@@ -56,8 +56,14 @@ jobs:
             print(f"New Version: {new_version}")
 
             # 2. Update .ino file
-            ino_path = './HorusByWyntro/HorusByWyntro.ino'
-            if os.path.exists(ino_path):
+            import glob
+            ino_files = glob.glob('**/*.ino', recursive=True)
+            if not ino_files:
+                print("Error: No .ino file found for version bumping!")
+            else:
+                ino_path = ino_files[0]
+                print(f"Updating version in: {ino_path}")
+                
                 with open(ino_path, 'r') as f:
                     content = f.read()
                 
@@ -82,7 +88,9 @@ jobs:
       run: |
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
-        git add version.json HorusByWyntro/HorusByWyntro.ino
+        git add version.json
+        # Stage .ino file dynamically
+        find . -name "*.ino" -exec git add {} \;
         git commit -m "chore: bump version to ${{ env.NEW_VERSION }} [skip ci]"
         git push
 
