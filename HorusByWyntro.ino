@@ -22,7 +22,6 @@
 #include <Update.h>
 #include <esp_now.h>
 
-
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
@@ -44,7 +43,10 @@
 // ===============================
 #define STEPS_PER_REVOLUTION 2048 // 28BYJ-48 adım sayısı (Yaklaşık)
 #define JSON_CONFIG_FILE "/config.json"
-#define GITHUB_VERSION_URL "https://recaner.github.io/horus-ota/version.json"
+#define GITHUB_VERSION_URL                                                     \
+  "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
+  "version.json"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -604,4 +606,85 @@ void saveConfig() {
   serializeJson(doc, file);
   file.close();
   Serial.println("Ayarlar kaydedildi.");
+}
+
+// ===============================
+// OTA (Over-The-Air) Güncelleme
+// ===============================
+void performOTA() {
+  Serial.println("OTA: Versiyon kontrolü yapılıyor...");
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("OTA: WiFi bağlı değil!");
+    return;
+  }
+
+  HTTPClient http;
+  http.begin(GITHUB_VERSION_URL);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, payload);
+
+    String newVersion = doc["version"];
+    String binUrl = doc["url"];
+
+    Serial.println("Mevcut Versiyon: " + String(FIRMWARE_VERSION));
+    Serial.println("Sunucu Versiyonu: " + newVersion);
+
+    if (newVersion != String(FIRMWARE_VERSION)) {
+      Serial.println("OTA: Yeni güncelleme bulundu! İndiriliyor...");
+
+      // Binary indirme ve güncelleme
+      HTTPClient httpBin;
+      httpBin.begin(binUrl);
+
+      // GitHub yönlendirmelerini takip et (L option equivalent)
+      httpBin.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
+      int binCode = httpBin.GET();
+      if (binCode == HTTP_CODE_OK) {
+        int len = httpBin.getSize();
+        if (len > 0) {
+          bool canBegin = Update.begin(len);
+          if (canBegin) {
+            WiFiClient *stream = httpBin.getStreamPtr();
+            size_t written = Update.writeStream(*stream);
+
+            if (written == len) {
+              Serial.println("OTA: Yazma başarılı.");
+            } else {
+              Serial.println("OTA: Yazma hatası: " + String(written) + "/" +
+                             String(len));
+            }
+
+            if (Update.end()) {
+              Serial.println(
+                  "OTA: Güncelleme tamamlandı! Yeniden başlatılıyor...");
+              ESP.restart();
+            } else {
+              Serial.println("OTA: Hata #" + String(Update.getError()));
+            }
+          } else {
+            Serial.println("OTA: Yetersiz alan/başlatma hatası");
+          }
+        } else {
+          Serial.println("OTA: İçerik uznluğu geçersiz (Content-Length: 0)");
+        }
+      } else {
+        Serial.println("OTA: Bin dosyası indirilemedi. Kod: " +
+                       String(binCode));
+      }
+      httpBin.end();
+
+    } else {
+      Serial.println("OTA: Cihaz güncel.");
+    }
+
+  } else {
+    Serial.println("OTA: Versiyon dosyası okunamadı. Kod: " + String(httpCode));
+  }
+  http.end();
 }
