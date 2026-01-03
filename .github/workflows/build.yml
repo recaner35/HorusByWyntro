@@ -16,12 +16,12 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0 # Tüm geçmişi çek (versiyonlama için iyi olabilir)
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
@@ -95,7 +95,7 @@ jobs:
         git push
 
     - name: Setup Arduino CLI
-      uses: arduino/setup-arduino-cli@v1
+      uses: arduino/setup-arduino-cli@v2
 
     - name: Install ESP32 Platform
       run: |
@@ -119,7 +119,7 @@ jobs:
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.NEW_VERSION }}
         name: Release ${{ env.NEW_VERSION }}
@@ -143,7 +143,7 @@ jobs:
         fi
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./public
