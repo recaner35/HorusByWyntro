@@ -132,7 +132,15 @@ jobs:
         mkdir -p public
         cp version.json public/
         cp ./build/*.bin public/
-        cp -r HorusByWyntro/data/* public/ # Web arayüzünü de kopyalayabiliriz opsiyonel
+        
+        # Find 'data' directory dynamically
+        DATA_DIR=$(find . -type d -name "data" | head -n 1)
+        if [ -n "$DATA_DIR" ]; then
+           echo "Copying data from $DATA_DIR"
+           cp -r "$DATA_DIR"/* public/
+        else
+           echo "Warning: 'data' directory not found, skipping."
+        fi
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
