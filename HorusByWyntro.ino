@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.7"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -320,6 +320,7 @@ void initWiFi() {
   String apName = "horus-" + shortMac; // Slugify benzeri
 
   WiFi.softAP(apName.c_str());
+  Serial.println("Raw MAC: " + mac); // DEBUG
   Serial.println("AP Başlatıldı: " + apName);
   Serial.println("AP IP: " + WiFi.softAPIP().toString());
 
