@@ -34,17 +34,28 @@ jobs:
 
     - name: Compile Sketch
       run: |
+        # Debug: List all files to verify structure
+        ls -R
+        
+        # Find the .ino file dynamically to avoid path/case issues
+        SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
+        if [ -z "$SKETCH_PATH" ]; then
+          echo "Error: No .ino file found!"
+          exit 1
+        fi
+        echo "Compiling sketch at: $SKETCH_PATH"
+        
         # FQBN for ESP32 Dev Module
-        arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build ./HorusByWyntro/HorusByWyntro.ino
+        arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: horus-firmware
-        path: ./build/HorusByWyntro.ino.bin
+        path: ./build/*.bin
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: ./build/HorusByWyntro.ino.bin
+        files: ./build/*.bin
