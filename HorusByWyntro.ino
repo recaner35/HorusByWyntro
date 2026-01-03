@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.6"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -67,7 +67,7 @@ struct Config {
   int tpd = 600;     // Günlük Tur Sayısı (600-1800)
   int duration = 15; // Bir tur süresi (sn) (10-20)
   int direction = 0; // 0: CW, 1: CCW, 2: Bi-Directional
-  String hostname = "horus-master";
+  String hostname = "";
 };
 Config config;
 
@@ -324,6 +324,11 @@ void initWiFi() {
   Serial.println("AP IP: " + WiFi.softAPIP().toString());
 
   // 2. Hostname
+  // Eğer hostname boşsa (ilk açılış veya reset), benzersiz olanı kullan
+  // (horus-MAC)
+  if (config.hostname == "") {
+    config.hostname = apName;
+  }
   WiFi.setHostname(config.hostname.c_str());
 
   // 3. Varsa kayıtlı ağa bağlan (Engellemeden)
@@ -585,7 +590,7 @@ void loadConfig() {
     config.tpd = doc["tpd"] | 600;
     config.duration = doc["dur"] | 15;
     config.direction = doc["dir"] | 0;
-    config.hostname = doc["name"] | "horus-master";
+    config.hostname = doc["name"] | "";
 
     file.close();
     Serial.println("Ayarlar yüklendi.");
