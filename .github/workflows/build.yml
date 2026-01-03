@@ -16,12 +16,11 @@ jobs:
     env:
       MKLITTLEFS_VERSION: 3.2.0
 
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Tüm geçmişi çek (versiyonlama için iyi olabilir)
+        fetch-depth: 0
 
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -31,24 +30,20 @@ jobs:
     - name: Auto Bump Version
       id: bump_version
       run: |
-        # Python script to increment version
         cat <<EOF > bump_version.py
         import json
         import re
         import os
 
-        # 1. Read and Bump version.json
         try:
             with open('version.json', 'r') as f:
                 data = json.load(f)
             
             old_version = data.get('version', '0.0.0')
             parts = [int(x) for x in old_version.split('.')]
-            parts[-1] += 1 # Patch arttır
+            parts[-1] += 1
             new_version = ".".join(map(str, parts))
             
-            # Update URL to point to the new Release asset
-            # NOTE: User can change this to Pages URL if preferred, but Releases is standard for history.
             data['version'] = new_version
             data['url'] = f"https://github.com/recaner35/HorusByWyntro/releases/download/{new_version}/HorusByWyntro.ino.bin"
             
@@ -58,7 +53,6 @@ jobs:
             print(f"Previous Version: {old_version}")
             print(f"New Version: {new_version}")
 
-            # 2. Update .ino file
             import glob
             ino_files = glob.glob('**/*.ino', recursive=True)
             if not ino_files:
@@ -70,13 +64,11 @@ jobs:
                 with open(ino_path, 'r') as f:
                     content = f.read()
                 
-                # Regex replace
                 content = re.sub(r'#define FIRMWARE_VERSION ".*?"', f'#define FIRMWARE_VERSION "{new_version}"', content)
                 
                 with open(ino_path, 'w') as f:
                     f.write(content)
             
-            # Export to ENV
             with open(os.environ['GITHUB_ENV'], 'a') as env_file:
                 env_file.write(f"NEW_VERSION={new_version}\n")
         
@@ -92,7 +84,6 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add version.json
-        # Stage .ino file dynamically
         find . -name "*.ino" -exec git add {} \;
         git commit -m "chore: bump version to ${{ env.NEW_VERSION }} [skip ci]"
         git push
@@ -117,25 +108,17 @@ jobs:
     - name: Compile Sketch
       run: |
         mkdir -p build
-        # Find the .ino file dynamically
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
 
     - name: Build LittleFS Image
       run: |
-        # Download mklittlefs
-        wget https://github.com/earlephilhower/mklittlefs/releases/download/${{ env.MKLITTLEFS_VERSION }}/x86_64-linux-gnu-mklittlefs-${{ env.MKLITTLEFS_VERSION }}.tar.gz
-        tar -xzf x86_64-linux-gnu-mklittlefs-${{ env.MKLITTLEFS_VERSION }}.tar.gz
-        mv mklittlefs /usr/local/bin/
+        # Download mklittlefs (Link Hash Kodu ile Güncellendi: 30b7fc1)
+        wget https://github.com/earlephilhower/mklittlefs/releases/download/3.2.0/x86_64-linux-gnu-mklittlefs-30b7fc1.tar.gz
+        tar -xzf x86_64-linux-gnu-mklittlefs-30b7fc1.tar.gz
+        sudo mv mklittlefs /usr/local/bin/
 
-        # Create LittleFS binary (assuming 1.5MB offset, 0x170000 size - adjust based on partition scheme)
-        # Using default partition scheme "default" usually gives ~1.5MB app, ~1.5MB SPIFFS/LittleFS
-        # We will create a generic bin, user must ensure partition match.
-        # But generally: mklittlefs -c <data_dir> -p <page_size> -b <block_size> -s <partition_size> <output_file>
-        # ESP32 Default: Page 256, Block 4096. Size depends on partition table.
-        # Let's assume standard 'default' partition: data is at 0x290000, size 0x170000 (approx 1.4MB)
-        
-        # NOTE: Finding the data directory dynamically
+        # Create LittleFS binary
         DATA_PATH=$(find . -type d -name "data" | head -n 1)
         if [ -z "$DATA_PATH" ]; then
            echo "No data directory found, creating empty one for valid bin generation"
@@ -145,7 +128,6 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         mklittlefs -c "$DATA_PATH" -p 256 -b 4096 -s 1474560 ./build/HorusByWyntro.littlefs.bin
-
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -164,7 +146,6 @@ jobs:
         cp version.json public/
         cp ./build/*.bin public/
         
-        # Deploy Website Content
         if [ -d "website" ]; then
            echo "Copying website content..."
            cp -r website/* public/
