@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horus By Wyntro - Smart Watch Winder Firmware</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="background-glow"></div>
+
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fa-solid fa-stopwatch"></i> HORUS <span>BY WYNTRO</span>
+            </div>
+            <nav>
+                <a href="https://github.com/recaner35/HorusByWyntro" target="_blank"><i class="fa-brands fa-github"></i>
+                    GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Ultimate Firmware for <br><span>Smart Watch Winder</span></h1>
+            <p>Elevate your automatic watch experience with precision control, silent operation, and seamless Wi-Fi
+                management.</p>
+
+            <div class="current-version-card" id="versionCard">
+                <div class="version-label">LATEST RELEASE</div>
+                <div class="version-number" id="currentVersion">Loading...</div>
+                <div class="actions">
+                    <a href="#" class="btn-primary" id="downloadBtn">
+                        <i class="fa-solid fa-download"></i> Download Firmware
+                    </a>
+                </div>
+                <div class="ota-note">
+                    <small>Or use OTA Update in your device settings</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-box">
+                <i class="fa-solid fa-wifi"></i>
+                <h3>Wi-Fi Controlled</h3>
+                <p>Manage settings wirelessly from any device on your network.</p>
+            </div>
+            <div class="feature-box">
+                <i class="fa-solid fa-arrows-spin"></i>
+                <h3>Smart Direction</h3>
+                <p>CW, CCW, and Bi-Directional modes optimized for all calibers.</p>
+            </div>
+            <div class="feature-box">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <h3>OTA Updates</h3>
+                <p>Stay up to date seamlessly with over-the-air firmware upgrades.</p>
+            </div>
+        </section>
+
+        <section class="changelog-section">
+            <h2><i class="fa-solid fa-list-check"></i> Release History</h2>
+            <div id="changelogList" class="changelog-list">
+                <!-- Dynamically populated -->
+                <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Fetching releases...</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Horus By Wyntro. Open Source Project.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
