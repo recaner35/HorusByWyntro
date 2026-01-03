@@ -113,12 +113,25 @@ jobs:
 
     - name: Build LittleFS Image
       run: |
-        # Download mklittlefs (Link Hash Kodu ile Güncellendi: 30b7fc1)
-        wget https://github.com/earlephilhower/mklittlefs/releases/download/3.2.0/x86_64-linux-gnu-mklittlefs-30b7fc1.tar.gz
-        tar -xzf x86_64-linux-gnu-mklittlefs-30b7fc1.tar.gz
-        sudo mv mklittlefs /usr/local/bin/
+        # --- KRİTİK DÜZELTME BAŞLANGICI ---
+        # mklittlefs'i internetten indirmek yerine, Arduino CLI'nin 
+        # zaten indirdiği yerel dosyayı bulup kullanıyoruz.
+        
+        echo "Yerel mklittlefs araci araniyor..."
+        # Arduino paketleri genelde ~/.arduino15 altinda olur.
+        MKLITTLEFS_BIN=$(find /home/runner/.arduino15 -name mklittlefs -type f | head -n 1)
+        
+        if [ -z "$MKLITTLEFS_BIN" ]; then
+           echo "HATA: mklittlefs yerel dosyalarda bulunamadi!"
+           exit 1
+        fi
+        
+        echo "BULUNDU: $MKLITTLEFS_BIN"
+        
+        # Dosyayı çalıştırılabilir yap
+        chmod +x "$MKLITTLEFS_BIN"
 
-        # Create LittleFS binary
+        # Data klasörünü kontrol et
         DATA_PATH=$(find . -type d -name "data" | head -n 1)
         if [ -z "$DATA_PATH" ]; then
            echo "No data directory found, creating empty one for valid bin generation"
@@ -127,7 +140,10 @@ jobs:
         fi
         
         echo "Building LittleFS from $DATA_PATH"
-        mklittlefs -c "$DATA_PATH" -p 256 -b 4096 -s 1474560 ./build/HorusByWyntro.littlefs.bin
+        
+        # Bulduğumuz aracı kullanarak imajı oluşturuyoruz
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1474560 ./build/HorusByWyntro.littlefs.bin
+        # --- KRİTİK DÜZELTME SONU ---
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
