@@ -13,6 +13,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      MKLITTLEFS_VERSION: 3.0.0
+
 
     steps:
     - name: Checkout Code
@@ -118,12 +121,40 @@ jobs:
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
 
+    - name: Build LittleFS Image
+      run: |
+        # Download mklittlefs
+        wget https://github.com/earlephilhower/mklittlefs/releases/download/${{ env.MKLITTLEFS_VERSION }}/x86_64-linux-gnu-mklittlefs-${{ env.MKLITTLEFS_VERSION }}.tar.gz
+        tar -xzf x86_64-linux-gnu-mklittlefs-${{ env.MKLITTLEFS_VERSION }}.tar.gz
+        mv mklittlefs /usr/local/bin/
+
+        # Create LittleFS binary (assuming 1.5MB offset, 0x170000 size - adjust based on partition scheme)
+        # Using default partition scheme "default" usually gives ~1.5MB app, ~1.5MB SPIFFS/LittleFS
+        # We will create a generic bin, user must ensure partition match.
+        # But generally: mklittlefs -c <data_dir> -p <page_size> -b <block_size> -s <partition_size> <output_file>
+        # ESP32 Default: Page 256, Block 4096. Size depends on partition table.
+        # Let's assume standard 'default' partition: data is at 0x290000, size 0x170000 (approx 1.4MB)
+        
+        # NOTE: Finding the data directory dynamically
+        DATA_PATH=$(find . -type d -name "data" | head -n 1)
+        if [ -z "$DATA_PATH" ]; then
+           echo "No data directory found, creating empty one for valid bin generation"
+           mkdir -p data
+           DATA_PATH="data"
+        fi
+        
+        echo "Building LittleFS from $DATA_PATH"
+        mklittlefs -c "$DATA_PATH" -p 256 -b 4096 -s 1474560 ./build/HorusByWyntro.littlefs.bin
+
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.NEW_VERSION }}
         name: Release ${{ env.NEW_VERSION }}
-        files: ./build/*.bin
+        files: |
+          ./build/*.bin
+          ./build/*.littlefs.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
