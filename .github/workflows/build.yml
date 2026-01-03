@@ -133,13 +133,13 @@ jobs:
         cp version.json public/
         cp ./build/*.bin public/
         
-        # Find 'data' directory dynamically
-        DATA_DIR=$(find . -type d -name "data" | head -n 1)
-        if [ -n "$DATA_DIR" ]; then
-           echo "Copying data from $DATA_DIR"
-           cp -r "$DATA_DIR"/* public/
+        # Deploy Website Content
+        if [ -d "website" ]; then
+           echo "Copying website content..."
+           cp -r website/* public/
         else
-           echo "Warning: 'data' directory not found, skipping."
+           echo "Error: 'website' directory not found!"
+           exit 1
         fi
 
     - name: Deploy to GitHub Pages
