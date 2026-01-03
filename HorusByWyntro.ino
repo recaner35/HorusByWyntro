@@ -18,7 +18,10 @@
 #include <LittleFS.h>
 #include <WiFi.h>
 // #include <WiFiManager.h> // REMOVED for Seamless Custom Logic
+#include <ESPmDNS.h>
+#include <Update.h>
 #include <esp_now.h>
+
 
 // ===============================
 // Motor Pin Tanımlamaları
@@ -34,6 +37,7 @@
 // Sensör ve Buton Tanımlamaları
 // ===============================
 #define TOUCH_PIN 23 // TTP223 Dokunmatik Sensör
+#define LED_PIN 2    // Built-in LED
 
 // ===============================
 // Sabitler ve Ayarlar
