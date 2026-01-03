@@ -5,6 +5,11 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,6 +17,74 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # Tüm geçmişi çek (versiyonlama için iyi olabilir)
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Auto Bump Version
+      id: bump_version
+      run: |
+        # Python script to increment version
+        cat <<EOF > bump_version.py
+        import json
+        import re
+        import os
+
+        # 1. Read and Bump version.json
+        try:
+            with open('version.json', 'r') as f:
+                data = json.load(f)
+            
+            old_version = data.get('version', '0.0.0')
+            parts = [int(x) for x in old_version.split('.')]
+            parts[-1] += 1 # Patch arttır
+            new_version = ".".join(map(str, parts))
+            
+            # Update URL to point to the new Release asset
+            # NOTE: User can change this to Pages URL if preferred, but Releases is standard for history.
+            data['version'] = new_version
+            data['url'] = f"https://github.com/recaner35/HorusByWyntro/releases/download/{new_version}/HorusByWyntro.ino.bin"
+            
+            with open('version.json', 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            print(f"Previous Version: {old_version}")
+            print(f"New Version: {new_version}")
+
+            # 2. Update .ino file
+            ino_path = './HorusByWyntro/HorusByWyntro.ino'
+            if os.path.exists(ino_path):
+                with open(ino_path, 'r') as f:
+                    content = f.read()
+                
+                # Regex replace
+                content = re.sub(r'#define FIRMWARE_VERSION ".*?"', f'#define FIRMWARE_VERSION "{new_version}"', content)
+                
+                with open(ino_path, 'w') as f:
+                    f.write(content)
+            
+            # Export to ENV
+            with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+                env_file.write(f"NEW_VERSION={new_version}\n")
+        
+        except Exception as e:
+            print(f"Error: {e}")
+            exit(1)
+        EOF
+        
+        python bump_version.py
+
+    - name: Commit and Push Version Bump
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add version.json HorusByWyntro/HorusByWyntro.ino
+        git commit -m "chore: bump version to ${{ env.NEW_VERSION }} [skip ci]"
+        git push
 
     - name: Setup Arduino CLI
       uses: arduino/setup-arduino-cli@v1
@@ -27,35 +100,35 @@ jobs:
         arduino-cli lib install "AccelStepper"
         arduino-cli lib install "ArduinoJson"
         arduino-cli lib install "WiFiManager"
-        # ESPAsyncWebServer ve AsyncTCP genelde kütüphane yöneticisinde olmayabilir, git clone gerekebilir
-        # Ancak burada yaygın forkları deneyeceğiz veya manuel indireceğiz
         git clone https://github.com/me-no-dev/AsyncTCP.git ~/Arduino/libraries/AsyncTCP
         git clone https://github.com/me-no-dev/ESPAsyncWebServer.git ~/Arduino/libraries/ESPAsyncWebServer
 
     - name: Compile Sketch
       run: |
-        # Debug: List all files to verify structure
-        ls -R
-        
-        # Find the .ino file dynamically to avoid path/case issues
+        mkdir -p build
+        # Find the .ino file dynamically
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
-        if [ -z "$SKETCH_PATH" ]; then
-          echo "Error: No .ino file found!"
-          exit 1
-        fi
-        echo "Compiling sketch at: $SKETCH_PATH"
-        
-        # FQBN for ESP32 Dev Module
         arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: horus-firmware
-        path: ./build/*.bin
-
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ env.NEW_VERSION }}
+        name: Release ${{ env.NEW_VERSION }}
         files: ./build/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Prepare Pages
+      run: |
+        mkdir -p public
+        cp version.json public/
+        cp ./build/*.bin public/
+        cp -r HorusByWyntro/data/* public/ # Web arayüzünü de kopyalayabiliriz opsiyonel
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./public
+        publish_branch: gh-pages
