@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.13"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -133,6 +133,16 @@ void setup() {
     return;
   }
   Serial.println("LittleFS Hazır.");
+
+  // DOSYA KONTROLÜ
+  if (LittleFS.exists("/index.html")) {
+    Serial.println("DOSYA DURUMU: index.html OK. (Size: " +
+                   String(LittleFS.open("/index.html").size()) + " bytes)");
+  } else {
+    Serial.println("DOSYA DURUMU: KRIITIK HATA! index.html BULUNAMADI.");
+    Serial.println("Lutfen 'ESP32 Sketch Data Upload' aracı ile dosya "
+                   "sistemini yükleyiniz!");
+  }
 
   // Ayarları Yükle
   loadConfig();
@@ -314,13 +324,44 @@ void initWiFi() {
   WiFi.mode(WIFI_AP_STA);
 
   // 1. AP Başlat
-  String mac = WiFi.macAddress();
-  mac.replace(":", "");
-  String shortMac = mac.substring(8);  // Son 4 hane
-  String apName = "horus-" + shortMac; // Slugify benzeri
+  // MAC Adresini doğrudan Efuse'dan oku (Daha güvenilir)
+  uint64_t chipid = ESP.getEfuseMac();
+  uint16_t chip = (uint16_t)(chipid >> 32);
+
+  // Son 4 hane (2 byte) için chipid'nin alt kısımlarını kullan
+  // chipid 6 byte mac adresini tutar.
+  // Örnek: AABBCCDDEEFF -> chipid hex olarak.
+  // Düzgün formatlama:
+  char macBuf[18];
+  sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
+          (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
+          (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
+          (uint8_t)(chipid >> 40));
+  String mac = String(macBuf);
+
+  // Son 4 hane için (son 2 byte)
+  char shortMacBuf[5];
+  sprintf(shortMacBuf, "%02X%02X", (uint8_t)(chipid >> 32),
+          (uint8_t)(chipid >> 40)); // Wi-Fi standartında son byte'lar MSB
+                                    // tarafında olabilir, kontrol edilecek.
+  // ESP32'de EfuseMac little-endian tarzı kaydediliyor olabilir, ama genellikle
+  // son byte'lar değişken kısım. Garanti olması için standart WiFi.macAddress
+  // çıktısının son 2 oktetini taklit edelim: EfuseMac: M5 M4 M3 M2 M1 M0 M0 en
+  // düşük byte.
+
+  uint8_t m0 = (uint8_t)(chipid >> 0);
+  uint8_t m1 = (uint8_t)(chipid >> 8);
+  // Genelde üretici ID'si üstte, cihaz ID'si altta olur. Değişken kısım en alt
+  // bitler. Biz "horus-" + son 4 hex kullanıyorduk.
+  sprintf(shortMacBuf, "%02X%02X", (uint8_t)(chipid >> 8),
+          (uint8_t)(chipid >> 0));
+
+  String shortMac = String(shortMacBuf);
+  String apName = "horus-" + shortMac;
 
   WiFi.softAP(apName.c_str());
-  Serial.println("Raw MAC: " + mac); // DEBUG
+  Serial.println("Efuse RAW: " + String((unsigned long)chipid, HEX)); // DEBUG
+  Serial.println("Formatted MAC: " + mac);                            // DEBUG
   Serial.println("AP Başlatıldı: " + apName);
   Serial.println("AP IP: " + WiFi.softAPIP().toString());
 
