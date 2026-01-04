@@ -142,7 +142,7 @@ jobs:
         echo "Building LittleFS from $DATA_PATH"
         
         # Bulduğumuz aracı kullanarak imajı oluşturuyoruz
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1507328 ./build/HorusByWyntro.littlefs.bin
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1441792 ./build/HorusByWyntro.littlefs.bin
         # --- KRİTİK DÜZELTME SONU ---
 
     - name: Create Release
