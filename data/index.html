@@ -1,224 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Horus Control Panel</title>
-    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffd700">
     <link rel="apple-touch-icon" href="192x192.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="languages.js"></script>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
-    <div class="background-glow"></div>
 
-    <div class="app-container">
-        <!-- Sidebar / Navigation -->
-        <nav class="sidebar">
-            <div class="logo">
-                <?xml version="1.0" encoding="UTF-8"?>
-                <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-                <!-- Creator: Caner Kocacık -->
-                <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="100%" height="100%" version="1.1"
-                    style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd; max-height: 50px;"
-                    viewBox="0 0 99.34 49.67" xmlns:xlink="http://www.w3.org/1999/xlink"
-                    xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
-                    <defs>
-                        <style type="text/css">
-                            <![CDATA[
-                            .fil0 {
-                                fill: none
-                            }
+    <!-- Header / Top Bar -->
+    <header class="top-bar">
+        <div class="logo-container">
+            <svg class="logo-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1.588836,0,0,1.583917,49.988012,52.379433)">
+                    <path
+                        d="M125.88,0C56.362,0,0,56.362,0,125.88s56.362,125.88,125.88,125.88s125.88-56.362,125.88-125.88 S195.398,0,125.88,0z M125.88,27.146c24.639,0,47.185,9.05,64.717,23.957l-15.006,23.109l-7.46,11.487l-24.965-42.33 C138.156,22.106,132.126,21.503,125.88,21.503c-57.646,0-104.377,46.731-104.377,104.377s46.731,104.377,104.377,104.377 s104.377-46.731,104.377-104.377c0-26.685-10.155-51.056-26.83-69.456l22.992-35.405 C242.046,45.421,251.76,74.07,251.76,104.887c-0.344,80.122-65.738,145.205-145.86,144.86S-39.095,184.01,38.749,103.887 S183.954-39.095,264.076,38.749c2.09,1.961,4.111,3.999,6.059,6.11l-24.3,37.419c-15.367-17.06-37.49-27.91-61.954-27.91 c-6.621,0-12.986,0.923-19.059,2.639l22.697,38.483l-7.79,11.995L152.091,66.6c-8.25-2.031-16.906-3.13-25.808-3.13 c-28.799,0-54.811,11.751-73.35,30.654l7.086,12.016l-7.079,10.901c15.206-16.711,37.487-27.026,61.763-27.026 c7.846,0,15.466,1.082,22.755,3.105l-25.042,38.56l-7.79,11.995l-7.79-11.995L71.369,91.828c-7.394,10.027-11.791,22.378-11.791,35.698 c0,33.585,27.226,60.811,60.811,60.811s60.811-27.226,60.811-60.811c0-14.771-5.323-28.329-14.157-38.823l12.784-19.686 c11.839,15.22,18.914,34.332,18.914,55.064c0,49.117-39.815,88.932-88.932,88.932s-88.932-39.815-88.932-88.932 c0-21.493,7.629-41.259,20.25-56.634l-7.749-13.141c-14.612,18.66-23.364,42.417-23.364,68.121 c0,60.088,48.706,108.794,108.794,108.794s108.794-48.706,108.794-108.794c0-23.824-7.53-45.992-20.359-63.784L125.88,27.146z"
+                        style="fill:var(--text-primary);fill-rule:nonzero;" />
+                </g>
+            </svg>
+            <h1>HORUS</h1>
+        </div>
+        <div class="header-controls">
+            <span id="connectionStatus" class="status-indicator"></span>
+            <select id="languageSelect" onchange="changeLanguage()">
+                <option value="tr">TR</option>
+                <option value="en">EN</option>
+                <option value="de">DE</option>
+                <option value="ru">RU</option>
+                <option value="uk">UK</option>
+                <option value="fr">FR</option>
+                <option value="it">IT</option>
+                <option value="es">ES</option>
+                <option value="rm">RM</option>
+                <option value="mk">MK</option>
+                <option value="sq">SQ</option>
+                <option value="bs">BS</option>
+                <option value="sr">SR</option>
+                <option value="rup">RUP</option>
+                <option value="rom">ROM</option>
+                <option value="zh">ZH</option>
+                <option value="ja">JA</option>
+                <option value="az">AZ</option>
+            </select>
+        </div>
+    </header>
 
-                            .fil1 {
-                                fill: var(--text-primary);
-                                fill-rule: nonzero
-                            }
-                            ]]>
-                        </style>
-                    </defs>
-                    <g id="Layer_x0020_1">
-                        <metadata id="CorelCorpID_0Corel-Layer" />
-                        <polygon class="fil0" points="0,0 99.34,0 99.34,49.67 0,49.67 " />
-                        <path class="fil1"
-                            d="M17.51 29.03l2.99 0 1.57 0c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.63,0 -1.16,-0.5 -1.17,-1.11l0 -17.13c0.01,-0.62 0.54,-1.12 1.17,-1.12 0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4l-2.88 0 0 0 -1.68 0c-0.22,0 -0.4,0.18 -0.4,0.4 0,0.21 0.18,0.39 0.4,0.39 0.64,0 1.17,0.5 1.17,1.13l0 6.61c0,0.35 0.11,0.69 0.3,0.97l-11.34 0 0 -7.58c0,-0.63 0.53,-1.13 1.17,-1.13 0.22,0 0.4,-0.18 0.4,-0.39 0,-0.22 -0.18,-0.4 -0.4,-0.4l-2.89 0 0 0 -1.67 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.21 0.19,0.39 0.41,0.39 0.64,0 1.16,0.5 1.17,1.12l0 17.12c-0.01,0.62 -0.53,1.12 -1.17,1.12 -0.22,0 -0.41,0.18 -0.41,0.4 0,0.21 0.19,0.39 0.41,0.39l4.56 0c0.22,0 0.4,-0.18 0.4,-0.39 0,-0.22 -0.18,-0.4 -0.4,-0.4 -0.64,0 -1.17,-0.51 -1.17,-1.12l0 -7.77c0,-0.36 -0.11,-0.69 -0.3,-0.98l11.34 0 0 8.64 0 0 0 0.11c0,0.61 -0.52,1.12 -1.17,1.12 -0.22,0 -0.4,0.18 -0.4,0.4 0,0.21 0.18,0.39 0.4,0.39l0 0zm16.82 0.38c0.06,0 0.12,0 0.19,0 0,0 0.22,-0.01 0.25,-0.01l0.08 0 0.01 -0.01c5.54,-0.28 9.87,-5.03 9.87,-10.83 0,-5.99 -4.67,-10.85 -10.4,-10.85 -0.15,0 -0.3,0 -0.44,0.01l-0.15 0 0 0.01c-5.51,0.31 -9.81,5.05 -9.81,10.83 0,5.98 4.67,10.85 10.4,10.85l0 0zm-8.43 -10.45c0.22,0 0.41,-0.18 0.41,-0.4 0,-1.16 0.15,-2.29 0.46,-3.37 1.09,-3.86 3.9,-6.48 7.15,-6.68 0.14,-0.01 0.28,-0.02 0.41,-0.02 5.15,0 9.37,4.31 9.57,9.68l-1.14 0c-0.23,0 -0.41,0.17 -0.41,0.39 0,1.49 -0.26,2.92 -0.75,4.26 -1.26,3.38 -3.89,5.61 -6.86,5.79l-0.2 0.01c-0.07,0 -0.14,0.01 -0.21,0.01 -5.15,0 -9.37,-4.31 -9.57,-9.67l1.14 0zm37.16 10.07c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.06,0 -0.12,0 -0.18,0 -0.87,-0.06 -1.65,-0.53 -2.08,-1.27l0 0 -0.05 -0.08 0 -0.01 -4.21 -6.82 -0.03 -0.04c-0.3,-0.42 -0.67,-0.78 -1.1,-1.07 3.13,-0.12 5.64,-2.51 5.64,-5.43 0,-2.96 -2.6,-5.39 -5.76,-5.42l-0.01 -0.01 -8.72 0c-0.23,0 -0.41,0.18 -0.41,0.4 0,0.21 0.18,0.39 0.41,0.39 0.64,0 1.17,0.5 1.17,1.13l0 17.11c-0.01,0.62 -0.53,1.12 -1.17,1.12 -0.23,0 -0.41,0.18 -0.41,0.4 0,0.21 0.18,0.39 0.41,0.39l4.55 0c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.64,0 -1.16,-0.51 -1.16,-1.12l0 -7.2c0,-0.35 -0.11,-0.68 -0.3,-0.97l3.1 0 0.01 0 0.1 0c0.26,0 0.5,0.13 0.64,0.32l4.07 6.64c1.09,1.88 3.06,3.04 5.25,3.11 0.08,0 0.16,0.01 0.24,0.01l0 0zm-7.82 -10.86l-5.29 0 0 -8.32c0,-0.35 -0.11,-0.69 -0.3,-0.97l5.42 0 0 0 0.1 0c1.93,0 3.51,2.08 3.51,4.64 0,2.53 -1.54,4.6 -3.43,4.65l-0.01 0zm16.35 11.24c1.46,0 2.85,-0.42 4.01,-1.2 0.1,-0.05 0.2,-0.12 0.28,-0.19 0.26,-0.18 0.5,-0.39 0.72,-0.6 1.37,-1.31 2.13,-3.06 2.13,-4.92l0 -12.5c0.01,-0.62 0.53,-1.12 1.17,-1.12 0.22,0 0.41,-0.17 0.41,-0.39 0,-0.22 -0.19,-0.4 -0.41,-0.4l-3.15 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.22 0.19,0.39 0.41,0.39 0.65,0 1.17,0.51 1.17,1.13l0 12.49c0,1.65 -0.67,3.2 -1.91,4.39 -0.17,0.16 -0.36,0.31 -0.56,0.46l-0.07 0.05c-0.07,0.05 -0.14,0.1 -0.21,0.14 -0.89,0.58 -1.94,0.88 -3.01,0.88 -1.48,0 -2.86,-0.56 -3.89,-1.55 -1.04,-1.01 -1.61,-2.34 -1.61,-3.76l0 -12.99 0 -0.01 0 -0.1c0,-0.62 0.52,-1.13 1.17,-1.13 0.22,0 0.41,-0.17 0.41,-0.39 0,-0.22 -0.19,-0.4 -0.41,-0.4l-4.56 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.22 0.19,0.39 0.41,0.39 0.64,0 1.16,0.5 1.17,1.13l0 12.49c0,3.81 3.2,6.91 7.15,6.91l0 0zm16.99 0c0.12,0 0.23,0 0.35,-0.01 0.09,0 0.17,0 0.26,-0.01l0.17 -0.02 0.06 -0.01 0.05 0 0.02 0c3.43,-0.37 6.01,-2.79 6.01,-5.64 0,-2.11 -1.4,-4.03 -3.65,-5.02l-5.87 -2.6c-1.54,-0.74 -2.5,-2.09 -2.5,-3.52 0,-2.1 1.96,-3.85 4.56,-4.06l0.22 -0.02c0.1,0 0.21,0 0.32,0 0.1,0 0.21,0 0.31,0l0.22 0.02c2.53,0.21 4.49,1.9 4.57,3.93 0,0.12 0.06,0.22 0.15,0.29 0.07,0.06 0.16,0.09 0.25,0.09l0.04 0 0.86 -0.14c0.11,-0.02 0.21,-0.08 0.27,-0.17l0.09 -0.17 -0.03 -0.14c-0.61,-2.43 -3.13,-4.27 -6.14,-4.48l-0.24 -0.01c-0.12,-0.01 -0.23,-0.01 -0.35,-0.01 -0.12,0 -0.24,0 -0.36,0.01l-0.23 0.01c-3.53,0.24 -6.29,2.72 -6.29,5.63 0,1.99 1.31,3.86 3.42,4.88l5.93 2.62c1.66,0.73 2.69,2.12 2.69,3.63 0,2.03 -1.88,3.79 -4.36,4.09 -0.03,0 -0.26,0.03 -0.26,0.03l-0.22 0.01c-0.11,0 -0.22,0 -0.32,0 -0.11,0 -0.22,0 -0.31,0l-0.23 -0.01c-2.64,-0.22 -4.62,-2 -4.62,-4.12 0,-0.1 0,-0.18 0.01,-0.26 0.02,-0.11 -0.02,-0.23 -0.11,-0.32 -0.07,-0.08 -0.18,-0.12 -0.32,-0.12 0,0 -0.94,0.08 -0.94,0.08 -0.11,0.01 -0.21,0.06 -0.28,0.15l-0.11 0.15 0.02 0.14c0.34,2.71 2.99,4.85 6.3,5.08l0.24 0.01c0.11,0.01 0.23,0.01 0.35,0.01l0 0z" />
-                        <path class="fil1"
-                            d="M4.05 41.73l4.9 0c1.75,0 3.17,-1.28 3.17,-2.86 0,-1.28 -0.94,-2.38 -2.25,-2.73 0.98,-0.43 1.64,-1.31 1.64,-2.31 0,-1.39 -1.24,-2.51 -2.83,-2.56 -0.02,0 -0.04,-0.01 -0.05,-0.01l-0.01 0 -4.57 0c-0.11,0 -0.21,0.09 -0.21,0.2 0,0.11 0.1,0.2 0.21,0.2 0.32,0 0.58,0.25 0.58,0.56l0 8.55c0,0.32 -0.26,0.57 -0.58,0.57 -0.11,0 -0.21,0.08 -0.21,0.19 0,0.11 0.1,0.2 0.21,0.2l0 0zm4.94 -0.39l-3.25 0 0 -4.45c0,-0.18 -0.05,-0.34 -0.15,-0.49l3.36 0c1.1,0 1.98,1.11 1.98,2.47 0,1.34 -0.86,2.44 -1.94,2.47l0 0zm-3.25 -5.33l0 -3.87c0,-0.17 -0.05,-0.34 -0.15,-0.48l2.95 0 0 0 0.05 0c0.02,0 0.05,0 0.07,0 0.93,0.06 1.66,1.01 1.66,2.17 0,1.17 -0.73,2.12 -1.66,2.18 -0.02,0 -0.05,0 -0.07,0l-2.85 0zm12.75 5.72c0.12,0 0.21,-0.09 0.21,-0.2 0,-0.11 -0.09,-0.19 -0.21,-0.19 -0.31,0 -0.58,-0.25 -0.58,-0.56l0 -3.15 3.01 -5.25 0.02 -0.01 0.02 -0.07c0.21,-0.35 0.68,-0.64 1.04,-0.64 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-1.57 0c-0.12,0 -0.21,0.09 -0.21,0.2 0,0.11 0.09,0.2 0.21,0.2 0.06,0 0.18,0.01 0.23,0.09 0.05,0.08 0.03,0.22 -0.06,0.37l-2.84 4.96 -2.84 -4.96c-0.09,-0.15 -0.11,-0.29 -0.06,-0.37 0.04,-0.08 0.16,-0.09 0.23,-0.09 0.11,0 0.21,-0.09 0.21,-0.2 0,-0.11 -0.1,-0.2 -0.21,-0.2l-2.38 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.11 0.09,0.2 0.2,0.2 0.36,0 0.84,0.3 1.05,0.66l3.04 5.31 0 3.14c0,0.31 -0.26,0.57 -0.59,0.57 -0.11,0 -0.2,0.08 -0.2,0.19 0,0.11 0.09,0.2 0.2,0.2l2.28 0zm19 0.19l0.03 0c0.08,0 0.16,-0.05 0.19,-0.12l0.38 -0.98 3.3 -8.53c0.13,-0.34 0.54,-0.63 0.89,-0.63 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-1.58 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.11 0.09,0.2 0.2,0.2 0.14,0 0.24,0.04 0.3,0.12 0.06,0.09 0.06,0.22 0.01,0.37l-3.11 8.04 -3.12 -8.04c-0.05,-0.15 -0.05,-0.28 0.02,-0.37 0.05,-0.08 0.16,-0.12 0.29,-0.12 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-0.7 0 0 0 -1.63 0c-0.11,0 -0.21,0.09 -0.21,0.2 0,0.11 0.1,0.2 0.21,0.2 0.35,0 0.76,0.29 0.89,0.63l1 2.59 -2.05 5.31 -3.11 -8.04c-0.06,-0.15 -0.06,-0.28 0.01,-0.37 0.05,-0.08 0.15,-0.12 0.29,-0.12 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-0.7 0 0 0 -1.63 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.11 0.09,0.2 0.2,0.2 0.35,0 0.76,0.29 0.89,0.63l3.68 9.5 0.02 0.08 0.05 0.02c0,0 0,0 0.01,0l0.02 0.03 0.09 0c0.08,0 0.16,-0.05 0.19,-0.12l2.46 -6.36 2.46 6.35 0.02 0.08 0.02 0.01 0 0.01 0.08 0.02 0.04 0.01 0 0zm11.59 -0.19c0.11,0 0.21,-0.09 0.21,-0.2 0,-0.11 -0.1,-0.19 -0.21,-0.19 -0.32,0 -0.58,-0.25 -0.58,-0.56l0 -3.15 3.01 -5.25 0.02 -0.01 0.02 -0.07c0.21,-0.35 0.68,-0.64 1.04,-0.64 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-1.58 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.11 0.09,0.2 0.2,0.2 0.07,0 0.19,0.01 0.24,0.09 0.05,0.08 0.02,0.22 -0.06,0.37l-2.84 4.96 -2.84 -4.96c-0.09,-0.15 -0.12,-0.29 -0.07,-0.37 0.05,-0.08 0.17,-0.09 0.24,-0.09 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-2.38 0c-0.11,0 -0.21,0.09 -0.21,0.2 0,0.11 0.1,0.2 0.21,0.2 0.36,0 0.84,0.3 1.04,0.66l3.05 5.31 0 3.14c0,0.31 -0.27,0.57 -0.59,0.57 -0.11,0 -0.2,0.08 -0.2,0.19 0,0.11 0.09,0.2 0.2,0.2l2.28 0zm13.82 0.24l0.04 0 0.11 -0.04 0.01 -0.04c0.03,-0.03 0.05,-0.08 0.05,-0.12l0 -9.55c0,-0.31 0.26,-0.56 0.58,-0.56 0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.2 -0.2,-0.2l-1.57 0c-0.12,0 -0.21,0.09 -0.21,0.2 0,0.11 0.09,0.2 0.21,0.2 0.32,0 0.58,0.25 0.58,0.56l0 7.83 -6.8 -8.71c-0.04,-0.05 -0.1,-0.08 -0.17,-0.08l-0.84 0 -0.02 0 -0.8 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.11 0.09,0.2 0.2,0.2 0.16,0 0.37,0.06 0.58,0.17l0 8.95c0,0.31 -0.26,0.57 -0.58,0.57 -0.11,0 -0.2,0.08 -0.2,0.19 0,0.11 0.09,0.2 0.2,0.2l1.57 0c0.11,0 0.21,-0.09 0.21,-0.2 0,-0.11 -0.1,-0.19 -0.21,-0.19 -0.32,0 -0.58,-0.26 -0.58,-0.57l0 -8.67c0.09,0.07 0.16,0.15 0.23,0.23l7.44 9.53 0.04 0.06 0.04 0.01c0.03,0.02 0.06,0.03 0.09,0.03l0 0zm8.02 -0.24c0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.19 -0.2,-0.19 -0.32,0 -0.58,-0.25 -0.58,-0.56l0 -9.12 1.97 0c0.81,0 1.62,0.64 1.81,1.42 0.02,0.09 0.1,0.15 0.19,0.15l0.03 0 0.02 -0.01c0.1,-0.02 0.17,-0.11 0.16,-0.2l0 -0.01 -0.38 -1.6 -0.02 -0.03 -0.01 -0.02c-0.01,-0.02 -0.02,-0.03 -0.03,-0.04l-0.07 -0.06 -3.83 0 0 0 -0.75 0 -3.81 0c-0.05,0 -0.1,0.02 -0.14,0.06l-0.02 0.02 -0.01 0.02 -0.02 0.02 -0.38 1.59 -0.01 0.03 0 0.02c-0.01,0.09 0.06,0.18 0.16,0.2l0.02 0.01 0.03 0c0.09,0 0.17,-0.06 0.19,-0.15 0.19,-0.78 1,-1.42 1.81,-1.42l1.97 0 0 9.11c0,0.32 -0.26,0.57 -0.58,0.57 -0.11,0 -0.2,0.08 -0.2,0.19 0,0.11 0.09,0.2 0.2,0.2l2.28 0zm13.23 0c0.11,0 0.2,-0.09 0.2,-0.2 0,-0.11 -0.09,-0.19 -0.2,-0.19 -0.03,0 -0.06,0 -0.09,0 -0.44,-0.03 -0.83,-0.27 -1.04,-0.64l0 0 -0.03 -0.04 0 0 -2.1 -3.41 -0.02 -0.02c-0.15,-0.22 -0.33,-0.39 -0.55,-0.54 1.57,-0.06 2.82,-1.25 2.82,-2.71 0,-1.49 -1.3,-2.7 -2.88,-2.71l0 -0.01 -4.36 0c-0.12,0 -0.21,0.09 -0.21,0.2 0,0.11 0.09,0.2 0.21,0.2 0.32,0 0.58,0.25 0.58,0.56l0 8.55c0,0.32 -0.26,0.57 -0.58,0.57 -0.12,0 -0.21,0.08 -0.21,0.19 0,0.11 0.09,0.2 0.21,0.2l2.27 0c0.12,0 0.21,-0.09 0.21,-0.2 0,-0.11 -0.09,-0.19 -0.21,-0.19 -0.32,0 -0.58,-0.26 -0.58,-0.57l0 -3.59c0,-0.18 -0.05,-0.34 -0.15,-0.49l1.55 0 0.01 0 0.05 0c0.13,0 0.25,0.07 0.32,0.16l2.03 3.32c0.55,0.94 1.53,1.52 2.63,1.56 0.04,0 0.08,0 0.12,0l0 0zm-3.91 -5.43l-2.65 0 0 -4.16c0,-0.17 -0.05,-0.34 -0.15,-0.48l2.71 0 0 0 0.05 0c0.97,0 1.76,1.04 1.76,2.32 0,1.26 -0.77,2.29 -1.72,2.32l0 0zm10.06 5.62c0.03,0 0.06,0 0.1,0 0,0 0.11,0 0.12,0l0.04 0 0.01 -0.01c2.77,-0.14 4.93,-2.51 4.93,-5.41 0,-3 -2.33,-5.43 -5.2,-5.43 -0.07,0 -0.15,0 -0.22,0.01l-0.07 0 -0.01 0c-2.75,0.16 -4.9,2.53 -4.9,5.42 0,2.99 2.34,5.42 5.2,5.42l0 0zm-4.21 -5.22c0.11,0 0.2,-0.09 0.2,-0.2 0,-0.58 0.08,-1.15 0.23,-1.69 0.55,-1.93 1.95,-3.24 3.58,-3.34 0.06,0 0.13,-0.01 0.2,-0.01 2.58,0 4.69,2.16 4.79,4.84l-0.58 0c-0.11,0 -0.2,0.09 -0.2,0.2 0,0.74 -0.13,1.46 -0.37,2.13 -0.63,1.69 -1.95,2.8 -3.43,2.89l-0.1 0.01c-0.04,0 -0.07,0 -0.11,0 -2.57,0 -4.69,-2.15 -4.79,-4.83l0.58 0z" />
-                    </g>
-                </svg>
+    <!-- Main Content Area with Routing -->
+    <main id="app">
+        <!-- Dashboard Tab -->
+        <section id="dashboard" class="tab-content active">
+            <div class="card status-card">
+                <h2 data-i18n="status">DURUM</h2>
+                <div id="statusText" class="status-text">HAZIR</div>
+                <button id="toggleBtn" class="btn-large" onclick="toggleSystem()" data-i18n="start">BAŞLAT</button>
             </div>
+        </section>
 
-            <div class="nav-links">
-                <button class="nav-btn active" onclick="showTab('dashboard')" data-i18n="status">
-                    <i class="fa-solid fa-gauge-high"></i> <span>Dashboard</span>
-                </button>
-                <button class="nav-btn" onclick="showTab('devices')" data-i18n="devices">
-                    <i class="fa-solid fa-layer-group"></i> <span>Devices</span>
-                </button>
-                <button class="nav-btn" onclick="showTab('network')" data-i18n="wifi_settings">
-                    <i class="fa-solid fa-wifi"></i> <span>Network</span>
-                </button>
-                <button class="nav-btn" onclick="showTab('settings')" data-i18n="general_settings">
-                    <i class="fa-solid fa-gear"></i> <span>Settings</span>
-                </button>
-            </div>
-
-            <div id="connectionStatus" class="connection-status disconnected" title="Connection Status"></div>
-        </nav>
-
-        <!-- Main Content Area -->
-        <main class="content-area">
-
-            <!-- DASHBOARD TAB -->
-            <div id="dashboard" class="tab-content active transition-fade">
-                <header class="tab-header">
-                    <h2 data-i18n="status">Dashboard</h2>
-                </header>
-
-                <div class="card status-card">
-                    <div class="status-display">
-                        <span id="statusText" data-i18n="stopped">STOPPED</span>
-                    </div>
-                    <button id="toggleBtn" class="btn-large start" onclick="toggleSystem()">
-                        <i class="fa-solid fa-power-off"></i> <span id="toggleBtnText" data-i18n="start">START</span>
-                    </button>
+        <!-- Devices Tab -->
+        <section id="devices" class="tab-content">
+            <div class="card">
+                <h2 data-i18n="devices">CİHAZLAR</h2>
+                <div class="control-group">
+                    <button class="btn-secondary" onclick="refreshPeers()" data-i18n="scan_devices">TARA</button>
                 </div>
-
-                <div class="card controls-card">
-                    <!-- TPD Slider -->
-                    <div class="control-group">
-                        <label>
-                            <span data-i18n="tpd">TPD</span>
-                            <span id="tpdValue" class="value-badge">600</span>
-                        </label>
-                        <input type="range" id="tpdPayload" min="600" max="1800" step="50" value="600"
-                            oninput="updateTpdDisplay(this.value)">
-                    </div>
-
-                    <!-- Duration Slider -->
-                    <div class="control-group">
-                        <label>
-                            <span data-i18n="duration">Duration (s)</span>
-                            <span id="durValue" class="value-badge">15</span>
-                        </label>
-                        <input type="range" id="durPayload" min="10" max="60" step="1" value="15"
-                            oninput="updateDurDisplay(this.value)">
-                    </div>
-
-                    <!-- Direction Selector -->
-                    <div class="control-group">
-                        <label data-i18n="direction">Direction</label>
-                        <div class="direction-selector">
-                            <button class="dir-btn active" id="btn-cw" onclick="setDirection(0)"
-                                data-i18n="cw">CW</button>
-                            <button class="dir-btn" id="btn-ccw" onclick="setDirection(1)" data-i18n="ccw">CCW</button>
-                            <button class="dir-btn" id="btn-bi" onclick="setDirection(2)"
-                                data-i18n="bidirectional">Bi-Dir</button>
-                        </div>
-                    </div>
-
-                    <button class="btn-primary" onclick="sendSettings()">
-                        <i class="fa-solid fa-save"></i> <span data-i18n="save">SAVE SETTINGS</span>
-                    </button>
+                <div id="deviceList" class="list-group">
+                    <!-- Peers will be injected here -->
+                    <div class="list-item placeholder" data-i18n="no_devices">Cihaz bulunamadı.</div>
                 </div>
             </div>
+        </section>
 
-            <!-- DEVICES TAB -->
-            <div id="devices" class="tab-content transition-fade">
-                <header class="tab-header">
-                    <h2 data-i18n="devices">Device Manager</h2>
-                    <button class="btn-icon" onclick="scanPeers()" title="Scan for Devices"><i
-                            class="fa-solid fa-arrows-rotate"></i></button>
-                </header>
-
-                <div id="deviceList" class="device-list">
-                    <!-- Devices will be injected here via JS -->
-                    <div class="empty-state">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Finding devices...
-                    </div>
+        <!-- Network Tab -->
+        <section id="network" class="tab-content">
+            <div class="card">
+                <h2 data-i18n="wifi_settings">AĞ AYARLARI</h2>
+                <div class="control-group">
+                    <button class="btn-secondary" onclick="scanWifi()" data-i18n="scan_networks">Ağları Tara</button>
+                </div>
+                <div id="wifiList" class="list-group">
+                    <!-- WiFi networks injected here -->
                 </div>
             </div>
+        </section>
 
-            <!-- NETWORK TAB -->
-            <div id="network" class="tab-content transition-fade">
-                <header class="tab-header">
-                    <h2 data-i18n="wifi_settings">WiFi Network</h2>
-                    <button class="btn-icon" onclick="scanNetworks()" title="Scan Networks"><i
-                            class="fa-solid fa-sync"></i></button>
-                </header>
+        <!-- Settings Tab -->
+        <section id="settings" class="tab-content">
+            <div class="card">
+                <h2 data-i18n="settings">AYARLAR</h2>
 
-                <div class="card">
-                    <h3 data-i18n="scan_networks">Available Networks</h3>
-                    <div id="wifiList" class="wifi-list">
-                        <div class="empty-state" data-i18n="scan_networks">Press scan to find networks...</div>
+                <div class="control-group">
+                    <label data-i18n="device_name">Cihaz Adı</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="deviceName" placeholder="Horus Device"
+                            style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary);">
+                    </div>
+                    <small style="color:var(--text-secondary); display:block; margin-top:5px;">Değişiklik sonrası cihaz
+                        yeniden başlar.</small>
+                </div>
+
+                <div class="control-group">
+                    <label><span data-i18n="tpd">TPD (Tur/Gün)</span>: <span id="tpdValue">900</span></label>
+                    <input type="range" id="tpdPayload" min="600" max="1800" step="50" value="900"
+                        oninput="updatesliderLabels()">
+                </div>
+
+                <div class="control-group">
+                    <label><span data-i18n="duration">Tur Süresi (sn)</span>: <span id="durValue">10</span></label>
+                    <input type="range" id="durPayload" min="5" max="15" step="1" value="10"
+                        oninput="updateSliderLabels()">
+                </div>
+
+                <div class="control-group">
+                    <label data-i18n="direction">Yön</label>
+                    <div class="direction-selector">
+                        <button id="dirCW" class="dir-btn" onclick="setDirection(0)">CW</button>
+                        <button id="dirCCW" class="dir-btn" onclick="setDirection(1)">CCW</button>
+                        <button id="dirBi" class="dir-btn active" onclick="setDirection(2)">Bi-Dir</button>
                     </div>
                 </div>
 
-                <div class="card hidden" id="wifiConnectCard">
-                    <h3 data-i18n="wifi_setup">Connect</h3>
-                    <div class="control-group">
-                        <input type="text" id="wifiSSID" placeholder="SSID" readonly>
-                    </div>
-                    <div class="control-group">
-                        <input type="password" id="wifiPass" placeholder="Password">
-                    </div>
-                    <button class="btn-primary" onclick="connectWifi()" data-i18n="connect">Connect</button>
+                <div class="control-group">
+                    <label data-i18n="firmware_version">Yazılım Sürümü</label>
+                    <span id="fwVersion" style="color:var(--accent-color); font-weight:bold;">...</span>
                 </div>
+
+                <button class="btn-primary" onclick="sendSettings()" data-i18n="save">KAYDET</button>
+                <div style="height: 20px;"></div>
+                <button class="btn-secondary" onclick="triggerAutoUpdate()" data-i18n="update_software">Yazılım
+                    Güncelle</button>
+
             </div>
+        </section>
+    </main>
 
-            <!-- SETTINGS TAB -->
-            <div id="settings" class="tab-content transition-fade">
-                <header class="tab-header">
-                    <h2 data-i18n="general_settings">Global Settings</h2>
-                </header>
-
-                <div class="card">
-                    <div class="control-group">
-                        <label data-i18n="language">Language</label>
-                        <select id="languageSelect" onchange="changeLanguage(this.value)">
-                            <option value="tr">Türkçe</option>
-                            <option value="en">English</option>
-                            <option value="de">Deutsch</option>
-                            <option value="ru">Русский</option>
-                            <option value="uk">Українська</option>
-                            <option value="fr">Français</option>
-                            <option value="it">Italiano</option>
-                            <option value="rm">Rumantsch</option>
-                            <option value="es">Español</option>
-                            <option value="mk">Македонски</option>
-                            <option value="sq">Shqip</option>
-                            <option value="bs">Bosanski</option>
-                            <option value="sr">Српски</option>
-                            <option value="rup">Armãneashce</option>
-                            <option value="rom">Romani</option>
-                            <option value="zh">简体中文</option>
-                            <option value="ja">日本語</option>
-                            <option value="az">Azərbaycan</option>
-                        </select>
-                    </div>
-
-                    <div class="control-group">
-                        <label data-i18n="ota_update">Firmware Update</label>
-                        <button class="btn-secondary" onclick="triggerAutoUpdate()">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> <span data-i18n="ota_update">Software
-                                Update</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-        </main>
+    <!-- WiFi Password Modal -->
+    <div id="wifiModal" class="modal">
+        <div class="modal-content" id="wifiConnectCard">
+            <span class="close-modal" onclick="closeWifiModal()">&times;</span>
+            <h3 id="modalSSID">Network Name</h3>
+            <input type="password" id="wifiPass" placeholder="Password">
+            <button class="btn-primary" onclick="connectWifi()" data-i18n="connect">Bağlan</button>
+        </div>
     </div>
 
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" onclick="switchTab('dashboard')" id="nav-dashboard">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-text" data-i18n="dashboard">Panel</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('devices')" id="nav-devices">
+            <span class="nav-icon">📱</span>
+            <span class="nav-text" data-i18n="devices">Cihazlar</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('network')" id="nav-network">
+            <span class="nav-icon">Wi-Fi</span>
+            <span class="nav-text" data-i18n="network">Ağ</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text" data-i18n="settings">Ayarlar</span>
+        </button>
+    </nav>
+
+    <script src="languages.js"></script>
     <script src="script.js"></script>
 </body>
 
