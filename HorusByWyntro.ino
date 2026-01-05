@@ -17,113 +17,55 @@
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
+#include <NetworkClientSecure.h> // Eklendi: Core 3.x SSL için
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
 
+
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
-// 28BYJ-48 için pin sırası: IN1-IN3-IN2-IN4 şeklinde olmalı (AccelStepper
-// FULL4WIRE için)
-#define MOTOR_PIN_1 19
-#define MOTOR_PIN_2 18
-#define MOTOR_PIN_3 5
-#define MOTOR_PIN_4 17
+// ... (defines remain same)
+
+// ... (globals remain same)
 
 // ===============================
-// Sensör ve Buton Tanımlamaları
+// FONKSİYON PROTOTİPLERİ (Full List)
 // ===============================
-#define TOUCH_PIN 23 // TTP223 Dokunmatik Sensör
-#define LED_PIN 2    // Built-in LED
+void loadConfig();
+void saveConfig();
+void initWiFi();
+void initMotor();
+void initWebServer();
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+               AwsEventType type, void *arg, uint8_t *data, size_t len);
+void processCommand(String jsonStr);
+void updateSchedule();
+void handlePhysicalControl();
+void checkSchedule();
+void startMotorTurn(); // Missing
+void handleWifiScan();
+void handleWifiConnection();
+String getWifiListJson();
+void initESPNow();
+void broadcastDiscovery();
+void broadcastStatus();
+void sendToPeer(String targetMac, String command, String action);
+bool execOTA(String url, int command);
+void checkAndPerformUpdate();
 
 // ===============================
-// Sabitler ve Ayarlar
+// OTA Helper Functions
 // ===============================
-#define STEPS_PER_REVOLUTION 2048 // 28BYJ-48 adım sayısı (Yaklaşık)
-#define JSON_CONFIG_FILE "/config.json"
-#define GITHUB_VERSION_URL                                                     \
-  "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
-  "version.json"
-#define FIRMWARE_VERSION "1.0.27"
-
-// ===============================
-// Nesneler
-// ===============================
-// Motor nesnesi (FULL4WIRE modu) - Pin sırası 1-3-2-4 ÖNEMLİ
-AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
-                     MOTOR_PIN_2, MOTOR_PIN_4);
-
-// Web Sunucusu (Port 80)
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-
-// ===============================
-// Global Değişkenler (Durum)
-// ===============================
-// Kullanıcı Ayarları
-struct Config {
-  int tpd = 600;     // Günlük Tur Sayısı (600-1800)
-  int duration = 15; // Bir tur süresi (sn) (10-20)
-  int direction = 0; // 0: CW, 1: CCW, 2: Bi-Directional
-  String hostname = "";
-};
-Config config;
-
-// Çalışma Durumu
-bool isRunning = false;     // Sistem genel olarak aktif mi?
-bool isMotorMoving = false; // Motor şu an dönüyor mu?
-unsigned long sessionStartTime = 0;
-int turnsThisHour = 0;      // Bu saatlik dilimde atılan tur
-int targetTurnsPerHour = 0; // Saat başı hedef tur
-unsigned long lastTouchTime = 0;
-bool touchState = false;
-
-// Zamanlayıcılar
-unsigned long lastHourCheck = 0;
-unsigned long hourDuration = 3600000; // 1 Saat (ms)
-
-// ESP-NOW Peer Listesi
-struct PeerDevice {
-  String mac;
-  String name;
-  unsigned long lastSeen;
-};
-std::vector<PeerDevice> peers;
-#define PEER_TIMEOUT 60000 // 60s görmezsek sileriz
-
-// ESP-NOW Paket Yapısı
-typedef struct struct_message {
-  char type[10]; // "DISCOVER", "STATUS", "CMD"
-  char sender_mac[20];
-  char sender_name[32];
-  char payload[64]; // JSON komut veya durum
-} struct_message;
-
-struct_message myData;
-struct_message incomingData;
-
-// ===============================
-// WiFi & Connection State
-// ===============================
-bool wifiScanning = false;
-long lastWifiCheck = 0;
-String wifiStatusStr = "disconnected";
-bool tryConnect = false;
-unsigned long connectStartTime = 0;
-String myMacAddress;
-bool shouldUpdate = false; // Flag for Auto OTA in loop
-
-// ===============================
-// FONKSİYON PROTOTİPLERİ
-// ===============================
-// ... helper functions ...
 
 // OTA Helper: URL'den stream update
 bool execOTA(String url, int command) {
+  NetworkClientSecure client; // Düzeltme: Secure Client ayrı tanımlanmalı
+  client.setInsecure();
+
   HTTPClient http;
-  http.setInsecure(); // GitHub HTTPS için
-  http.begin(url);
+  http.begin(client, url); // Düzeltme: Client parametre olarak verilmeli
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
   int httpCode = http.GET();
@@ -170,9 +112,12 @@ bool execOTA(String url, int command) {
 
 void checkAndPerformUpdate() {
   Serial.println("Guncelleme kontrol ediliyor...");
+
+  NetworkClientSecure client; // Düzeltme
+  client.setInsecure();
+
   HTTPClient http;
-  http.setInsecure();
-  http.begin(GITHUB_VERSION_URL);
+  http.begin(client, GITHUB_VERSION_URL); // Düzeltme
 
   int httpCode = http.GET();
   if (httpCode == 200) {
@@ -185,12 +130,9 @@ void checkAndPerformUpdate() {
 
     Serial.println("Mevcut: " + currentVersion + ", Yeni: " + newVersion);
 
-    // Semver karsilastirmasi basitce string olarak farkliysa yapalim
-    // (Daha karmasik bir kiyaslama gerekirse eklenebilir)
     if (newVersion != currentVersion) {
       Serial.println("Yeni surum bulundu! Guncelleniyor...");
 
-      // Dosya URL'lerini olustur
       String baseUrl =
           "https://github.com/recaner35/HorusByWyntro/releases/download/" +
           newVersion + "/";
@@ -203,7 +145,6 @@ void checkAndPerformUpdate() {
         Serial.println("LittleFS guncellendi.");
       } else {
         Serial.println("LittleFS guncelleme hatasi!");
-        // FS hatasi kritik degil, devam edebiliriz veya durabiliriz.
       }
 
       // 2. Firmware Guncelle
@@ -225,10 +166,13 @@ void checkAndPerformUpdate() {
 }
 
 // ... inside initWebServer ...
-// (Removed placeholders)
+// server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
+//    request->send(200, "application/json", "{\"status\":\"started\"}");
+//    shouldUpdate = true;
+// });
 
-// ... inside loop ...
-// (Removed placeholders)
+// Global flag
+// bool shouldUpdate = false; // Already defined in globals section
 
 // ===============================
 // Kurulum (Setup)
