@@ -45,7 +45,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.22"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -409,24 +409,74 @@ void processCommand(String jsonStr) {
 
 void initWiFi() {
   WiFi.mode(WIFI_AP_STA);
-  // ... (Efuse okuma kodu aynı) ...
-  // Sadece bu satırı ekle:
-  myMacAddress = WiFi.macAddress();
-  // ...
-
-  // Önceki kodun aynısı...
+  // 1. AP Başlat
+  // MAC Adresini doğrudan Efuse'dan oku (Daha güvenilir)
   uint64_t chipid = ESP.getEfuseMac();
-  char macBuf[18];
-  sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
-          (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
-          (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
-          (uint8_t)(chipid >> 40));
-  myMacAddress = String(macBuf);    // Düzeltme: ChipID little endian olabilir,
-                                    // WiFi.macAddress() en temizi.
-  myMacAddress = WiFi.macAddress(); // Standart kütüphaneyi kullanalım
+  uint16_t chip = (uint16_t)(chipid >> 32);
 
-  String apName = "horus-" + myMacAddress.substring(12, 14) +
-                  myMacAddress.substring(15, 17);
+  // Son 4 hane (2 byte) için chipid'nin alt kısımlarını kullan
+  // chipid 6 byte return eder.
+  char macBuf[18];
+  // 6 byte MAC:
+  // (chipid >> 40) & 0xFF
+  // (chipid >> 32) & 0xFF
+  // (chipid >> 24) & 0xFF
+  // (chipid >> 16) & 0xFF
+  // (chipid >> 8) & 0xFF
+  // (chipid >> 0) & 0xFF
+
+  // Biz sadece son 2 byte'ı unique ID olarak kullanalım (basitlik için)
+  // Veya WiFi.macAddress() stringi üzerinden gidelim ama AP ismini efuse'dan
+  // türetelim.
+
+  // Eski çalışan kodun mantığını geri getiriyoruz.
+  // WiFi mac adresini string olarak al
+  myMacAddress = WiFi.macAddress();
+
+  // AP ismini oluştururken garanti olsun diye Efuse kullanalım
+  // ya da myMacAddress'in boş gelme ihtimaline karşı kontrol koyalım
+  if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
+    // Fallback: Efuse
+    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
+            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
+            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
+            (uint8_t)(chipid >> 40));
+    myMacAddress = String(macBuf);
+  }
+
+  // AP ismi örneği: horus-A1B2
+  // String substring 12,14 (xx:xx:xx:xx:YY:zz) -> YY
+  // String substring 15,17 (xx:xx:xx:xx:yy:ZZ) -> ZZ
+  String shortMac = myMacAddress.substring(9); // xx:xx:xx:AA:BB:CC alalım
+  shortMac.replace(":", "");                   // AABBCC
+
+  // Daha kısa olsun: Son 4 hane
+  String apSuffix =
+      myMacAddress.substring(12, 14) + myMacAddress.substring(15, 17);
+  // Eğer mac düzgün gelmediyse suffix 0000 olabilir.
+
+  // Efusedan garanti suffix üretelim:
+  char suffixBuf[5];
+  sprintf(suffixBuf, "%02X%02X", (uint8_t)(chipid >> 40),
+          (uint8_t)(chipid >> 32));
+  // Not: Efuse byteları modele göre değişebilir, ancak genellikle unique ID
+  // içerir.
+
+  String apName = "horus-" + apSuffix;
+
+  // Kullanıcı "0000" görüyorum dedi, demek ki WiFi.macAddress() o an 0 dönüyor
+  // olabilir. Bu yüzden AP başlatmadan önce biraz bekleyip tekrar denemek veya
+  // efuse kullanmak en iyisi.
+
+  // KESİN ÇÖZÜM:
+  // AP ismini ChipID'den türetelim, WiFi.macAddress'e güvenmeyelim.
+  uint32_t low = chipid & 0xFFFFFFFF;
+  uint16_t idHigh = (low >> 0) & 0xFFFF; // Rastgele bir parça
+
+  char idStr[5];
+  sprintf(idStr, "%04X", idHigh);
+  apName = "horus-" + String(idStr);
+
   WiFi.softAP(apName.c_str());
 
   if (config.hostname == "")
