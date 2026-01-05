@@ -280,3 +280,33 @@ function changeLanguage(lang) {
     });
     updateStatusUI();
 }
+
+// =======================
+// OTA AUTO UPDATE
+// =======================
+function triggerAutoUpdate() {
+    if (!confirm("Check for updates and install if available? Device will reboot.")) return;
+
+    const btn = document.querySelector('#settings button.btn-secondary'); // Target the update button
+    const originalText = btn.innerHTML;
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+    btn.disabled = true;
+
+    fetch('/api/ota-auto', { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                alert('Update process started! The device will check version, download, and reboot if a new version is found. Please wait ~2 minutes.');
+            } else {
+                alert('Failed to start update process.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error triggering update.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+}
