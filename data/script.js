@@ -219,14 +219,11 @@ function switchTab(tabId) {
     document.getElementById('nav-' + tabId).classList.add('active');
 }
 
-// ================= DEVICE DISCOVERY =================
+// ================= DEVICE DISCOVERY & CONTROL =================
 function refreshPeers() {
     var cmd = { type: "check_peers" };
     socket.send(JSON.stringify(cmd));
-    document.getElementById('deviceList').innerHTML = '<div class="list-item placeholder" data-i18n="scanning">' + getTrans('scanning') + '</div>';
-
-    // Auto refresh peers every 5 sec if on devices tab? 
-    // For now manual is fine or handled by backend broadcast
+    document.getElementById('deviceList').innerHTML = '<div class="list-item placeholder" data-i18n="scanning">' + getTrans('scanning') + '...</div>';
 }
 
 function renderPeers(peers) {
@@ -238,26 +235,113 @@ function renderPeers(peers) {
     }
 
     peers.forEach(function (p) {
-        var item = document.createElement('div');
-        item.className = "list-item";
-        item.innerHTML = `
-            <div class="list-info">
-                <span class="ssid">${p.name || 'Horus Device'}</span>
-                <span class="rssi">${p.mac}</span>
+        // Varsayılan değerler
+        var tpd = p.tpd !== undefined ? p.tpd : 900;
+        var dur = p.dur !== undefined ? p.dur : 10;
+        var dir = p.dir !== undefined ? p.dir : 2;
+        var isRunning = p.running === true;
+
+        var div = document.createElement('div');
+        div.className = 'card peer-card';
+        div.id = 'peer-' + p.mac;
+
+        var statusColor = isRunning ? 'var(--success-color)' : 'var(--text-secondary)';
+
+        // Kart İçeriği
+        var html = `
+            <div class="peer-header">
+                <div>
+                    <h3>${p.name}</h3>
+                    <small style="opacity:0.6">${p.mac}</small>
+                </div>
+                <div style="width:12px; height:12px; border-radius:50%; background:${statusColor}; box-shadow: 0 0 5px ${statusColor};"></div>
             </div>
-            <div class="list-action">
-                <button class="btn-small" onclick="controlPeer('${p.mac}', 'start')" data-i18n="start">START</button>
-                <button class="btn-small btn-stop" onclick="controlPeer('${p.mac}', 'stop')" data-i18n="stop">STOP</button>
+            
+            <div class="peer-controls-grid">
+                <div class="control-group">
+                    <label>TPD</label>
+                    <input type="number" id="p-tpd-${p.mac}" value="${tpd}">
+                </div>
+                <div class="control-group">
+                    <label>${getTrans('duration') || 'Süre'}</label>
+                    <input type="number" id="p-dur-${p.mac}" value="${dur}">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>${getTrans('direction') || 'Yön'}</label>
+                <div class="direction-selector">
+                    <button class="dir-btn ${dir == 0 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 0)">CW</button>
+                    <button class="dir-btn ${dir == 1 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 1)">CCW</button>
+                    <button class="dir-btn ${dir == 2 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 2)">⇄</button>
+                </div>
+                <input type="hidden" id="p-dir-${p.mac}" value="${dir}">
+            </div>
+            
+            <div class="peer-actions" style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-small ${isRunning ? 'btn-stop' : ''}" style="flex:1" onclick="togglePeer('${p.mac}', ${!isRunning})">
+                    ${isRunning ? (getTrans('stop') || 'DURDUR') : (getTrans('start') || 'BAŞLAT')}
+                </button>
+                <button class="btn-secondary" style="flex:1" onclick="pushPeerSettings('${p.mac}', ${isRunning})">
+                    ${getTrans('save') || 'KAYDET'}
+                </button>
             </div>
         `;
-        list.appendChild(item);
+
+        div.innerHTML = html;
+        list.appendChild(div);
     });
 }
+// Global scope functions for onclick
+window.setPeerDirUI = function (btn, mac, dir) {
+    var parent = btn.parentElement;
+    var btns = parent.getElementsByClassName('dir-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    btn.classList.add('active');
+    document.getElementById('p-dir-' + mac).value = dir;
+};
 
-function controlPeer(mac, action) {
-    var cmd = { type: "peer_command", target: mac, action: action };
+window.pushPeerSettings = function (mac, currentRunningState) {
+    var tpd = parseInt(document.getElementById('p-tpd-' + mac).value);
+    var dur = parseInt(document.getElementById('p-dur-' + mac).value);
+    var dir = parseInt(document.getElementById('p-dir-' + mac).value);
+
+    // Running state'i inputtan değil, fonksiyona gelen mevcut parametreden al ama 
+    // togglePeer ayrı çalışıyor. Buradaki amaç ayarları kaydetmek. 
+    // Ayar kaydederken motoru durdurmasın veya başlatmasın, mevcut durumu korusun
+    // ANCAK: Kullanıcı başlat/durdur butonuna basmadan ayar gönderirse running ne olacak?
+    // renderPeers'ta running state'i güncellemiştik.
+
+    var cmd = {
+        type: "peer_settings",
+        target: mac,
+        tpd: tpd,
+        dur: dur,
+        dir: dir,
+        running: currentRunningState // Statusu koru
+    };
+
     socket.send(JSON.stringify(cmd));
-}
+    // Görsel geri bildirim
+    alert('Ayarlar cihaza gönderildi!');
+};
+
+window.togglePeer = function (mac, newState) {
+    // Mevcut input değerlerini de alalım ki toggle yaparken ayarlar sıfırlanmasın
+    var tpd = parseInt(document.getElementById('p-tpd-' + mac).value);
+    var dur = parseInt(document.getElementById('p-dur-' + mac).value);
+    var dir = parseInt(document.getElementById('p-dir-' + mac).value);
+
+    var cmd = {
+        type: "peer_settings",
+        target: mac,
+        tpd: tpd,
+        dur: dur,
+        dir: dir,
+        running: newState
+    };
+    socket.send(JSON.stringify(cmd));
+};
 
 // ================= WIFI LOGIC =================
 function scanWifi() {
