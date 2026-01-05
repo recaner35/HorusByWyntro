@@ -46,7 +46,8 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.66"
+#define FIRMWARE_VERSION "1.0.0"
+#define PEER_FILE "/peers.json"
 
 // ===============================
 // Nesneler
@@ -136,9 +137,12 @@ void handleWifiScan();
 void handleWifiConnection();
 String getWifiListJson();
 void initESPNow();
+void restorePeers();
 void broadcastDiscovery();
 void broadcastStatus();
 void sendToPeer(String targetMac, String payloadJson);
+void loadPeers();
+void savePeers();
 bool execOTA(String url, int command);
 void checkAndPerformUpdate();
 String slugify(String text);
@@ -371,6 +375,9 @@ void setup() {
     Serial.println("mDNS Başlatıldı: " + mdnsName + ".local");
   }
 
+  loadPeers();
+  restorePeers(); // Load peers to ESP-NOW list initially
+
   updateSchedule();
   delay(100); // ESP-NOW'un hazır olması için kısa bekleme
   broadcastDiscovery();
@@ -420,6 +427,9 @@ void loop() {
   }
 
   // Her 10 saniyede bir eski peer'ları temizle
+  // Her 10 saniyede bir eski peer'ları temizle -- DEVRE DIŞI BIRAKILDI
+  // (Persistence için)
+  /*
   if (millis() - lastPrune > 10000) {
     lastPrune = millis();
     for (int i = peers.size() - 1; i >= 0; i--) {
@@ -427,24 +437,27 @@ void loop() {
         Serial.println("Peer timeout: " + peers[i].name + " (" + peers[i].mac +
                        ")");
         peers.erase(peers.begin() + i);
-        String json = "{ \"peers\": [";
-        for (int j = 0; j < peers.size(); j++) {
-          if (j > 0)
-            json += ",";
-          json += "{\"mac\":\"" + peers[j].mac + "\",\"name\":\"" +
-                  peers[j].name + "\",\"tpd\":" + String(peers[j].tpd) +
-                  ",\"dur\":" + String(peers[j].duration) +
-                  ",\"dir\":" + String(peers[j].direction) +
-                  ",\"running\":" + (peers[j].isRunning ? "true" : "false") +
-                  "}";
-        }
-        json += "] }";
-        ws.textAll(json);
+        // ... WS update logic
       }
     }
   }
+  */
+  for (int j = 0; j < peers.size(); j++) {
+    if (j > 0)
+      json += ",";
+    json += "{\"mac\":\"" + peers[j].mac + "\",\"name\":\"" + peers[j].name +
+            "\",\"tpd\":" + String(peers[j].tpd) +
+            ",\"dur\":" + String(peers[j].duration) +
+            ",\"dir\":" + String(peers[j].direction) +
+            ",\"running\":" + (peers[j].isRunning ? "true" : "false") + "}";
+  }
+  json += "] }";
+  ws.textAll(json);
+}
+}
+}
 
-  delay(2); // CPU ve WiFi stack için kısa bekleme
+delay(2); // CPU ve WiFi stack için kısa bekleme
 }
 
 // ===============================
@@ -524,8 +537,18 @@ void saveConfig() {
 void handleWifiScan() {
   if (wifiScanning) {
     int n = WiFi.scanComplete();
-    if (n >= 0 || n == -2)
+    if (n >= 0) { // Tarama tamamlandı
       wifiScanning = false;
+
+      // ESP-NOW Servisini yeniden başlat ve peerları yükle
+      initESPNow();
+      restorePeers();
+
+      // Kanalı tekrar 1'e sabitle (ESP-NOW gereği)
+      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
+    } else if (n == -2) {
+      wifiScanning = false;
+    }
   }
 }
 
@@ -593,6 +616,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
       if (p.name != senderName) {
         p.name = senderName;
         needsUpdate = true;
+        savePeers(); // İsim değişirse kaydet
       }
       // Update motor settings if present in payload
       if (doc_payload.containsKey("r"))
@@ -631,6 +655,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     Serial.println("  Yeni peer eklendi! Toplam peer sayısı: " +
                    String(peers.size()));
     needsUpdate = true;
+    savePeers(); // Yeni peer eklendiğinde kaydet
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
@@ -696,7 +721,9 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
               "\",\"tpd\":" + String(peers[i].tpd) +
               ",\"dur\":" + String(peers[i].duration) +
               ",\"dir\":" + String(peers[i].direction) +
-              ",\"running\":" + (peers[i].isRunning ? "true" : "false") + "}";
+              ",\"running\":" + (peers[i].isRunning ? "true" : "false") +
+              ",\"online\":" +
+              ((millis() - peers[i].lastSeen < 65000) ? "true" : "false") + "}";
     }
     json += "] }";
     ws.textAll(json);
@@ -745,6 +772,69 @@ void initESPNow() {
     Serial.println("Broadcast peer eklendi");
   } else {
     Serial.println("Broadcast peer eklenemedi!");
+  }
+}
+
+void restorePeers() {
+  for (auto &p : peers) {
+    uint8_t mac[6];
+    sscanf(p.mac.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2],
+           &mac[3], &mac[4], &mac[5]);
+
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, mac, 6);
+    peerInfo.channel = 1;
+    peerInfo.encrypt = false;
+    if (!esp_now_is_peer_exist(mac)) {
+      esp_now_add_peer(&peerInfo);
+    }
+  }
+  Serial.println("Peerlar ESP-NOW'a geri yüklendi.");
+}
+
+void loadPeers() {
+  if (LittleFS.exists(PEER_FILE)) {
+    File file = LittleFS.open(PEER_FILE, "r");
+    if (file) {
+      StaticJsonDocument<2048> doc;
+      DeserializationError error = deserializeJson(doc, file);
+      if (!error) {
+        peers.clear();
+        JsonArray arr = doc.as<JsonArray>();
+        for (JsonObject obj : arr) {
+          PeerDevice p;
+          p.mac = obj["mac"].as<String>();
+          p.name = obj["name"].as<String>();
+          p.tpd = obj["tpd"];
+          p.duration = obj["dur"];
+          p.direction = obj["dir"];
+          p.isRunning = false; // Başlangıçta false varsayalım
+          p.lastSeen = 0;      // Offline
+          peers.push_back(p);
+        }
+        Serial.println("Peerlar yüklendi: " + String(peers.size()));
+      }
+      file.close();
+    }
+  }
+}
+
+void savePeers() {
+  File file = LittleFS.open(PEER_FILE, "w");
+  if (file) {
+    StaticJsonDocument<2048> doc;
+    JsonArray arr = doc.to<JsonArray>();
+    for (auto &p : peers) {
+      JsonObject obj = arr.createNestedObject();
+      obj["mac"] = p.mac;
+      obj["name"] = p.name;
+      obj["tpd"] = p.tpd;
+      obj["dur"] = p.duration;
+      obj["dir"] = p.direction;
+    }
+    serializeJson(doc, file);
+    file.close();
+    Serial.println("Peerlar kaydedildi.");
   }
 }
 
@@ -850,7 +940,12 @@ void processCommand(String jsonStr) {
       if (i > 0)
         json += ",";
       json += "{\"mac\":\"" + peers[i].mac + "\",\"name\":\"" + peers[i].name +
-              "\"}";
+              "\",\"tpd\":" + String(peers[i].tpd) +
+              ",\"dur\":" + String(peers[i].duration) +
+              ",\"dir\":" + String(peers[i].direction) +
+              ",\"running\":" + (peers[i].isRunning ? "true" : "false") +
+              ",\"online\":" +
+              ((millis() - peers[i].lastSeen < 65000) ? "true" : "false") + "}";
     }
     json += "] }";
     ws.textAll(json);
@@ -868,6 +963,32 @@ void processCommand(String jsonStr) {
     String payload;
     serializeJson(pDoc, payload);
     sendToPeer(target, payload);
+  } else if (type == "del_peer") {
+    String target = doc["target"];
+    for (int i = 0; i < peers.size(); i++) {
+      if (peers[i].mac == target) {
+        // ESP-NOW'dan da sil
+        uint8_t mac[6];
+        sscanf(target.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2],
+               &mac[3], &mac[4], &mac[5]);
+        esp_now_del_peer(mac);
+
+        peers.erase(peers.begin() + i);
+        savePeers();
+
+        // Tüm istemcilere güncel listeyi gönder
+        String json = "{ \"peers\": [";
+        for (int k = 0; k < peers.size(); k++) {
+          if (k > 0)
+            json += ",";
+          json += "{\"mac\":\"" + peers[k].mac + "\",\"name\":\"" +
+                  peers[k].name + "\"}";
+        }
+        json += "] }";
+        ws.textAll(json);
+        break;
+      }
+    }
   }
 }
 
@@ -927,6 +1048,7 @@ void initWebServer() {
 
   server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!wifiScanning) {
+      esp_now_deinit(); // Tarama öncesi ESP-NOW'ı durdur (Çakışmayı önle)
       WiFi.scanNetworks(true);
       wifiScanning = true;
       request->send(202, "application/json", "{\"status\":\"scanning\"}");
