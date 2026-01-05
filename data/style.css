@@ -403,36 +403,80 @@ input:focus {
 
     .sidebar {
         width: 100%;
-        height: auto;
-        padding: 10px;
+        height: 70px;
+        /* Fixed header height */
+        padding: 0 20px;
         flex-direction: row;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
+        /* Center logo in header */
+        position: relative;
+        z-index: 100;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: none;
     }
 
     .logo {
         margin-bottom: 0;
-        font-size: 1.2rem;
+        height: 40px;
+        /* Limit logo height in header */
     }
 
     .nav-links {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: var(--sidebar-bg);
+        /* Match sidebar background */
+        backdrop-filter: blur(10px);
         flex-direction: row;
-        overflow-x: auto;
-        gap: 5px;
-        justify-content: flex-end;
+        justify-content: space-around;
+        /* Distribute icons evenly */
+        align-items: center;
+        padding: 0 10px;
+        gap: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        z-index: 1000;
+        /* On top of everything */
+        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
     }
 
     .nav-btn span {
         display: none;
+        /* Hide text on mobile */
     }
 
-    /* Icon only on mobile */
     .nav-btn {
         padding: 10px;
+        flex: 1;
+        /* Each button takes equal width */
+        justify-content: center;
+        border-radius: 0;
+        margin: 0;
+    }
+
+    .nav-btn.active {
+        box-shadow: inset 0 -3px 0 var(--accent-color);
+        /* Bottom indicator instead of full bg */
+        background: transparent;
+        color: var(--accent-color);
+    }
+
+    .connection-status {
+        position: absolute;
+        top: 25px;
+        right: 20px;
+        margin: 0;
     }
 
     .content-area {
-        padding: 15px;
+        padding: 20px;
         padding-bottom: 80px;
+        /* Space for bottom nav */
+        margin-top: 0;
+        height: calc(100vh - 70px);
+        /* Subtract header height */
     }
 }
