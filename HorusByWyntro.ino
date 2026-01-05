@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.51"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -77,6 +77,7 @@ int turnsThisHour = 0;      // Bu saatlik dilimde atılan tur
 int targetTurnsPerHour = 0; // Saat başı hedef tur
 unsigned long lastTouchTime = 0;
 bool touchState = false;
+String deviceSuffix = ""; // Unique suffix from ChipID
 
 // Zamanlayıcılar
 unsigned long lastHourCheck = 0;
@@ -206,7 +207,7 @@ String slugify(String text) {
     out = out.substring(0, out.length() - 1);
 
   if (out.length() == 0)
-    return "horus-device";
+    return "horus"; // Default base if empty
   return out;
 }
 
@@ -340,13 +341,28 @@ void setup() {
   pinMode(TOUCH_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
 
+  // Generate Device Suffix from Efuse ID
+  uint64_t chipid = ESP.getEfuseMac();
+  uint32_t low = chipid & 0xFFFFFFFF;
+  uint16_t idHigh = (low >> 0) & 0xFFFF;
+  char idStr[5];
+  sprintf(idStr, "%04X", idHigh);
+  deviceSuffix = String(idStr);
+  Serial.println("Device Suffix: " + deviceSuffix);
+
   initMotor();
   initWiFi();
   delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
   initESPNow();
   initWebServer();
 
-  String mdnsName = slugify(config.hostname);
+  // MDNS Name logic: slugify(hostname) + "-" + suffix
+  String mdnsBase = "horus";
+  if (config.hostname != "") {
+    mdnsBase = slugify(config.hostname);
+  }
+  String mdnsName = mdnsBase + "-" + deviceSuffix;
+
   if (MDNS.begin(mdnsName.c_str())) {
     Serial.println("mDNS Başlatıldı: " + mdnsName + ".local");
   }
