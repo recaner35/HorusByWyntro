@@ -3,6 +3,7 @@ var isRunning = false;
 var currentDirection = 2; // 0: CW, 1: CCW, 2: Bi-Directional
 var wifiScanInterval;
 var otaStatusInterval;
+var deviceSuffix = ""; // WebSocket'ten gelecek
 
 // Dil dosyasından çeviri al
 function getTrans(key) {
@@ -82,6 +83,9 @@ function initWebSocket() {
         if (data.name !== undefined) {
             document.getElementById('deviceName').value = data.name;
         }
+        if (data.suffix !== undefined) {
+            deviceSuffix = data.suffix;
+        }
 
         if (data.peers) {
             renderPeers(data.peers);
@@ -139,17 +143,61 @@ function sendSettings() {
     var tpd = parseInt(document.getElementById('tpdPayload').value);
     var dur = parseInt(document.getElementById('durPayload').value);
     var dir = currentDirection;
-    var name = document.getElementById('deviceName').value; // Get Name
 
     var settings = {
         type: "settings",
         tpd: tpd,
         dur: dur,
-        dir: dir,
-        name: name
+        dir: dir
     };
     socket.send(JSON.stringify(settings));
     alert(getTrans('saved'));
+}
+
+function saveDeviceName() {
+    var name = document.getElementById('deviceName').value;
+
+    if (!name || name.trim() === '') {
+        alert('Lütfen geçerli bir cihaz adı girin.');
+        return;
+    }
+
+    var settings = {
+        type: "settings",
+        name: name
+    };
+
+    socket.send(JSON.stringify(settings));
+
+    // Kullanıcıya bilgi ver
+    alert('Cihaz adı kaydedildi. Cihaz yeniden başlatılıyor...');
+
+    // 3 saniye bekle, sonra yeni hostname'e yönlendir
+    setTimeout(function () {
+        // Slugify fonksiyonunu JavaScript'te de uyguluyoruz
+        var slugifiedName = name.toLowerCase()
+            .replace(/ş/g, 's').replace(/Ş/g, 's')
+            .replace(/ı/g, 'i').replace(/İ/g, 'i')
+            .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
+            .replace(/ü/g, 'u').replace(/Ü/g, 'u')
+            .replace(/ö/g, 'o').replace(/Ö/g, 'o')
+            .replace(/ç/g, 'c').replace(/Ç/g, 'c')
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/--+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        if (!slugifiedName) slugifiedName = 'horus';
+
+        // Hostname: slugName + "-" + suffix + ".local"
+        // Suffix yoksa (hata veya eski FW) sadece slugName kullan (veya varsayılan suffix)
+        var newHostname = slugifiedName;
+        if (deviceSuffix) {
+            newHostname += "-" + deviceSuffix;
+        }
+
+        // Yeni hostname'e yönlendir
+        window.location.href = 'http://' + newHostname + '.local';
+    }, 3000);
 }
 
 // ================= TAB LOGIC =================
