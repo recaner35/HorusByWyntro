@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.65"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -701,7 +701,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     json += "] }";
     ws.textAll(json);
     Serial.println("Mevcut peer sayısı: " + String(peers.size()));
-  } else if (type == "peer_settings") {
+  } /* else if (type == "peer_settings") {
     // Send settings command to peer
     String target = doc["target"];
     StaticJsonDocument<128> pDoc;
@@ -714,7 +714,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     String payload;
     serializeJson(pDoc, payload);
     sendToPeer(target, payload);
-  }
+  } */
 }
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
