@@ -55,6 +55,13 @@ window.onload = function () {
 function initWebSocket() {
     socket = new WebSocket('ws://' + window.location.hostname + '/ws');
 
+    // Otomatik durum güncellemesi (10 saniyede bir)
+    setInterval(function () {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "check_peers" }));
+        }
+    }, 10000);
+
     socket.onopen = function () {
         console.log('WebSocket Connected');
         document.getElementById('connectionStatus').style.backgroundColor = '#0f0';
@@ -223,7 +230,7 @@ function switchTab(tabId) {
 function refreshPeers() {
     var cmd = { type: "check_peers" };
     socket.send(JSON.stringify(cmd));
-    document.getElementById('deviceList').innerHTML = '<div class="list-item placeholder" data-i18n="scanning">' + getTrans('scanning') + '...</div>';
+    // Placeholder kaldırıldı - akıcı güncelleme için
 }
 
 function renderPeers(peers) {
@@ -240,12 +247,13 @@ function renderPeers(peers) {
         var dur = p.dur !== undefined ? p.dur : 10;
         var dir = p.dir !== undefined ? p.dir : 2;
         var isRunning = p.running === true;
+        var isOnline = (p.online !== undefined) ? p.online : true;
 
         var div = document.createElement('div');
-        div.className = 'card peer-card';
+        div.className = 'card peer-card' + (isOnline ? '' : ' offline');
         div.id = 'peer-' + p.mac;
 
-        var statusColor = isRunning ? 'var(--success-color)' : 'var(--text-secondary)';
+        var statusColor = isOnline ? (isRunning ? 'var(--success-color)' : 'var(--text-secondary)') : '#555';
 
         // Kart İçeriği
         var html = `
@@ -254,7 +262,12 @@ function renderPeers(peers) {
                     <h3>${p.name}</h3>
                     <small style="opacity:0.6">${p.mac}</small>
                 </div>
-                <div style="width:12px; height:12px; border-radius:50%; background:${statusColor}; box-shadow: 0 0 5px ${statusColor};"></div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:12px; height:12px; border-radius:50%; background:${statusColor}; box-shadow: 0 0 5px ${statusColor};" title="${isOnline ? 'Online' : 'Offline'}"></div>
+                    <button class="btn-icon" onclick="deletePeer('${p.mac}')" title="${getTrans('delete') || 'Sil'}">
+                        <svg style="width:20px;height:20px" viewBox="0 0 24 24"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+                    </button>
+                </div>
             </div>
             
             <div class="peer-controls-grid">
@@ -341,6 +354,17 @@ window.togglePeer = function (mac, newState) {
         running: newState
     };
     socket.send(JSON.stringify(cmd));
+};
+
+window.deletePeer = function (mac) {
+    var msg = (typeof getTrans === 'function' && getTrans('confirm_delete')) ? getTrans('confirm_delete') : "Cihazı silmek istediğinize emin misiniz?";
+    if (confirm(msg)) {
+        var cmd = {
+            type: "del_peer",
+            target: mac
+        };
+        socket.send(JSON.stringify(cmd));
+    }
 };
 
 // ================= WIFI LOGIC =================
