@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.61"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -88,6 +88,10 @@ struct PeerDevice {
   String mac;
   String name;
   unsigned long lastSeen;
+  int tpd = 900;
+  int duration = 10;
+  int direction = 2;
+  bool isRunning = false;
 };
 std::vector<PeerDevice> peers;
 #define PEER_TIMEOUT 60000 // 60s görmezsek sileriz
@@ -134,7 +138,7 @@ String getWifiListJson();
 void initESPNow();
 void broadcastDiscovery();
 void broadcastStatus();
-void sendToPeer(String targetMac, String command, String action);
+void sendToPeer(String targetMac, String payloadJson);
 bool execOTA(String url, int command);
 void checkAndPerformUpdate();
 String slugify(String text);
@@ -428,7 +432,11 @@ void loop() {
           if (j > 0)
             json += ",";
           json += "{\"mac\":\"" + peers[j].mac + "\",\"name\":\"" +
-                  peers[j].name + "\"}";
+                  peers[j].name + "\",\"tpd\":" + String(peers[j].tpd) +
+                  ",\"dur\":" + String(peers[j].duration) +
+                  ",\"dir\":" + String(peers[j].direction) +
+                  ",\"running\":" + (peers[j].isRunning ? "true" : "false") +
+                  "}";
         }
         json += "] }";
         ws.textAll(json);
@@ -576,6 +584,9 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
   bool found = false;
   bool needsUpdate = false;
 
+  StaticJsonDocument<128> doc_payload; // Parse payload once for all checks
+  deserializeJson(doc_payload, incomingData.payload);
+
   for (auto &p : peers) {
     if (p.mac == senderMac) {
       p.lastSeen = millis();
@@ -583,6 +594,16 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
         p.name = senderName;
         needsUpdate = true;
       }
+      // Update motor settings if present in payload
+      if (doc_payload.containsKey("r"))
+        p.isRunning = doc_payload["r"];
+      if (doc_payload.containsKey("t"))
+        p.tpd = doc_payload["t"];
+      if (doc_payload.containsKey("d"))
+        p.duration = doc_payload["d"];
+      if (doc_payload.containsKey("dr"))
+        p.direction = doc_payload["dr"];
+
       found = true;
       Serial.println("  Mevcut peer güncellendi");
       break;
@@ -594,6 +615,17 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     newPeer.mac = senderMac;
     newPeer.name = senderName;
     newPeer.lastSeen = millis();
+
+    // Populate new peer's motor settings from payload
+    if (doc_payload.containsKey("r"))
+      newPeer.isRunning = doc_payload["r"];
+    if (doc_payload.containsKey("t"))
+      newPeer.tpd = doc_payload["t"];
+    if (doc_payload.containsKey("d"))
+      newPeer.duration = doc_payload["d"];
+    if (doc_payload.containsKey("dr"))
+      newPeer.direction = doc_payload["dr"];
+
     peers.push_back(newPeer);
 
     Serial.println("  Yeni peer eklendi! Toplam peer sayısı: " +
@@ -613,6 +645,47 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     }
   }
 
+  // Eğer bu bir CMD ise ve bize geldiyse uygula
+  if (type == "CMD") {
+    // doc_payload already contains the deserialized data
+
+    // Ayar değiştirme komutu
+    if (doc_payload.containsKey("set")) {
+      if (doc_payload.containsKey("t"))
+        config.tpd = doc_payload["t"];
+      if (doc_payload.containsKey("d"))
+        config.duration = doc_payload["d"];
+      if (doc_payload.containsKey("dr"))
+        config.direction = doc_payload["dr"];
+      if (doc_payload.containsKey("r"))
+        isRunning = doc_payload["r"];
+
+      saveConfig();
+      updateSchedule();
+      broadcastStatus(); // Yeni durumu herkese bildir
+
+      // WS'ye de bildir
+      String json = "{\"running\":" + String(isRunning ? "true" : "false") +
+                    ",\"tpd\":" + String(config.tpd) +
+                    ",\"dur\":" + String(config.duration) +
+                    ",\"dir\":" + String(config.direction) + "}";
+      ws.textAll(json);
+    } else { // Original CMD actions (start/stop)
+      String action = doc_payload["action"];
+      Serial.println("  Komut alındı: " + action);
+
+      if (action == "start")
+        isRunning = true;
+      if (action == "stop")
+        isRunning = false;
+
+      broadcastStatus();
+      String resp =
+          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      ws.textAll(resp);
+    }
+  }
+
   // Peer listesi değiştiyse web socket'e bildir
   if (needsUpdate) {
     String json = "{ \"peers\": [";
@@ -620,309 +693,317 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
       if (i > 0)
         json += ",";
       json += "{\"mac\":\"" + peers[i].mac + "\",\"name\":\"" + peers[i].name +
-              "\"}";
+              broadcastStatus();
+      String resp =
+          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      ws.textAll(resp);
     }
-    json += "] }";
-    ws.textAll(json);
   }
 
-  if (type == "CMD") {
-    String payload = String(incomingData.payload);
-    StaticJsonDocument<200> doc;
-    deserializeJson(doc, payload);
-    String action = doc["action"];
-
-    Serial.println("  Komut alındı: " + action);
-
-    if (action == "start")
-      isRunning = true;
-    if (action == "stop")
-      isRunning = false;
-
-    broadcastStatus();
-    String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-    ws.textAll(resp);
-  }
-}
-
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  // Debug if needed
-}
-
-void initESPNow() {
-  WiFi.disconnect(); // STA modundaki eski bağlantıları temizle
-
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
+  void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+    // Debug if needed
   }
 
-  Serial.println("ESP-NOW Başlatıldı");
-  Serial.println("WiFi Kanal: " + String(WiFi.channel()));
+  void initESPNow() {
+    WiFi.disconnect(); // STA modundaki eski bağlantıları temizle
 
-  esp_now_register_recv_cb(OnDataRecv);
-  esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
-
-  // Broadcast peer ekleme
-  esp_now_peer_info_t peerInfo = {};
-  memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 1; // WiFi kanalıyla aynı olmalı
-  peerInfo.encrypt = false;
-
-  if (esp_now_add_peer(&peerInfo) == ESP_OK) {
-    Serial.println("Broadcast peer eklendi");
-  } else {
-    Serial.println("Broadcast peer eklenemedi!");
-  }
-}
-
-void broadcastDiscovery() {
-  strcpy(myData.type, "DISCOVER");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-  strcpy(myData.payload, "");
-  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-  esp_err_t result =
-      esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-
-  if (result == ESP_OK) {
-    Serial.println("Discovery broadcast gönderildi: " + config.hostname);
-  } else {
-    Serial.println("Discovery broadcast gönderilemedi! Hata: " +
-                   String(result));
-  }
-}
-
-void broadcastStatus() {
-  strcpy(myData.type, "STATUS");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-  String status = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-  status.toCharArray(myData.payload, 64);
-  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-}
-
-void sendToPeer(String targetMac, String command, String action) {
-  uint8_t peerAddr[6];
-  sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
-         &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
-
-  strcpy(myData.type, "CMD");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-  String payload = "{\"action\":\"" + action + "\"}";
-  payload.toCharArray(myData.payload, 64);
-  esp_now_send(peerAddr, (uint8_t *)&myData, sizeof(myData));
-}
-
-void processCommand(String jsonStr) {
-  StaticJsonDocument<200> doc;
-  DeserializationError error = deserializeJson(doc, jsonStr);
-  if (error)
-    return;
-
-  String type = doc["type"];
-
-  if (type == "command") {
-    String action = doc["action"];
-    if (action == "start")
-      isRunning = true;
-    if (action == "stop")
-      isRunning = false;
-    updateSchedule();
-    broadcastStatus(); // Added broadcastStatus here
-    String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-    ws.textAll(resp);
-  } else if (type == "settings") {
-    if (doc.containsKey("tpd"))
-      config.tpd = doc["tpd"];
-    if (doc.containsKey("dur"))
-      config.duration = doc["dur"];
-    if (doc.containsKey("dir"))
-      config.direction = doc["dir"];
-    if (doc.containsKey("name"))
-      config.hostname = doc["name"].as<String>(); // Save Name
-
-    saveConfig();
-    updateSchedule();
-
-    String resp = "{\"tpd\":" + String(config.tpd) +
-                  ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                  config.hostname + "\"}";
-    ws.textAll(resp);
-
-    // If name changed, we should probably reboot for SSID effect, or just let
-    // user restart For now we assume user knows to restart for SSID change.
-  } else if (type == "check_peers") {
-    Serial.println(
-        "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
-    broadcastDiscovery();
-
-    // Mevcut peer listesini hemen gönder
-    String json = "{ \"peers\": [";
-    for (int i = 0; i < peers.size(); i++) {
-      if (i > 0)
-        json += ",";
-      json += "{\"mac\":\"" + peers[i].mac + "\",\"name\":\"" + peers[i].name +
-              "\"}";
-    }
-    json += "] }";
-    ws.textAll(json);
-    Serial.println("Mevcut peer sayısı: " + String(peers.size()));
-  } else if (type == "peer_command") {
-    String target = doc["target"];
-    String action = doc["action"];
-    sendToPeer(target, "command", action);
-  }
-}
-
-// ===============================
-// PROPER WiFi Initialization
-// ===============================
-void initWiFi() {
-  WiFi.mode(WIFI_AP_STA);
-  uint64_t chipid = ESP.getEfuseMac();
-  char macBuf[18];
-
-  myMacAddress = WiFi.macAddress();
-  if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
-    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
-            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
-            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
-            (uint8_t)(chipid >> 40));
-    myMacAddress = String(macBuf);
-  }
-
-  // AP naming always uses Suffix
-  String apBase = "horus";
-  if (config.hostname != "") {
-    apBase = slugify(config.hostname);
-  }
-  String apName = apBase + "-" + deviceSuffix;
-
-  // ESP-NOW için WiFi kanalını 1'e sabitleme (önemli!)
-  WiFi.softAP(apName.c_str(), "", 1);
-
-  // Set Hostname for DHCP (optional to be same as AP)
-  WiFi.setHostname(apName.c_str());
-
-  Serial.println("WiFi AP Başlatıldı: " + apName);
-  Serial.println("MAC Adresi: " + myMacAddress);
-  Serial.print("AP IP Adresi: ");
-  Serial.println(WiFi.softAPIP());
-  Serial.println("WiFi Kanal: 1");
-}
-
-// ===============================
-// Web Server Initialization
-// ===============================
-void initWebServer() {
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/index.html", "text/html");
-  });
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/style.css", "text/css");
-  });
-  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/script.js", "application/javascript");
-  });
-  server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/languages.js", "application/javascript");
-  });
-
-  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!wifiScanning) {
-      WiFi.scanNetworks(true);
-      wifiScanning = true;
-      request->send(202, "application/json", "{\"status\":\"scanning\"}");
-    } else
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
-  });
-
-  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", getWifiListJson());
-  });
-
-  server.on("/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("ssid", true) && request->hasParam("pass", true)) {
-      WiFi.begin(request->getParam("ssid", true)->value().c_str(),
-                 request->getParam("pass", true)->value().c_str());
-      request->send(200, "application/json", "{\"status\":\"started\"}");
-    } else
-      request->send(400);
-  });
-
-  // Auto OTA Endpoint
-  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (otaStatus == "started" || otaStatus == "updating") {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
+    if (esp_now_init() != ESP_OK) {
+      Serial.println("Error initializing ESP-NOW");
       return;
     }
 
-    // Check if status request only (you might want a separate GET status
-    // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
-    shouldUpdate = true;
-    otaStatus = "started";
-    request->send(200, "application/json", "{\"status\":\"started\"}");
-  });
+    Serial.println("ESP-NOW Başlatıldı");
+    Serial.println("WiFi Kanal: " + String(WiFi.channel()));
 
-  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"status\":\"" + otaStatus + "\"}";
-    request->send(200, "application/json", json);
-  });
+    esp_now_register_recv_cb(OnDataRecv);
+    esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
 
-  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
-    request->send(200, "application/json", json);
-  });
+    // Broadcast peer ekleme
+    esp_now_peer_info_t peerInfo = {};
+    memset(peerInfo.peer_addr, 0xFF, 6);
+    peerInfo.channel = 1; // WiFi kanalıyla aynı olmalı
+    peerInfo.encrypt = false;
 
-  // Manual OTA Landing
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/update.html", "text/html");
-  });
+    if (esp_now_add_peer(&peerInfo) == ESP_OK) {
+      Serial.println("Broadcast peer eklendi");
+    } else {
+      Serial.println("Broadcast peer eklenemedi!");
+    }
+  }
 
-  // Manual OTA Handler
-  server.on(
-      "/update", HTTP_POST,
-      [](AsyncWebServerRequest *request) {
-        bool shouldReboot = !Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(
-            200, "text/plain", shouldReboot ? "OK" : "FAIL");
-        response->addHeader("Connection", "close");
-        request->send(response);
-        if (shouldReboot)
-          ESP.restart();
-      },
-      [](AsyncWebServerRequest *request, String filename, size_t index,
-         uint8_t *data, size_t len, bool final) {
-        if (!index)
-          Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
-        if (!Update.hasError())
-          Update.write(data, len);
-        if (final)
-          Update.end(true);
-      });
+  // Helper to get status JSON
+  String getShortStatusJson() {
+    StaticJsonDocument<128> doc;
+    doc["r"] = isRunning;
+    doc["t"] = config.tpd;
+    doc["d"] = config.duration;
+    doc["dr"] = config.direction;
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
 
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
-  server.begin();
-}
+  void broadcastDiscovery() {
+    strcpy(myData.type, "DISCOVER");
+    strcpy(myData.sender_mac, myMacAddress.c_str());
+    strcpy(myData.sender_name, config.hostname.c_str());
 
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-               AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  if (type == WS_EVT_CONNECT) {
-    String json = "{\"running\":" + String(isRunning ? "true" : "false") +
-                  ",\"tpd\":" + String(config.tpd) +
-                  ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                  config.hostname + "\"}";
-    client->text(json);
-  } else if (type == WS_EVT_DATA) {
-    AwsFrameInfo *info = (AwsFrameInfo *)arg;
-    if (info->final && info->index == 0 && info->len == len &&
-        info->opcode == WS_TEXT) {
-      data[len] = 0;
-      processCommand(String((char *)data));
+    String payload = getShortStatusJson();
+    payload.toCharArray(myData.payload, 64);
+
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    esp_err_t result =
+        esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+    //...
+  }
+
+  void broadcastStatus() {
+    strcpy(myData.type, "STATUS");
+    strcpy(myData.sender_mac, myMacAddress.c_str());
+    strcpy(myData.sender_name, config.hostname.c_str());
+
+    String payload = getShortStatusJson();
+    payload.toCharArray(myData.payload, 64);
+
+    uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+  }
+
+  void sendToPeer(String targetMac, String payloadJson) {
+    uint8_t peerAddr[6];
+    sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
+           &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
+
+    strcpy(myData.type, "CMD");
+    strcpy(myData.sender_mac, myMacAddress.c_str());
+    strcpy(myData.sender_name, config.hostname.c_str());
+    payloadJson.toCharArray(myData.payload, 64);
+
+    esp_now_send(peerAddr, (uint8_t *)&myData, sizeof(myData));
+  }
+
+  void processCommand(String jsonStr) {
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, jsonStr);
+    if (error)
+      return;
+
+    String type = doc["type"];
+
+    if (type == "command") {
+      String action = doc["action"];
+      if (action == "start")
+        isRunning = true;
+      if (action == "stop")
+        isRunning = false;
+      updateSchedule();
+      broadcastStatus(); // Added broadcastStatus here
+      String resp =
+          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      ws.textAll(resp);
+    } else if (type == "settings") {
+      if (doc.containsKey("tpd"))
+        config.tpd = doc["tpd"];
+      if (doc.containsKey("dur"))
+        config.duration = doc["dur"];
+      if (doc.containsKey("dir"))
+        config.direction = doc["dir"];
+      if (doc.containsKey("name"))
+        config.hostname = doc["name"].as<String>(); // Save Name
+
+      saveConfig();
+      updateSchedule();
+
+      String resp = "{\"tpd\":" + String(config.tpd) +
+                    ",\"dur\":" + String(config.duration) +
+                    ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
+                    config.hostname + "\"}";
+      ws.textAll(resp);
+
+      // If name changed, we should probably reboot for SSID effect, or just let
+      // user restart For now we assume user knows to restart for SSID change.
+    } else if (type == "check_peers") {
+      Serial.println(
+          "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
+      broadcastDiscovery();
+
+      // Mevcut peer listesini hemen gönder
+      String json = "{ \"peers\": [";
+      for (int i = 0; i < peers.size(); i++) {
+        if (i > 0)
+          json += ",";
+        json += "{\"mac\":\"" + peers[i].mac + "\",\"name\":\"" +
+                peers[i].name + "\"}";
+      }
+      json += "] }";
+      ws.textAll(json);
+      Serial.println("Mevcut peer sayısı: " + String(peers.size()));
+    } else if (type == "peer_settings") {
+      // Send settings command to peer
+      String target = doc["target"];
+      StaticJsonDocument<128> pDoc;
+      pDoc["set"] = true;
+      pDoc["t"] = doc["tpd"];
+      pDoc["d"] = doc["dur"];
+      pDoc["dr"] = doc["dir"];
+      pDoc["r"] = doc["running"];
+
+      String payload;
+      serializeJson(pDoc, payload);
+      sendToPeer(target, payload);
+    }
+  }
+
+  // ===============================
+  // PROPER WiFi Initialization
+  // ===============================
+  void initWiFi() {
+    WiFi.mode(WIFI_AP_STA);
+    uint64_t chipid = ESP.getEfuseMac();
+    char macBuf[18];
+
+    myMacAddress = WiFi.macAddress();
+    if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
+      sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
+              (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
+              (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
+              (uint8_t)(chipid >> 40));
+      myMacAddress = String(macBuf);
+    }
+
+    // AP naming always uses Suffix
+    String apBase = "horus";
+    if (config.hostname != "") {
+      apBase = slugify(config.hostname);
+    }
+    String apName = apBase + "-" + deviceSuffix;
+
+    // ESP-NOW için WiFi kanalını 1'e sabitleme (önemli!)
+    WiFi.softAP(apName.c_str(), "", 1);
+
+    // Set Hostname for DHCP (optional to be same as AP)
+    WiFi.setHostname(apName.c_str());
+
+    Serial.println("WiFi AP Başlatıldı: " + apName);
+    Serial.println("MAC Adresi: " + myMacAddress);
+    Serial.print("AP IP Adresi: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.println("WiFi Kanal: 1");
+  }
+
+  // ===============================
+  // Web Server Initialization
+  // ===============================
+  void initWebServer() {
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/index.html", "text/html");
+    });
+    server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/style.css", "text/css");
+    });
+    server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/script.js", "application/javascript");
+    });
+    server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/languages.js", "application/javascript");
+    });
+
+    server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+      if (!wifiScanning) {
+        WiFi.scanNetworks(true);
+        wifiScanning = true;
+        request->send(202, "application/json", "{\"status\":\"scanning\"}");
+      } else
+        request->send(200, "application/json", "{\"status\":\"busy\"}");
+    });
+
+    server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "application/json", getWifiListJson());
+    });
+
+    server.on(
+        "/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request) {
+          if (request->hasParam("ssid", true) &&
+              request->hasParam("pass", true)) {
+            WiFi.begin(request->getParam("ssid", true)->value().c_str(),
+                       request->getParam("pass", true)->value().c_str());
+            request->send(200, "application/json", "{\"status\":\"started\"}");
+          } else
+            request->send(400);
+        });
+
+    // Auto OTA Endpoint
+    server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
+      if (otaStatus == "started" || otaStatus == "updating") {
+        request->send(200, "application/json", "{\"status\":\"busy\"}");
+        return;
+      }
+
+      // Check if status request only (you might want a separate GET status
+      // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
+      shouldUpdate = true;
+      otaStatus = "started";
+      request->send(200, "application/json", "{\"status\":\"started\"}");
+    });
+
+    server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+      String json = "{\"status\":\"" + otaStatus + "\"}";
+      request->send(200, "application/json", json);
+    });
+
+    server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+      String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
+      request->send(200, "application/json", json);
+    });
+
+    // Manual OTA Landing
+    server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/update.html", "text/html");
+    });
+
+    // Manual OTA Handler
+    server.on(
+        "/update", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+          bool shouldReboot = !Update.hasError();
+          AsyncWebServerResponse *response = request->beginResponse(
+              200, "text/plain", shouldReboot ? "OK" : "FAIL");
+          response->addHeader("Connection", "close");
+          request->send(response);
+          if (shouldReboot)
+            ESP.restart();
+        },
+        [](AsyncWebServerRequest *request, String filename, size_t index,
+           uint8_t *data, size_t len, bool final) {
+          if (!index)
+            Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
+          if (!Update.hasError())
+            Update.write(data, len);
+          if (final)
+            Update.end(true);
+        });
+
+    ws.onEvent(onWsEvent);
+    server.addHandler(&ws);
+    server.begin();
+  }
+
+  void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client,
+                 AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    if (type == WS_EVT_CONNECT) {
+      String json = "{\"running\":" + String(isRunning ? "true" : "false") +
+                    ",\"tpd\":" + String(config.tpd) +
+                    ",\"dur\":" + String(config.duration) +
+                    ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
+                    config.hostname + "\"}";
+      client->text(json);
+    } else if (type == WS_EVT_DATA) {
+      AwsFrameInfo *info = (AwsFrameInfo *)arg;
+      if (info->final && info->index == 0 && info->len == len &&
+          info->opcode == WS_TEXT) {
+        data[len] = 0;
+        processCommand(String((char *)data));
+      }
+    }
+  }
