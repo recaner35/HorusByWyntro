@@ -110,7 +110,8 @@ function sendSettings() {
 // =======================
 function scanNetworks() {
     const list = document.getElementById('wifiList');
-    list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Scanning...</div>';
+    // Localization: 'scanning'
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> ${getTrans('scanning')}</div>`;
 
     // Call API (Async)
     fetch('/api/wifi-scan')
@@ -166,7 +167,8 @@ function connectWifi() {
     const pass = document.getElementById('wifiPass').value;
     const btn = document.querySelector('#wifiConnectCard .btn-primary');
 
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+    // Localization: 'connecting'
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${getTrans('connecting')}`;
 
     // Post params
     const formData = new FormData();
@@ -176,8 +178,9 @@ function connectWifi() {
     fetch('/api/wifi-connect', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
-            alert('Connection started! If successful, device IP might change.');
-            btn.innerHTML = 'Connect';
+            // Localization: 'connection_started'
+            alert(getTrans('connection_started') + ' (IP might change)');
+            btn.innerHTML = getTrans('connect');
             document.getElementById('wifiConnectCard').classList.add('hidden');
         });
 }
@@ -186,10 +189,10 @@ function connectWifi() {
 // DEVICE MANAGER (ESP-NOW)
 // =======================
 function scanPeers() {
-    document.getElementById('deviceList').innerHTML = '<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Discovering peers...</div>';
+    // Localization: 'scanning'
+    document.getElementById('deviceList').innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> ${getTrans('scanning')}</div>`;
     // Send discovery command to Firmware
     ws.send(JSON.stringify({ type: "check_peers" }));
-    // Note: Firmware should auto-broadcast discovery packets
 }
 
 function renderDeviceList(peers) {
@@ -197,16 +200,20 @@ function renderDeviceList(peers) {
     list.innerHTML = '';
 
     if (!peers || peers.length === 0) {
-        list.innerHTML = '<div class="empty-state">No peers found.</div>';
+        // Localization: 'no_peers'
+        list.innerHTML = `<div class="empty-state">${getTrans('no_peers')}</div>`;
         return;
     }
 
     peers.forEach(peer => {
         const item = document.createElement('div');
         item.className = 'device-item';
+        // Localization: 'unknown_device'
+        const devName = peer.name || getTrans('unknown_device');
+
         item.innerHTML = `
             <div>
-                <div style="font-weight:bold">${peer.name || 'Unknown Device'}</div>
+                <div style="font-weight:bold">${devName}</div>
                 <div style="font-size:0.8rem; color:#aaa">${peer.mac}</div>
             </div>
             <div>
@@ -252,18 +259,22 @@ function updateStatusUI() {
     var statusText = document.getElementById('statusText');
     var toggleBtn = document.getElementById('toggleBtn');
     var toggleBtnText = document.getElementById('toggleBtnText');
-    const lang = document.getElementById('languageSelect').value;
-    const t = translations[lang] || translations['en'];
+
+    // Localization
+    const runningText = getTrans('running');
+    const stoppedText = getTrans('stopped');
+    const startText = getTrans('start');
+    const stopText = getTrans('stop');
 
     if (isRunning) {
-        statusText.innerText = t['running'];
+        statusText.innerText = runningText;
         statusText.style.color = '#00ff88';
-        toggleBtnText.innerText = t['stop'];
+        toggleBtnText.innerText = stopText;
         toggleBtn.className = 'btn-large stop';
     } else {
-        statusText.innerText = t['stopped'];
+        statusText.innerText = stoppedText;
         statusText.style.color = '#ff4444';
-        toggleBtnText.innerText = t['start'];
+        toggleBtnText.innerText = startText;
         toggleBtn.className = 'btn-large start';
     }
 }
@@ -271,13 +282,23 @@ function updateStatusUI() {
 // =======================
 // LOCALIZATION
 // =======================
+function getTrans(key) {
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
+    const t = translations[lang] || translations['en'];
+    return t[key] || key;
+}
+
 function changeLanguage(lang) {
     localStorage.setItem('selectedLanguage', lang);
     const t = translations[lang] || translations['en'];
+
+    // Update static elements
     document.querySelectorAll('[data-i18n]').forEach(elem => {
         const key = elem.getAttribute('data-i18n');
         if (t[key]) elem.innerText = t[key];
     });
+
+    // Update dynamic status
     updateStatusUI();
 }
 
