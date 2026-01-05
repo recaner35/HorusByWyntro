@@ -33,6 +33,14 @@ window.onload = function () {
     document.getElementById('languageSelect').value = currentLang;
     applyLanguage(currentLang);
 
+    // Tema Yükleme
+    var savedTheme = localStorage.getItem('horus_theme') || 'auto';
+    setTheme(savedTheme);
+
+    // Renk Yükleme
+    var savedColor = localStorage.getItem('horus_accent_color') || '#ffd700';
+    setAccentColor(savedColor);
+
     // Check Version
     fetch('/api/version')
         .then(response => response.json())
@@ -366,4 +374,31 @@ function applyLanguage(lang) {
 
     // Update dynamic texts
     updateStatusUI();
+}
+
+// ================= THEME FUNCTIONS =================
+function setTheme(theme) {
+    localStorage.setItem('horus_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // Update theme buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-theme') === theme) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+function setAccentColor(color) {
+    localStorage.setItem('horus_accent_color', color);
+    document.documentElement.style.setProperty('--accent-color', color);
+
+    // Update color buttons
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-color') === color) {
+            btn.classList.add('active');
+        }
+    });
 }
