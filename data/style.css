@@ -176,6 +176,7 @@ body {
 .btn-icon:hover {
     background: var(--accent-color);
     color: #000;
+    font-weight: 700;
 }
 
 /* CARDS & CONTROLS */
@@ -396,6 +397,12 @@ input:focus {
     font-style: italic;
 }
 
+/* WIFI CONNECT MODAL OVERLAY (Changed for Mobile Fix) */
+#wifiConnectCard {
+    /* Only apply special modal styles when it is NOT hidden */
+}
+
+/* Media Queries */
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
@@ -478,5 +485,31 @@ input:focus {
         margin-top: 0;
         height: calc(100vh - 70px);
         /* Subtract header height */
+    }
+
+    /* Modal Style for WiFi Connect on Mobile */
+    #wifiConnectCard {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        z-index: 2000;
+        background: #1a1a20;
+        border: 1px solid var(--accent-color);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Backdrop for modal */
+    #wifiConnectCard::before {
+        content: '';
+        position: fixed;
+        top: -100vh;
+        left: -100vw;
+        width: 300vw;
+        height: 300vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: -1;
     }
 }
