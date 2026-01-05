@@ -17,7 +17,7 @@
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
-#include <NetworkClientSecure.h> // Eklendi: Core 3.x SSL için
+#include <NetworkClientSecure.h> // Core 3.x SSL fix
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
@@ -26,8 +26,7 @@
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
-// 28BYJ-48 için pin sırası: IN1-IN3-IN2-IN4 şeklinde olmalı (AccelStepper
-// FULL4WIRE için)
+// 28BYJ-48 için pin sırası: IN1-IN3-IN2-IN4 şeklinde olmalı
 #define MOTOR_PIN_1 19
 #define MOTOR_PIN_2 18
 #define MOTOR_PIN_3 5
@@ -47,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.29"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -63,7 +62,6 @@ AsyncWebSocket ws("/ws");
 // ===============================
 // Global Değişkenler (Durum)
 // ===============================
-// Kullanıcı Ayarları
 struct Config {
   int tpd = 600;     // Günlük Tur Sayısı (600-1800)
   int duration = 15; // Bir tur süresi (sn) (10-20)
@@ -72,7 +70,6 @@ struct Config {
 };
 Config config;
 
-// Çalışma Durumu
 bool isRunning = false;     // Sistem genel olarak aktif mi?
 bool isMotorMoving = false; // Motor şu an dönüyor mu?
 unsigned long sessionStartTime = 0;
@@ -105,9 +102,7 @@ typedef struct struct_message {
 struct_message myData;
 struct_message incomingData;
 
-// ===============================
 // WiFi & Connection State
-// ===============================
 bool wifiScanning = false;
 long lastWifiCheck = 0;
 String wifiStatusStr = "disconnected";
@@ -117,7 +112,7 @@ String myMacAddress;
 bool shouldUpdate = false; // Flag for Auto OTA in loop
 
 // ===============================
-// FONKSİYON PROTOTİPLERİ (Full List)
+// FONKSİYON PROTOTİPLERİ
 // ===============================
 void loadConfig();
 void saveConfig();
@@ -144,14 +139,12 @@ void checkAndPerformUpdate();
 // ===============================
 // OTA Helper Functions
 // ===============================
-
-// OTA Helper: URL'den stream update
 bool execOTA(String url, int command) {
-  NetworkClientSecure client; // Secure Client
+  NetworkClientSecure client;
   client.setInsecure();
 
   HTTPClient http;
-  http.begin(client, url); // Client parametre olarak verilmeli
+  http.begin(client, url);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
   int httpCode = http.GET();
@@ -225,7 +218,6 @@ void checkAndPerformUpdate() {
       String fsUrl = baseUrl + "HorusByWyntro.littlefs.bin";
       String fwUrl = baseUrl + "HorusByWyntro.ino.bin";
 
-      // 1. LittleFS Guncelle
       Serial.println("LittleFS indiriliyor: " + fsUrl);
       if (execOTA(fsUrl, U_SPIFFS)) {
         Serial.println("LittleFS guncellendi.");
@@ -233,7 +225,6 @@ void checkAndPerformUpdate() {
         Serial.println("LittleFS guncelleme hatasi!");
       }
 
-      // 2. Firmware Guncelle
       Serial.println("Firmware indiriliyor: " + fwUrl);
       if (execOTA(fwUrl, U_FLASH)) {
         Serial.println("Firmware guncellendi. Yeniden baslatiliyor...");
@@ -277,7 +268,6 @@ void setup() {
   }
 
   updateSchedule();
-  // Açılışta ben buradayım de
   broadcastDiscovery();
 }
 
@@ -314,14 +304,13 @@ void loop() {
     }
   }
 
-  // Peer Temizliği (Timeout olanları sil)
+  // Peer Temizliği
   static unsigned long lastPrune = 0;
   if (millis() - lastPrune > 10000) {
     lastPrune = millis();
     for (int i = peers.size() - 1; i >= 0; i--) {
       if (millis() - peers[i].lastSeen > PEER_TIMEOUT) {
         peers.erase(peers.begin() + i);
-        // Listeyi arayüze güncelle
         String json = "{ \"peers\": [";
         for (int j = 0; j < peers.size(); j++) {
           if (j > 0)
@@ -337,129 +326,7 @@ void loop() {
 }
 
 // ===============================
-// ESP-NOW Callback
-// ===============================
-#if ESP_ARDUINO_VERSION_MAJOR >= 3
-void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingDataPtr,
-                int len) {
-  const uint8_t *mac = info->src_addr;
-#else
-void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
-#endif
-  memcpy(&incomingData, incomingDataPtr, sizeof(incomingData));
-
-  String type = String(incomingData.type);
-  String senderMac = String(incomingData.sender_mac);
-  String senderName = String(incomingData.sender_name);
-
-  // Peer Ekle/Güncelle
-  bool found = false;
-  for (auto &p : peers) {
-    if (p.mac == senderMac) {
-      p.lastSeen = millis();
-      p.name = senderName;
-      found = true;
-      break;
-    }
-  }
-  if (!found) {
-    PeerDevice newPeer;
-    newPeer.mac = senderMac;
-    newPeer.name = senderName;
-    newPeer.lastSeen = millis();
-    peers.push_back(newPeer);
-
-    // ESP-NOW Peer Listesine Ekle (İletişim için gerekli)
-    esp_now_peer_info_t peerInfo = {};
-    memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0;
-    peerInfo.encrypt = false;
-    if (!esp_now_is_peer_exist(mac)) {
-      esp_now_add_peer(&peerInfo);
-    }
-  }
-
-  // Mesaj Tipi İşleme
-  if (type == "CMD") {
-    // Bana komut geldi (Örn: "start", "stop")
-    String payload = String(incomingData.payload);
-    StaticJsonDocument<200> doc;
-    deserializeJson(doc, payload);
-    String action = doc["action"];
-
-    if (action == "start")
-      isRunning = true;
-    if (action == "stop")
-      isRunning = false;
-
-    // Durumu geri bildir
-    broadcastStatus(); // Tüm ağa durum bildirimi yap
-    // Arayüzü güncelle
-    String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-    ws.textAll(resp);
-  }
-}
-
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  // Gönderim durumu (Opsiyonel debug)
-}
-
-void initESPNow() {
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  }
-  esp_now_register_recv_cb(OnDataRecv);
-  esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
-
-  // Broadcast Peer Ekle (FF:FF:FF:FF:FF:FF)
-  esp_now_peer_info_t peerInfo = {};
-  memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-  esp_now_add_peer(&peerInfo);
-}
-
-void broadcastDiscovery() {
-  strcpy(myData.type, "DISCOVER");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-  strcpy(myData.payload, "");
-
-  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-}
-
-void broadcastStatus() {
-  strcpy(myData.type, "STATUS");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-  // Durum JSON
-  String status = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-  status.toCharArray(myData.payload, 64);
-
-  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-}
-
-void sendToPeer(String targetMac, String command, String action) {
-  // Mac String -> Hex Array
-  uint8_t peerAddr[6];
-  sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
-         &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
-
-  strcpy(myData.type, "CMD");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
-
-  String payload = "{\"action\":\"" + action + "\"}";
-  payload.toCharArray(myData.payload, 64);
-
-  esp_now_send(peerAddr, (uint8_t *)&myData, sizeof(myData));
-}
-
-// ===============================
-// Yardımcı Fonksiyonlar ve Web
+// Yardımcı Fonksiyonlar
 // ===============================
 
 void initMotor() {
@@ -504,7 +371,7 @@ void handlePhysicalControl() {
     isRunning = !isRunning;
     String json = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
     ws.textAll(json);
-    broadcastStatus(); // Durum değişti, yayınla
+    broadcastStatus();
   }
 }
 
@@ -541,7 +408,6 @@ void handleWifiScan() {
 }
 
 void handleWifiConnection() {
-  // Basit bağlantı durumu takibi
   if (WiFi.status() == WL_CONNECTED && wifiStatusStr != "connected")
     wifiStatusStr = "connected";
   else if (WiFi.status() != WL_CONNECTED && !tryConnect)
@@ -567,10 +433,118 @@ String getWifiListJson() {
   return json;
 }
 
+// ===============================
+// ESP-NOW Logic
+// ===============================
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingDataPtr,
+                int len) {
+  const uint8_t *mac = info->src_addr;
+#else
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
+#endif
+  memcpy(&incomingData, incomingDataPtr, sizeof(incomingData));
+
+  String type = String(incomingData.type);
+  String senderMac = String(incomingData.sender_mac);
+  String senderName = String(incomingData.sender_name);
+
+  bool found = false;
+  for (auto &p : peers) {
+    if (p.mac == senderMac) {
+      p.lastSeen = millis();
+      p.name = senderName;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    PeerDevice newPeer;
+    newPeer.mac = senderMac;
+    newPeer.name = senderName;
+    newPeer.lastSeen = millis();
+    peers.push_back(newPeer);
+
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, mac, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (!esp_now_is_peer_exist(mac)) {
+      esp_now_add_peer(&peerInfo);
+    }
+  }
+
+  if (type == "CMD") {
+    String payload = String(incomingData.payload);
+    StaticJsonDocument<200> doc;
+    deserializeJson(doc, payload);
+    String action = doc["action"];
+
+    if (action == "start")
+      isRunning = true;
+    if (action == "stop")
+      isRunning = false;
+
+    broadcastStatus();
+    String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+    ws.textAll(resp);
+  }
+}
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  // Debug if needed
+}
+
+void initESPNow() {
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+  esp_now_register_recv_cb(OnDataRecv);
+  esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
+
+  esp_now_peer_info_t peerInfo = {};
+  memset(peerInfo.peer_addr, 0xFF, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+  esp_now_add_peer(&peerInfo);
+}
+
+void broadcastDiscovery() {
+  strcpy(myData.type, "DISCOVER");
+  strcpy(myData.sender_mac, myMacAddress.c_str());
+  strcpy(myData.sender_name, config.hostname.c_str());
+  strcpy(myData.payload, "");
+  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+}
+
+void broadcastStatus() {
+  strcpy(myData.type, "STATUS");
+  strcpy(myData.sender_mac, myMacAddress.c_str());
+  strcpy(myData.sender_name, config.hostname.c_str());
+  String status = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+  status.toCharArray(myData.payload, 64);
+  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+}
+
+void sendToPeer(String targetMac, String command, String action) {
+  uint8_t peerAddr[6];
+  sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
+         &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
+
+  strcpy(myData.type, "CMD");
+  strcpy(myData.sender_mac, myMacAddress.c_str());
+  strcpy(myData.sender_name, config.hostname.c_str());
+  String payload = "{\"action\":\"" + action + "\"}";
+  payload.toCharArray(myData.payload, 64);
+  esp_now_send(peerAddr, (uint8_t *)&myData, sizeof(myData));
+}
+
 void processCommand(String jsonStr) {
   StaticJsonDocument<200> doc;
   DeserializationError error = deserializeJson(doc, jsonStr);
-
   if (error)
     return;
 
@@ -585,10 +559,6 @@ void processCommand(String jsonStr) {
     updateSchedule();
     String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
     ws.textAll(resp);
-
-    // Değişikliği ESP-NOW ile duyur (Opsiyonel, senkronize grup için)
-    // broadcastStatus();
-
   } else if (type == "settings") {
     if (doc.containsKey("tpd"))
       config.tpd = doc["tpd"];
@@ -602,11 +572,8 @@ void processCommand(String jsonStr) {
                   ",\"dur\":" + String(config.duration) +
                   ",\"dir\":" + String(config.direction) + "}";
     ws.textAll(resp);
-
   } else if (type == "check_peers") {
-    // Keşif yayını yap
     broadcastDiscovery();
-    // Mevcut listeyi hemen gönder
     String json = "{ \"peers\": [";
     for (int i = 0; i < peers.size(); i++) {
       if (i > 0)
@@ -616,7 +583,6 @@ void processCommand(String jsonStr) {
     }
     json += "] }";
     ws.textAll(json);
-
   } else if (type == "peer_command") {
     String target = doc["target"];
     String action = doc["action"];
@@ -624,25 +590,16 @@ void processCommand(String jsonStr) {
   }
 }
 
+// ===============================
+// PROPER WiFi Initialization
+// ===============================
 void initWiFi() {
   WiFi.mode(WIFI_AP_STA);
-  // 1. AP Başlat
-  // MAC Adresini doğrudan Efuse'dan oku (Daha güvenilir)
   uint64_t chipid = ESP.getEfuseMac();
-  uint16_t chip = (uint16_t)(chipid >> 32);
-
-  // Son 4 hane (2 byte) için chipid'nin alt kısımlarını kullan
-  // chipid 6 byte return eder.
   char macBuf[18];
 
-  // Eski çalışan kodun mantığını geri getiriyoruz.
-  // WiFi mac adresini string olarak al
   myMacAddress = WiFi.macAddress();
-
-  // AP ismini oluştururken garanti olsun diye Efuse kullanalım
-  // ya da myMacAddress'in boş gelme ihtimaline karşı kontrol koyalım
   if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
-    // Fallback: Efuse
     sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
             (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
             (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
@@ -650,27 +607,9 @@ void initWiFi() {
     myMacAddress = String(macBuf);
   }
 
-  // AP ismi örneği: horus-A1B2
-  // String substring 12,14 (xx:xx:xx:xx:YY:zz) -> YY
-  // String substring 15,17 (xx:xx:xx:xx:yy:ZZ) -> ZZ
-  String shortMac = myMacAddress.substring(9); // xx:xx:xx:AA:BB:CC alalım
-  shortMac.replace(":", "");                   // AABBCC
-
-  // Daha kısa olsun: Son 4 hane
-  String apSuffix =
-      myMacAddress.substring(12, 14) + myMacAddress.substring(15, 17);
-  // Eğer mac düzgün gelmediyse suffix 0000 olabilir.
-
-  // Efusedan garanti suffix üretelim:
-  char suffixBuf[5];
-  sprintf(suffixBuf, "%02X%02X", (uint8_t)(chipid >> 40),
-          (uint8_t)(chipid >> 32));
-
-  // KESİN ÇÖZÜM:
-  // AP ismini ChipID'den türetelim, WiFi.macAddress'e güvenmeyelim.
+  // AP naming from Efuse ID for consistency
   uint32_t low = chipid & 0xFFFFFFFF;
-  uint16_t idHigh = (low >> 0) & 0xFFFF; // Rastgele bir parça
-
+  uint16_t idHigh = (low >> 0) & 0xFFFF;
   char idStr[5];
   sprintf(idStr, "%04X", idHigh);
   String apName = "horus-" + String(idStr);
@@ -683,6 +622,9 @@ void initWiFi() {
   WiFi.begin();
 }
 
+// ===============================
+// Web Server Initialization
+// ===============================
 void initWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
@@ -696,6 +638,7 @@ void initWebServer() {
   server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/languages.js", "application/javascript");
   });
+
   server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!wifiScanning) {
       WiFi.scanNetworks(true);
@@ -704,9 +647,11 @@ void initWebServer() {
     } else
       request->send(200, "application/json", "{\"status\":\"busy\"}");
   });
+
   server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "application/json", getWifiListJson());
   });
+
   server.on("/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("ssid", true) && request->hasParam("pass", true)) {
       WiFi.begin(request->getParam("ssid", true)->value().c_str(),
@@ -722,10 +667,12 @@ void initWebServer() {
     shouldUpdate = true;
   });
 
-  // OTA Update
+  // Manual OTA Landing
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/update.html", "text/html");
   });
+
+  // Manual OTA Handler
   server.on(
       "/update", HTTP_POST,
       [](AsyncWebServerRequest *request) {
@@ -750,4 +697,22 @@ void initWebServer() {
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
   server.begin();
+}
+
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+               AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    String json = "{\"running\":" + String(isRunning ? "true" : "false") +
+                  ",\"tpd\":" + String(config.tpd) +
+                  ",\"dur\":" + String(config.duration) +
+                  ",\"dir\":" + String(config.direction) + "}";
+    client->text(json);
+  } else if (type == WS_EVT_DATA) {
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    if (info->final && info->index == 0 && info->len == len &&
+        info->opcode == WS_TEXT) {
+      data[len] = 0;
+      processCommand(String((char *)data));
+    }
+  }
 }
