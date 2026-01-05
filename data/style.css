@@ -4,7 +4,7 @@
     --card-bg: #1a1a20;
     --text-primary: #ffffff;
     --text-secondary: #a0a0b0;
-    --accent-color: #dec19e;
+    --accent-color: #ffd700;
     --success-color: #00ff88;
     --danger-color: #ff4444;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -641,6 +641,49 @@ input[type="range"]::-moz-range-thumb {
 
 .close-modal:hover {
     color: var(--accent-color);
+}
+
+/* ===============================
+   PEER CARD STYLES
+   =============================== */
+.peer-card {
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    transition: var(--transition);
+}
+
+.peer-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.peer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.peer-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.peer-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 380px) {
+    .peer-controls-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
 }
 
 /* ===============================
