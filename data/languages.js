@@ -1,4 +1,4 @@
-/* Horus by Wyntro - Localization Module */
+/* Horus by Wyntro - Yerelleştirme Modülü */
 
 const translations = {
     "tr": {
@@ -11,7 +11,9 @@ const translations = {
         "device_name": "Cihaz Adı", "save": "Kaydet", "language": "Dil",
         "theme": "Tema", "auto": "Otomatik", "dark": "Karanlık", "light": "Aydınlık",
         "ota_update": "Yazılım Güncelle", "scan": "Tara", "connect": "Bağlan",
-        "wifi_settings": "Wi-Fi Ağları", "scan_networks": "Ağları Tara", "wifi_setup": "Wi-Fi Kurulumu"
+        "wifi_settings": "Wi-Fi Ağları", "scan_networks": "Ağları Tara", "wifi_setup": "Wi-Fi Kurulumu",
+        "scanning": "Taranıyor...", "no_peers": "Cihaz bulunamadı", "unknown_device": "Bilinmeyen Cihaz",
+        "connecting": "Bağlanıyor...", "connection_started": "Bağlantı başlatıldı!"
     },
     "en": {
         "status": "STATUS", "stopped": "STOPPED", "running": "RUNNING", "ready": "Ready",
@@ -23,7 +25,9 @@ const translations = {
         "device_name": "Device Name", "save": "Save", "language": "Language",
         "theme": "Theme", "auto": "Auto", "dark": "Dark", "light": "Light",
         "ota_update": "Firmware Update", "scan": "Scan", "connect": "Connect",
-        "wifi_settings": "Wi-Fi Networks", "scan_networks": "Scan Networks", "wifi_setup": "Wi-Fi Setup"
+        "wifi_settings": "Wi-Fi Networks", "scan_networks": "Scan Networks", "wifi_setup": "Wi-Fi Setup",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "de": {
         "status": "STATUS", "stopped": "GESTOPPT", "running": "LÄUFT", "ready": "Bereit",
@@ -35,7 +39,9 @@ const translations = {
         "device_name": "Gerätename", "save": "Speichern", "language": "Sprache",
         "theme": "Thema", "auto": "Auto", "dark": "Dunkel", "light": "Hell",
         "ota_update": "Update", "scan": "Scannen", "connect": "Verbinden",
-        "wifi_settings": "Wi-Fi-Netzwerke", "scan_networks": "Netzwerke scannen", "wifi_setup": "Wi-Fi-Einrichtung"
+        "wifi_settings": "Wi-Fi-Netzwerke", "scan_networks": "Netzwerke scannen", "wifi_setup": "Wi-Fi-Einrichtung",
+        "scanning": "Scannen...", "no_peers": "Keine Geräte gefunden", "unknown_device": "Unbekanntes Gerät",
+        "connecting": "Verbinden...", "connection_started": "Verbindung gestartet!"
     },
     "ru": {
         "status": "СТАТУС", "stopped": "ОСТАНОВЛЕНО", "running": "РАБОТАЕТ", "ready": "Готов",
@@ -47,7 +53,9 @@ const translations = {
         "device_name": "Имя устр.", "save": "Сохранить", "language": "Язык",
         "theme": "Тема", "auto": "Авто", "dark": "Темная", "light": "Светлая",
         "ota_update": "Обновление", "scan": "Сканировать", "connect": "Подкл.",
-        "wifi_settings": "Сети Wi-Fi", "scan_networks": "Сканировать сети", "wifi_setup": "Настройка Wi-Fi"
+        "wifi_settings": "Сети Wi-Fi", "scan_networks": "Сканировать сети", "wifi_setup": "Настройка Wi-Fi",
+        "scanning": "Сканирование...", "no_peers": "Устройства не найдены", "unknown_device": "Неизвестное устройство",
+        "connecting": "Подключение...", "connection_started": "Подключение начато!"
     },
     "uk": {
         "status": "СТАТУС", "stopped": "ЗУПИНЕНО", "running": "ПРАЦЮЄ", "ready": "Готовий",
@@ -59,7 +67,9 @@ const translations = {
         "device_name": "Ім'я пристр.", "save": "Зберегти", "language": "Мова",
         "theme": "Тема", "auto": "Авто", "dark": "Темна", "light": "Світла",
         "ota_update": "Оновлення", "scan": "Сканувати", "connect": "Підключити",
-        "wifi_settings": "Мережі Wi-Fi", "scan_networks": "Сканувати мережі", "wifi_setup": "Налаштування Wi-Fi"
+        "wifi_settings": "Мережі Wi-Fi", "scan_networks": "Сканувати мережі", "wifi_setup": "Налаштування Wi-Fi",
+        "scanning": "Сканування...", "no_peers": "Пристрої не знайдено", "unknown_device": "Невідомий пристрій",
+        "connecting": "Підключення...", "connection_started": "Підключення розпочато!"
     },
     "fr": {
         "status": "STATUT", "stopped": "ARRÊTÉ", "running": "EN MARCHE", "ready": "Prêt",
@@ -71,7 +81,9 @@ const translations = {
         "device_name": "Nom Appareil", "save": "Enregistrer", "language": "Langue",
         "theme": "Thème", "auto": "Auto", "dark": "Sombre", "light": "Clair",
         "ota_update": "Mise à jour", "scan": "Scanner", "connect": "Connecter",
-        "wifi_settings": "Réseaux Wi-Fi", "scan_networks": "Scanner les réseaux", "wifi_setup": "Configuration Wi-Fi"
+        "wifi_settings": "Réseaux Wi-Fi", "scan_networks": "Scanner les réseaux", "wifi_setup": "Configuration Wi-Fi",
+        "scanning": "Scan en cours...", "no_peers": "Aucun appareil trouvé", "unknown_device": "Appareil inconnu",
+        "connecting": "Connexion...", "connection_started": "Connexion lancée!"
     },
     "it": {
         "status": "STATO", "stopped": "FERMATO", "running": "IN ESECUZIONE", "ready": "Pronto",
@@ -83,7 +95,9 @@ const translations = {
         "device_name": "Nome Disp.", "save": "Salva", "language": "Lingua",
         "theme": "Tema", "auto": "Auto", "dark": "Scuro", "light": "Chiaro",
         "ota_update": "Aggiornamento", "scan": "Scansiona", "connect": "Collega",
-        "wifi_settings": "Reti Wi-Fi", "scan_networks": "Scansiona reti", "wifi_setup": "Configurazione Wi-Fi"
+        "wifi_settings": "Reti Wi-Fi", "scan_networks": "Scansiona reti", "wifi_setup": "Configurazione Wi-Fi",
+        "scanning": "Scansione...", "no_peers": "Nessun dispositivo trovato", "unknown_device": "Dispositivo sconosciuto",
+        "connecting": "Connessione...", "connection_started": "Connessione avviata!"
     },
     "es": {
         "status": "ESTADO", "stopped": "DETENIDO", "running": "EN MARCHA", "ready": "Listo",
@@ -95,7 +109,9 @@ const translations = {
         "device_name": "Nombre Disp.", "save": "Guardar", "language": "Idioma",
         "theme": "Tema", "auto": "Auto", "dark": "Oscuro", "light": "Claro",
         "ota_update": "Actualizar", "scan": "Escanear", "connect": "Conectar",
-        "wifi_settings": "Redes Wi-Fi", "scan_networks": "Escanear redes", "wifi_setup": "Configuración Wi-Fi"
+        "wifi_settings": "Redes Wi-Fi", "scan_networks": "Escanear redes", "wifi_setup": "Configuración Wi-Fi",
+        "scanning": "Escaneando...", "no_peers": "No se encontraron dispositivos", "unknown_device": "Dispositivo desconocido",
+        "connecting": "Conectando...", "connection_started": "¡Conexión iniciada!"
     },
     "rm": {
         "status": "STATUS", "stopped": "FIRMÀ", "running": "EN FUNCZIUN", "ready": "Promt",
@@ -107,7 +123,9 @@ const translations = {
         "device_name": "Num Apparat", "save": "Arcunar", "language": "Lingua",
         "theme": "Tema", "auto": "Auto", "dark": "Stgir", "light": "Cler",
         "ota_update": "Actualisaziun", "scan": "Scannar", "connect": "Colliar",
-        "wifi_settings": "Retsas Wi-Fi", "scan_networks": "Scannar retsas", "wifi_setup": "Configuraziun Wi-Fi"
+        "wifi_settings": "Retsas Wi-Fi", "scan_networks": "Scannar retsas", "wifi_setup": "Configuraziun Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "mk": {
         "status": "СТАТУС", "stopped": "ЗАПРЕНО", "running": "РАБОТИ", "ready": "Подготвен",
@@ -119,7 +137,9 @@ const translations = {
         "device_name": "Име на уред", "save": "Зачувај", "language": "Јазик",
         "theme": "Тема", "auto": "Авто", "dark": "Темна", "light": "Светла",
         "ota_update": "Ажурирање", "scan": "Скенирај", "connect": "Поврзи",
-        "wifi_settings": "Wi-Fi мрежи", "scan_networks": "Скенирај мрежи", "wifi_setup": "Поставување Wi-Fi"
+        "wifi_settings": "Wi-Fi мрежи", "scan_networks": "Скенирај мрежи", "wifi_setup": "Поставување Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "sq": {
         "status": "STATUSI", "stopped": "NDALUAR", "running": "NË PUNË", "ready": "Gati",
@@ -131,7 +151,9 @@ const translations = {
         "device_name": "Emri", "save": "Ruaj", "language": "Gjuha",
         "theme": "Tema", "auto": "Auto", "dark": "Errët", "light": "Dritë",
         "ota_update": "Përditësim", "scan": "Skano", "connect": "Lidhu",
-        "wifi_settings": "Rrjetet Wi-Fi", "scan_networks": "Skano rrjetet", "wifi_setup": "Konfigurimi Wi-Fi"
+        "wifi_settings": "Rrjetet Wi-Fi", "scan_networks": "Skano rrjetet", "wifi_setup": "Konfigurimi Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "bs": {
         "status": "STATUS", "stopped": "ZAUSTAVLJENO", "running": "RADI", "ready": "Spremno",
@@ -143,7 +165,9 @@ const translations = {
         "device_name": "Ime uređaja", "save": "Sačuvaj", "language": "Jezik",
         "theme": "Tema", "auto": "Auto", "dark": "Tamno", "light": "Svijetlo",
         "ota_update": "Ažuriranje", "scan": "Skeniraj", "connect": "Spoji",
-        "wifi_settings": "Wi-Fi mreže", "scan_networks": "Skeniraj mreže", "wifi_setup": "Podešavanje Wi-Fi"
+        "wifi_settings": "Wi-Fi mreže", "scan_networks": "Skeniraj mreže", "wifi_setup": "Podešavanje Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "sr": {
         "status": "СТАТУС", "stopped": "ЗАУСТАВЉЕНО", "running": "РАДИ", "ready": "Спремно",
@@ -155,7 +179,9 @@ const translations = {
         "device_name": "Име уређаја", "save": "Сачувај", "language": "Језик",
         "theme": "Тема", "auto": "Ауто", "dark": "Тамно", "light": "Светло",
         "ota_update": "Ажурирање", "scan": "Скенирај", "connect": "Повежи",
-        "wifi_settings": "Wi-Fi мреже", "scan_networks": "Скенирај мреже", "wifi_setup": "Подешавање Wi-Fi"
+        "wifi_settings": "Wi-Fi мреже", "scan_networks": "Скенирај мреже", "wifi_setup": "Подешавање Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "rup": {
         "status": "STATUS", "stopped": "STĂTUTĂ", "running": "LUCREADZĂ", "ready": "Hăzu",
@@ -167,7 +193,9 @@ const translations = {
         "device_name": "Nume Aparat", "save": "Avinâ", "language": "Limba",
         "theme": "Tema", "auto": "Auto", "dark": "Ntunecat", "light": "Luminos",
         "ota_update": "Actualizare", "scan": "Caută", "connect": "Leagă",
-        "wifi_settings": "Rețele Wi-Fi", "scan_networks": "Caută rețele", "wifi_setup": "Configurare Wi-Fi"
+        "wifi_settings": "Rețele Wi-Fi", "scan_networks": "Caută rețele", "wifi_setup": "Configurare Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "rom": {
         "status": "STATUSO", "stopped": "TERDI", "running": "KEREL BUTI", "ready": "Gata",
@@ -179,7 +207,9 @@ const translations = {
         "device_name": "Anav", "save": "Arak", "language": "Čhib",
         "theme": "Tema", "auto": "Auto", "dark": "Kalo", "light": "Parno",
         "ota_update": "Nevo", "scan": "Rode", "connect": "Phand",
-        "wifi_settings": "Wi-Fi rețele", "scan_networks": "Rode rețele", "wifi_setup": "Konfiguracija Wi-Fi"
+        "wifi_settings": "Wi-Fi rețele", "scan_networks": "Rode rețele", "wifi_setup": "Konfiguracija Wi-Fi",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "zh": {
         "status": "状态", "stopped": "已停止", "running": "运行中", "ready": "就绪",
@@ -191,7 +221,9 @@ const translations = {
         "device_name": "设备名称", "save": "保存", "language": "语言",
         "theme": "主题", "auto": "自动", "dark": "深色", "light": "浅色",
         "ota_update": "系统更新", "scan": "扫描", "connect": "连接",
-        "wifi_settings": "Wi-Fi网络", "scan_networks": "扫描网络", "wifi_setup": "Wi-Fi设置"
+        "wifi_settings": "Wi-Fi网络", "scan_networks": "扫描网络", "wifi_setup": "Wi-Fi设置",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "ja": {
         "status": "ステータス", "stopped": "停止中", "running": "稼働中", "ready": "準備完了",
@@ -203,7 +235,9 @@ const translations = {
         "device_name": "デバイス名", "save": "保存", "language": "言語",
         "theme": "テーマ", "auto": "自動", "dark": "ダーク", "light": "ライト",
         "ota_update": "更新", "scan": "スキャン", "connect": "接続",
-        "wifi_settings": "Wi-Fiネットワーク", "scan_networks": "ネットワークをスキャン", "wifi_setup": "Wi-Fi設定"
+        "wifi_settings": "Wi-Fiネットワーク", "scan_networks": "ネットワークをスキャン", "wifi_setup": "Wi-Fi設定",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     },
     "az": {
         "status": "STATUS", "stopped": "DAYANDI", "running": "İŞLƏYİR", "ready": "Hazır",
@@ -215,6 +249,9 @@ const translations = {
         "device_name": "Cihaz Adı", "save": "Yadda Saxla", "language": "Dil",
         "theme": "Mövzu", "auto": "Avtomatik", "dark": "Qaranlıq", "light": "Aydınlıq",
         "ota_update": "Yeniləmə", "scan": "Axtar", "connect": "Qoşul",
-        "wifi_settings": "Wi-Fi şəbəkələri", "scan_networks": "Şəbəkələri axtar", "wifi_setup": "Wi-Fi quraşdırması"
+        "wifi_settings": "Wi-Fi şəbəkələri", "scan_networks": "Şəbəkələri axtar", "wifi_setup": "Wi-Fi quraşdırması",
+        "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
+        "connecting": "Connecting...", "connection_started": "Connection started!"
     }
 };
+
