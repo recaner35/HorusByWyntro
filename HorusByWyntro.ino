@@ -21,7 +21,6 @@
 #include <WiFi.h>
 #include <esp_now.h>
 
-
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
@@ -46,7 +45,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.21"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -220,7 +219,13 @@ void loop() {
 // ===============================
 // ESP-NOW Callback
 // ===============================
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingDataPtr,
+                int len) {
+  const uint8_t *mac = info->src_addr;
+#else
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
+#endif
   memcpy(&incomingData, incomingDataPtr, sizeof(incomingData));
 
   String type = String(incomingData.type);
@@ -285,7 +290,7 @@ void initESPNow() {
     return;
   }
   esp_now_register_recv_cb(OnDataRecv);
-  esp_now_register_send_cb(OnDataSent);
+  esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
 
   // Broadcast Peer Ekle (FF:FF:FF:FF:FF:FF)
   esp_now_peer_info_t peerInfo = {};
