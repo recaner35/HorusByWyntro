@@ -650,6 +650,39 @@ input[type="range"]::-moz-range-thumb {
     border: 1px solid var(--border-color);
     background: rgba(255, 255, 255, 0.02);
     transition: var(--transition);
+    position: relative;
+}
+
+.peer-card.offline .peer-controls-grid,
+.peer-card.offline .control-group {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.peer-card.offline .peer-header h3 {
+    color: var(--text-secondary);
+}
+
+.btn-danger {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #ff3333;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.btn-icon:hover {
+    color: #ff4d4d;
 }
 
 .peer-card:hover {
