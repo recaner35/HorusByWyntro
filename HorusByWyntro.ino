@@ -21,7 +21,7 @@
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
-
+#include <vector>
 
 // ===============================
 // Motor Pin Tanımlamaları
@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.39"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -63,9 +63,9 @@ AsyncWebSocket ws("/ws");
 // Global Değişkenler (Durum)
 // ===============================
 struct Config {
-  int tpd = 600;     // Günlük Tur Sayısı (600-1800)
-  int duration = 15; // Bir tur süresi (sn) (10-20)
-  int direction = 0; // 0: CW, 1: CCW, 2: Bi-Directional
+  int tpd = 900;     // Günlük Tur Sayısı (Varsayılan 900)
+  int duration = 10; // Bir tur süresi (sn) (5-15)
+  int direction = 2; // 0: CW, 1: CCW, 2: Bi-Directional (Varsayılan 2)
   String hostname = "";
 };
 Config config;
@@ -110,6 +110,7 @@ bool tryConnect = false;
 unsigned long connectStartTime = 0;
 String myMacAddress;
 bool shouldUpdate = false; // Flag for Auto OTA in loop
+String otaStatus = "idle"; // idle, started, up_to_date, error
 
 // ===============================
 // FONKSİYON PROTOTİPLERİ
@@ -135,6 +136,79 @@ void broadcastStatus();
 void sendToPeer(String targetMac, String command, String action);
 bool execOTA(String url, int command);
 void checkAndPerformUpdate();
+String slugify(String text);
+
+// ===============================
+// Slugify Helper
+// ===============================
+String slugify(String text) {
+  String out = "";
+  text.toLowerCase();
+
+  for (int i = 0; i < text.length(); i++) {
+    char c = text[i];
+    // Basit Mapping
+    switch ((unsigned char)c) {
+    case 0xC3:  // UTF8 start
+      continue; // Skip prefix byte
+    // Note: Handling multi-byte chars correctly requires peeking next usually,
+    // but for basic tr chars, we can approximate map if input is consistent.
+    // Better approach for Arduino string simple map:
+    default:
+      if (c >= 'a' && c <= 'z')
+        out += c;
+      else if (c >= '0' && c <= '9')
+        out += c;
+      else if (c == ' ' || c == '-')
+        out += '-';
+      // Handle explicit Turkish Char replacements if ASCII codes match,
+      // else they might be filtered by alnum check.
+      // Given complexity of UTF8 on Arduino without libs, we trust input is
+      // "mostly" alnum or cleaned in JS. But let's handle spaces firmly.
+      break;
+    }
+  }
+
+  // Re-run for specific TR replacements manually if standard text logic fails
+  // Since String object is UTF8, replacing commonly used codes:
+  text.replace("ş", "s");
+  text.replace("Ş", "s");
+  text.replace("ı", "i");
+  text.replace("İ", "i");
+  text.replace("ğ", "g");
+  text.replace("Ğ", "g");
+  text.replace("ü", "u");
+  text.replace("Ü", "u");
+  text.replace("ö", "o");
+  text.replace("Ö", "o");
+  text.replace("ç", "c");
+  text.replace("Ç", "c");
+
+  // Clean pass
+  out = "";
+  for (int i = 0; i < text.length(); i++) {
+    char c = text[i];
+    if (isalnum(c)) {
+      out += (char)tolower(c);
+    } else if (c == ' ' || c == '-' || c == '_') {
+      out += '-';
+    }
+  }
+
+  // Remove duplicate dashes
+  while (out.indexOf("--") >= 0) {
+    out.replace("--", "-");
+  }
+  // Remove leading/trailing dashes
+  if (out.startsWith("-"))
+    out = out.substring(1);
+  if (out.endsWith("-"))
+    out = out.substring(0, out.length() - 1);
+
+  if (out.length() == 0)
+    return "horus-device";
+  return out;
+}
 
 // ===============================
 // OTA Helper Functions
@@ -191,6 +265,7 @@ bool execOTA(String url, int command) {
 
 void checkAndPerformUpdate() {
   Serial.println("Guncelleme kontrol ediliyor...");
+  otaStatus = "started"; // Temporary status
 
   NetworkClientSecure client;
   client.setInsecure();
@@ -199,6 +274,8 @@ void checkAndPerformUpdate() {
   http.begin(client, GITHUB_VERSION_URL);
 
   int httpCode = http.GET();
+  bool updated = false;
+
   if (httpCode == 200) {
     String payload = http.getString();
     StaticJsonDocument<512> doc;
@@ -211,6 +288,7 @@ void checkAndPerformUpdate() {
 
     if (newVersion != currentVersion) {
       Serial.println("Yeni surum bulundu! Guncelleniyor...");
+      otaStatus = "updating";
 
       String baseUrl =
           "https://github.com/recaner35/HorusByWyntro/releases/download/" +
@@ -229,15 +307,19 @@ void checkAndPerformUpdate() {
       if (execOTA(fwUrl, U_FLASH)) {
         Serial.println("Firmware guncellendi. Yeniden baslatiliyor...");
         ESP.restart();
+        updated = true;
       } else {
         Serial.println("Firmware guncelleme hatasi!");
+        otaStatus = "error";
       }
 
     } else {
       Serial.println("Zaten guncel.");
+      otaStatus = "up_to_date";
     }
   } else {
     Serial.println("Version dosyasi alinamadi");
+    otaStatus = "error";
   }
   http.end();
 }
@@ -263,8 +345,9 @@ void setup() {
   initESPNow();
   initWebServer();
 
-  if (MDNS.begin(config.hostname.c_str())) {
-    Serial.println("mDNS Başlatıldı: " + config.hostname + ".local");
+  String mdnsName = slugify(config.hostname);
+  if (MDNS.begin(mdnsName.c_str())) {
+    Serial.println("mDNS Başlatıldı: " + mdnsName + ".local");
   }
 
   updateSchedule();
@@ -380,9 +463,9 @@ void loadConfig() {
     File file = LittleFS.open(JSON_CONFIG_FILE, "r");
     StaticJsonDocument<512> doc;
     deserializeJson(doc, file);
-    config.tpd = doc["tpd"] | 600;
-    config.duration = doc["dur"] | 15;
-    config.direction = doc["dir"] | 0;
+    config.tpd = doc["tpd"] | 900;
+    config.duration = doc["dur"] | 10;
+    config.direction = doc["dir"] | 2;
     config.hostname = doc["name"] | "";
     file.close();
   }
@@ -566,12 +649,20 @@ void processCommand(String jsonStr) {
       config.duration = doc["dur"];
     if (doc.containsKey("dir"))
       config.direction = doc["dir"];
+    if (doc.containsKey("name"))
+      config.hostname = doc["name"].as<String>(); // Save Name
+
     saveConfig();
     updateSchedule();
+
     String resp = "{\"tpd\":" + String(config.tpd) +
                   ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + "}";
+                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
+                  config.hostname + "\"}";
     ws.textAll(resp);
+
+    // If name changed, we should probably reboot for SSID effect, or just let
+    // user restart For now we assume user knows to restart for SSID change.
   } else if (type == "check_peers") {
     broadcastDiscovery();
     String json = "{ \"peers\": [";
@@ -607,17 +698,23 @@ void initWiFi() {
     myMacAddress = String(macBuf);
   }
 
-  // AP naming from Efuse ID for consistency
+  // AP naming from Efuse ID for consistency if config is empty
   uint32_t low = chipid & 0xFFFFFFFF;
   uint16_t idHigh = (low >> 0) & 0xFFFF;
   char idStr[5];
   sprintf(idStr, "%04X", idHigh);
+
   String apName = "horus-" + String(idStr);
+
+  // Use Custom Hostname for SSID if available
+  if (config.hostname != "") {
+    apName = slugify(config.hostname);
+  } else {
+    config.hostname = apName; // Set default to config if empty
+  }
 
   WiFi.softAP(apName.c_str());
 
-  if (config.hostname == "")
-    config.hostname = apName;
   WiFi.setHostname(config.hostname.c_str());
   WiFi.begin();
 }
@@ -663,8 +760,26 @@ void initWebServer() {
 
   // Auto OTA Endpoint
   server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", "{\"status\":\"started\"}");
+    if (otaStatus == "started" || otaStatus == "updating") {
+      request->send(200, "application/json", "{\"status\":\"busy\"}");
+      return;
+    }
+
+    // Check if status request only (you might want a separate GET status
+    // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
     shouldUpdate = true;
+    otaStatus = "started";
+    request->send(200, "application/json", "{\"status\":\"started\"}");
+  });
+
+  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"status\":\"" + otaStatus + "\"}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
+    request->send(200, "application/json", json);
   });
 
   // Manual OTA Landing
@@ -705,7 +820,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     String json = "{\"running\":" + String(isRunning ? "true" : "false") +
                   ",\"tpd\":" + String(config.tpd) +
                   ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + "}";
+                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
+                  config.hostname + "\"}";
     client->text(json);
   } else if (type == WS_EVT_DATA) {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
