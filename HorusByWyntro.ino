@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.60"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -435,6 +435,8 @@ void loop() {
       }
     }
   }
+
+  delay(2); // CPU ve WiFi stack için kısa bekleme
 }
 
 // ===============================
@@ -559,6 +561,11 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 
   String type = String(incomingData.type);
   String senderMac = String(incomingData.sender_mac);
+
+  // Kendi paketimizi duyarsak yoksay
+  if (senderMac == myMacAddress)
+    return;
+
   String senderName = String(incomingData.sender_name);
 
   Serial.println("ESP-NOW Paket Alındı!");
@@ -725,6 +732,7 @@ void processCommand(String jsonStr) {
     if (action == "stop")
       isRunning = false;
     updateSchedule();
+    broadcastStatus(); // Added broadcastStatus here
     String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
     ws.textAll(resp);
   } else if (type == "settings") {
@@ -788,28 +796,23 @@ void initWiFi() {
     myMacAddress = String(macBuf);
   }
 
-  // AP naming from Efuse ID for consistency if config is empty
-  uint32_t low = chipid & 0xFFFFFFFF;
-  uint16_t idHigh = (low >> 0) & 0xFFFF;
-  char idStr[5];
-  sprintf(idStr, "%04X", idHigh);
-
-  String apName = "horus-" + String(idStr);
-
-  // Use Custom Hostname for SSID if available
+  // AP naming always uses Suffix
+  String apBase = "horus";
   if (config.hostname != "") {
-    apName = slugify(config.hostname);
-  } else {
-    config.hostname = apName; // Set default to config if empty
+    apBase = slugify(config.hostname);
   }
+  String apName = apBase + "-" + deviceSuffix;
 
   // ESP-NOW için WiFi kanalını 1'e sabitleme (önemli!)
   WiFi.softAP(apName.c_str(), "", 1);
 
-  WiFi.setHostname(config.hostname.c_str());
+  // Set Hostname for DHCP (optional to be same as AP)
+  WiFi.setHostname(apName.c_str());
 
   Serial.println("WiFi AP Başlatıldı: " + apName);
   Serial.println("MAC Adresi: " + myMacAddress);
+  Serial.print("AP IP Adresi: ");
+  Serial.println(WiFi.softAPIP());
   Serial.println("WiFi Kanal: 1");
 }
 
@@ -923,6 +926,3 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
         info->opcode == WS_TEXT) {
       data[len] = 0;
       processCommand(String((char *)data));
-    }
-  }
-}
