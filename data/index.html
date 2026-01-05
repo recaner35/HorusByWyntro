@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Horus Control Panel</title>
+    <title>Horus by Wyntro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffd700">
     <link rel="apple-touch-icon" href="192x192.png">
@@ -100,9 +100,11 @@
                 <div class="control-group">
                     <label data-i18n="direction">Yön</label>
                     <div class="direction-selector">
-                        <button id="dirCW" class="dir-btn" onclick="setDirection(0)">CW</button>
-                        <button id="dirCCW" class="dir-btn" onclick="setDirection(1)">CCW</button>
-                        <button id="dirBi" class="dir-btn active" onclick="setDirection(2)">Bi-Dir</button>
+                        <button id="dirCW" class="dir-btn" onclick="setDirection(0)" data-i18n="cw">Saat Yönü</button>
+                        <button id="dirCCW" class="dir-btn" onclick="setDirection(1)" data-i18n="ccw">Saat Yönü
+                            Tersi</button>
+                        <button id="dirBi" class="dir-btn active" onclick="setDirection(2)"
+                            data-i18n="bidirectional">Çift Yön</button>
                     </div>
                 </div>
 
@@ -147,6 +149,8 @@
                     <input type="text" id="deviceName" placeholder="Horus Device">
                     <small style="color:var(--text-secondary); display:block; margin-top:5px;">Değişiklik sonrası cihaz
                         yeniden başlar.</small>
+                    <button class="btn-primary" style="margin-top: 10px;" onclick="saveDeviceName()"
+                        data-i18n="save">KAYDET</button>
                 </div>
 
                 <div class="control-group">
