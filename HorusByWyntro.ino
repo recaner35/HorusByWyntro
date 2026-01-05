@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.45"
+#define FIRMWARE_VERSION "1.0.0"
 
 // ===============================
 // Nesneler
@@ -342,6 +342,7 @@ void setup() {
 
   initMotor();
   initWiFi();
+  delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
   initESPNow();
   initWebServer();
 
@@ -351,6 +352,7 @@ void setup() {
   }
 
   updateSchedule();
+  delay(100); // ESP-NOW'un hazır olması için kısa bekleme
   broadcastDiscovery();
 }
 
@@ -387,12 +389,23 @@ void loop() {
     }
   }
 
-  // Peer Temizliği
+  // Peer Temizliği ve Periyodik Discovery
   static unsigned long lastPrune = 0;
+  static unsigned long lastDiscovery = 0;
+
+  // Her 10 saniyede bir discovery broadcast gönder
+  if (millis() - lastDiscovery > 10000) {
+    lastDiscovery = millis();
+    broadcastDiscovery();
+  }
+
+  // Her 10 saniyede bir eski peer'ları temizle
   if (millis() - lastPrune > 10000) {
     lastPrune = millis();
     for (int i = peers.size() - 1; i >= 0; i--) {
       if (millis() - peers[i].lastSeen > PEER_TIMEOUT) {
+        Serial.println("Peer timeout: " + peers[i].name + " (" + peers[i].mac +
+                       ")");
         peers.erase(peers.begin() + i);
         String json = "{ \"peers\": [";
         for (int j = 0; j < peers.size(); j++) {
@@ -532,15 +545,27 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
   String senderMac = String(incomingData.sender_mac);
   String senderName = String(incomingData.sender_name);
 
+  Serial.println("ESP-NOW Paket Alındı!");
+  Serial.println("  Tip: " + type);
+  Serial.println("  Gönderen MAC: " + senderMac);
+  Serial.println("  Gönderen İsim: " + senderName);
+
   bool found = false;
+  bool needsUpdate = false;
+
   for (auto &p : peers) {
     if (p.mac == senderMac) {
       p.lastSeen = millis();
-      p.name = senderName;
+      if (p.name != senderName) {
+        p.name = senderName;
+        needsUpdate = true;
+      }
       found = true;
+      Serial.println("  Mevcut peer güncellendi");
       break;
     }
   }
+
   if (!found) {
     PeerDevice newPeer;
     newPeer.mac = senderMac;
@@ -548,13 +573,34 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     newPeer.lastSeen = millis();
     peers.push_back(newPeer);
 
+    Serial.println("  Yeni peer eklendi! Toplam peer sayısı: " +
+                   String(peers.size()));
+    needsUpdate = true;
+
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0;
+    peerInfo.channel = 1; // WiFi kanalıyla aynı
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
-      esp_now_add_peer(&peerInfo);
+      if (esp_now_add_peer(&peerInfo) == ESP_OK) {
+        Serial.println("  Peer ESP-NOW listesine eklendi");
+      } else {
+        Serial.println("  Peer ESP-NOW listesine eklenemedi!");
+      }
     }
+  }
+
+  // Peer listesi değiştiyse web socket'e bildir
+  if (needsUpdate) {
+    String json = "{ \"peers\": [";
+    for (int i = 0; i < peers.size(); i++) {
+      if (i > 0)
+        json += ",";
+      json += "{\"mac\":\"" + peers[i].mac + "\",\"name\":\"" + peers[i].name +
+              "\"}";
+    }
+    json += "] }";
+    ws.textAll(json);
   }
 
   if (type == "CMD") {
@@ -562,6 +608,8 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     StaticJsonDocument<200> doc;
     deserializeJson(doc, payload);
     String action = doc["action"];
+
+    Serial.println("  Komut alındı: " + action);
 
     if (action == "start")
       isRunning = true;
@@ -579,18 +627,30 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void initESPNow() {
+  WiFi.disconnect(); // STA modundaki eski bağlantıları temizle
+
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
+
+  Serial.println("ESP-NOW Başlatıldı");
+  Serial.println("WiFi Kanal: " + String(WiFi.channel()));
+
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
 
+  // Broadcast peer ekleme
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 0;
+  peerInfo.channel = 1; // WiFi kanalıyla aynı olmalı
   peerInfo.encrypt = false;
-  esp_now_add_peer(&peerInfo);
+
+  if (esp_now_add_peer(&peerInfo) == ESP_OK) {
+    Serial.println("Broadcast peer eklendi");
+  } else {
+    Serial.println("Broadcast peer eklenemedi!");
+  }
 }
 
 void broadcastDiscovery() {
@@ -599,7 +659,16 @@ void broadcastDiscovery() {
   strcpy(myData.sender_name, config.hostname.c_str());
   strcpy(myData.payload, "");
   uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+
+  esp_err_t result =
+      esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+
+  if (result == ESP_OK) {
+    Serial.println("Discovery broadcast gönderildi: " + config.hostname);
+  } else {
+    Serial.println("Discovery broadcast gönderilemedi! Hata: " +
+                   String(result));
+  }
 }
 
 void broadcastStatus() {
@@ -664,7 +733,11 @@ void processCommand(String jsonStr) {
     // If name changed, we should probably reboot for SSID effect, or just let
     // user restart For now we assume user knows to restart for SSID change.
   } else if (type == "check_peers") {
+    Serial.println(
+        "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
     broadcastDiscovery();
+
+    // Mevcut peer listesini hemen gönder
     String json = "{ \"peers\": [";
     for (int i = 0; i < peers.size(); i++) {
       if (i > 0)
@@ -674,6 +747,7 @@ void processCommand(String jsonStr) {
     }
     json += "] }";
     ws.textAll(json);
+    Serial.println("Mevcut peer sayısı: " + String(peers.size()));
   } else if (type == "peer_command") {
     String target = doc["target"];
     String action = doc["action"];
@@ -713,10 +787,14 @@ void initWiFi() {
     config.hostname = apName; // Set default to config if empty
   }
 
-  WiFi.softAP(apName.c_str());
+  // ESP-NOW için WiFi kanalını 1'e sabitleme (önemli!)
+  WiFi.softAP(apName.c_str(), "", 1);
 
   WiFi.setHostname(config.hostname.c_str());
-  WiFi.begin();
+
+  Serial.println("WiFi AP Başlatıldı: " + apName);
+  Serial.println("MAC Adresi: " + myMacAddress);
+  Serial.println("WiFi Kanal: 1");
 }
 
 // ===============================
