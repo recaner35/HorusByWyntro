@@ -1,462 +1,438 @@
-/* 
-  Horus by Wyntro - Luxury Design Language 
-  Theme: Modern, Minimalist, Premium
-*/
-
 :root {
-  /* Renk Paleti (Varsayılan Dark Luxury) */
-  --bg-color: #050505;
-  --card-bg: #121212;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --accent-color: #d4af37;
-  /* Altın */
-  --accent-glow: rgba(212, 175, 55, 0.4);
-  --danger-color: #ff4d4d;
-  --success-color: #00b894;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --transition-speed: 0.3s;
-}
-
-[data-theme="light"] {
-  --bg-color: #f5f5f7;
-  --card-bg: #ffffff;
-  --text-primary: #1d1d1f;
-  --text-secondary: #86868b;
-  --accent-color: #bfa02f;
-  /* Biraz daha koyu altın */
-  --glass-bg: rgba(0, 0, 0, 0.05);
-  --glass-border: rgba(0, 0, 0, 0.1);
+    --bg-color: #0d0d12;
+    --sidebar-bg: #141419;
+    --card-bg: #1a1a20;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --accent-color: #ffd700;
+    --success-color: #00ff88;
+    --danger-color: #ff4444;
+    --font-main: 'Outfit', sans-serif;
+    --transition: all 0.3s ease;
 }
 
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  background-color: var(--bg-color);
-  color: var(--text-primary);
-  font-family: var(--font-main);
-  line-height: 1.6;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  overflow-x: hidden;
-  transition: background-color var(--transition-speed), color var(--transition-speed);
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    /* App-like feel */
 }
 
-.container {
-  width: 100%;
-  max-width: 480px;
-  /* Mobile first approach focus */
-  padding: 20px;
-  padding-bottom: 100px;
+/* Background */
+.background-glow {
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+    z-index: -1;
+    pointer-events: none;
 }
 
-/* Header & Logo */
-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding-top: 20px;
+/* App Container */
+.app-container {
+    display: flex;
+    height: 100vh;
 }
 
-.logo-svg {
-  width: 220px;
-  height: auto;
-  fill: var(--accent-color);
-  filter: drop-shadow(0 0 10px var(--accent-glow));
+/* SIGDEBAR */
+.sidebar {
+    width: 250px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.logo-svg path,
-.logo-svg polygon {
-  fill: inherit;
+.logo {
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center the logo */
+    height: 60px;
+    /* Fixed height container */
 }
 
-h1.brand-title {
-  font-size: 1.2rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-top: 10px;
-  font-weight: 300;
-  color: var(--text-secondary);
+/* Old .logo i removed */
+
+.nav-links {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-/* Kartlar ve Paneller */
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    text-align: left;
+    padding: 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: var(--transition);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.nav-btn.active {
+    background: var(--accent-color);
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+}
+
+.nav-btn i {
+    width: 20px;
+    text-align: center;
+}
+
+.connection-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #333;
+    margin: 20px auto;
+}
+
+.connection-status.connected {
+    background-color: var(--success-color);
+    box-shadow: 0 0 10px var(--success-color);
+}
+
+.connection-status.disconnected {
+    background-color: var(--danger-color);
+    box-shadow: 0 0 10px var(--danger-color);
+}
+
+/* MAIN CONTENT */
+.content-area {
+    flex: 1;
+    position: relative;
+    overflow-y: auto;
+    padding: 30px;
+}
+
+/* TABS */
+.tab-content {
+    display: none;
+    max-width: 800px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.tab-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-icon:hover {
+    background: var(--accent-color);
+    color: #000;
+}
+
+/* CARDS & CONTROLS */
 .card {
-  background: var(--card-bg);
-  border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 20px;
 }
 
-.card-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Status Indicator */
 .status-display {
-  text-align: center;
-  margin: 10px 0;
+    text-align: center;
+    margin: 20px 0;
 }
 
-.status-text {
-  font-size: 2rem;
-  font-weight: 700;
-  display: block;
+#statusText {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--danger-color);
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-.status-sub {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+.btn-large {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
 }
 
-/* Kontroller: Slider */
+.btn-large.start {
+    background: var(--success-color);
+    color: #000;
+    box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+}
+
+.btn-large.stop {
+    background: var(--danger-color);
+    color: #fff;
+    box-shadow: 0 5px 20px rgba(255, 68, 68, 0.3);
+}
+
+/* SLIDERS & FORM */
 .control-group {
-  margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
-label {
-  display: block;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
-  color: var(--text-secondary);
+.control-group label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+
+.value-badge {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: #fff;
 }
 
 input[type=range] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  background: transparent;
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
 }
 
 input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  height: 24px;
-  width: 24px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  cursor: pointer;
-  margin-top: -10px;
-  box-shadow: 0 0 15px var(--accent-glow);
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+    margin-top: -8px;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 input[type=range]::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 4px;
-  cursor: pointer;
-  background: var(--glass-border);
-  border-radius: 2px;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
 }
 
-.range-value {
-  float: right;
-  color: var(--accent-color);
-  font-weight: bold;
+.direction-selector {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 5px;
+    gap: 5px;
 }
 
-/* Kontroller: Button Main */
-.btn-main {
-  width: 100%;
-  padding: 18px;
-  border: none;
-  border-radius: 18px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  background: linear-gradient(135deg, var(--card-bg), var(--bg-color));
-  color: var(--text-secondary);
-  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2), -5px -5px 15px rgba(255, 255, 255, 0.05);
+.dir-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
-.btn-main.active {
-  background: var(--accent-color);
-  color: #000;
-  box-shadow: 0 0 30px var(--accent-glow);
+.dir-btn.active {
+    background: var(--accent-color);
+    color: #000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-.btn-main:active {
-  transform: scale(0.98);
+.btn-primary,
+.btn-secondary {
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
 }
 
-/* Yön Seçimi (Segmented Control) */
-.segmented-control {
-  display: flex;
-  background: var(--glass-bg);
-  padding: 4px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+.btn-primary {
+    background: #333;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.segment-opt {
-  flex: 1;
-  text-align: center;
-  padding: 10px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  transition: all 0.2s;
+.btn-primary:hover {
+    background: #444;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-.segment-opt.selected {
-  background: var(--card-bg);
-  /* or accent */
-  color: var(--accent-color);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
 }
 
-/* Device List */
-.device-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--glass-border);
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
-.device-item:last-child {
-  border: none;
-}
-
-.device-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.device-name {
-  font-weight: 600;
-}
-
-.device-ip {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-/* Settings Modal overlay */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal.active {
-  display: flex;
-}
-
-.settings-panel {
-  width: 90%;
-  max-width: 400px;
-  background: var(--card-bg);
-  border-radius: 20px;
-  padding: 24px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.close-btn {
-  float: right;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-/* Utility buttons */
-.icon-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 10px;
-}
-
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--card-bg);
-  display: flex;
-  justify-content: space-around;
-  padding: 15px;
-  border-top: 1px solid var(--glass-border);
-}
-
+/* INPUTS */
 input[type=text],
+input[type=password],
 select {
-  width: 100%;
-  padding: 12px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  color: var(--text-primary);
-  margin-bottom: 10px;
-  /* Fix for browser defaults on dropdowns */
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23a0a0a0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 12px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: inherit;
+    margin-bottom: 5px;
 }
 
-/* Fix option visibility in dark mode */
-select option {
-  background-color: var(--card-bg);
-  color: var(--text-primary);
+input:focus {
+    outline: none;
+    border-color: var(--accent-color);
 }
 
-/* Animasyonlar */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--accent-glow);
-  }
-
-  70% {
-    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
-  }
+/* WIFI LIST */
+.wifi-list,
+.device-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-.pulse-anim {
-  animation: pulse 2s infinite;
+.wifi-item,
+.device-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
-/* Color Picker */
-.color-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
-  gap: 10px;
-  margin-bottom: 20px;
-  margin-top: 10px;
+.wifi-item:hover,
+.device-item:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.color-option {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: transform 0.2s, border-color 0.2s;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+.wifi-item.secure i {
+    color: var(--success-color);
 }
 
-.color-option:hover {
-  transform: scale(1.1);
+.wifi-item.open i {
+    color: var(--danger-color);
 }
 
-.color-option.selected {
-  border-color: var(--text-primary);
-  transform: scale(1.15);
-  box-shadow: 0 0 10px var(--accent-glow);
+.hidden {
+    display: none;
 }
 
-/* Wi-Fi Elements */
-.wifi-list {
-  max-height: 200px;
-  overflow-y: auto;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  margin-bottom: 20px;
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px;
+    font-style: italic;
 }
 
-.wifi-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid var(--glass-border);
-  transition: background 0.2s;
-}
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
 
-.wifi-item:hover {
-  background: var(--glass-bg);
-}
+    .sidebar {
+        width: 100%;
+        height: auto;
+        padding: 10px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-.wifi-info {
-  display: flex;
-  flex-direction: column;
-}
+    .logo {
+        margin-bottom: 0;
+        font-size: 1.2rem;
+    }
 
-.wifi-ssid {
-  font-weight: bold;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
+    .nav-links {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 5px;
+        justify-content: flex-end;
+    }
 
-.wifi-meta {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
+    .nav-btn span {
+        display: none;
+    }
 
-.btn-select {
-  padding: 5px 12px;
-  background: var(--glass-border);
-  border: 1px solid var(--text-secondary);
-  color: var(--text-primary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
+    /* Icon only on mobile */
+    .nav-btn {
+        padding: 10px;
+    }
 
-.btn-select:hover {
-  background: var(--accent-color);
-  color: black;
-  border-color: var(--accent-color);
-}
-
-/* Spinner */
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--glass-border);
-  border-top: 4px solid var(--accent-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 20px auto;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+    .content-area {
+        padding: 15px;
+        padding-bottom: 80px;
+    }
 }
