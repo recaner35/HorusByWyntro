@@ -1,4 +1,4 @@
-/* Horus by Wyntro - Yerelleştirme Modülü */
+/* Horus by Wyntro - Localization Module */
 
 const translations = {
     "tr": {
