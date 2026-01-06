@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.88"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -156,7 +156,7 @@ String slugify(String text);
 // ===============================
 String slugify(String text) {
   String out = "";
-  text = text.toLowerCase();
+  text.toLowerCase();
 
   for (int i = 0; i < text.length(); i++) {
     char c = text[i];
