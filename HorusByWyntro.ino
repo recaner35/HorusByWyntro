@@ -21,7 +21,6 @@
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
-#include <esp_wifi.h>
 #include <vector>
 
 // ===============================
@@ -47,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.81"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -118,8 +117,9 @@ String wifiStatusStr = "disconnected";
 bool tryConnect = false;
 unsigned long connectStartTime = 0;
 String myMacAddress;
-bool shouldUpdate = false; // Flag for Auto OTA in loop
-String otaStatus = "idle"; // idle, started, up_to_date, error
+bool shouldUpdate = false;       // Flag for Auto OTA in loop
+String otaStatus = "idle";       // idle, started, up_to_date, error
+unsigned long scanStartTime = 0; // For WiFi scan timeout
 
 // ===============================
 // FONKSİYON PROTOTİPLERİ
@@ -129,7 +129,6 @@ void saveConfig();
 void initWiFi();
 void initMotor();
 void initWebServer();
-void deinitESPNow();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len);
 void processCommand(String jsonStr);
@@ -408,7 +407,6 @@ void loop() {
   handleWifiScan();
   handleWifiConnection();
   handlePhysicalControl();
-  ws.cleanupClients();
 
   if (isRunning) {
     checkSchedule();
@@ -550,11 +548,25 @@ void handleWifiScan() {
     if (n >= 0) { // Tarama tamamlandı
       Serial.printf("WiFi tarama tamamlandı: %d ağ bulundu\n", n);
       wifiScanning = false;
-      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
-    } else if (n == -2) {
-      Serial.println("WiFi tarama başlatılamadı veya başarısız oldu.");
+      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix,
+                  ""); // Kanal otomatik
+
+      // Tarama sonrası ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa)
+      if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
+        initESPNow();
+        restorePeers();
+      }
+    } else if (n == -2 || (millis() - scanStartTime > 20000)) {
+      Serial.println("WiFi tarama hatası veya zaman aşımı.");
       wifiScanning = false;
-      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
+      WiFi.scanDelete();
+      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "");
+      ws.textAll("{\"type\":\"wifi_scan_error\"}");
+
+      if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
+        initESPNow();
+        restorePeers();
+      }
     }
   }
 }
@@ -766,7 +778,8 @@ void initESPNow() {
 
   isEspNowActive = true;
   Serial.println("ESP-NOW Başlatıldı");
-  Serial.println("WiFi Kanal: " + String(WiFi.channel()));
+  int currentChannel = WiFi.channel();
+  Serial.println("WiFi Kanal: " + String(currentChannel));
 
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
@@ -774,7 +787,7 @@ void initESPNow() {
   // Broadcast peer ekleme
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 1; // WiFi kanalıyla aynı olmalı
+  peerInfo.channel = currentChannel; // WiFi kanalıyla aynı olmalı
   peerInfo.encrypt = false;
 
   if (esp_now_add_peer(&peerInfo) == ESP_OK) {
@@ -792,7 +805,7 @@ void restorePeers() {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 1;
+    peerInfo.channel = WiFi.channel();
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       esp_now_add_peer(&peerInfo);
@@ -933,8 +946,29 @@ void processCommand(String jsonStr) {
       config.duration = doc["dur"];
     if (doc.containsKey("dir"))
       config.direction = doc["dir"];
-    if (doc.containsKey("espnow"))
-      config.espNowEnabled = doc["espnow"];
+    if (doc.containsKey("espnow")) {
+      bool targetState = doc["espnow"];
+      if (targetState && WiFi.status() != WL_CONNECTED) {
+        config.espNowEnabled = false;
+        // User attempted to enable without WiFi connection
+        String errorMsg =
+            "{\"type\":\"error\",\"message\":\"WiFi baglantisi gerekli!\"}";
+        ws.textAll(errorMsg);
+      } else {
+        config.espNowEnabled = targetState;
+        if (config.espNowEnabled) {
+          if (!isEspNowActive && !wifiScanning) {
+            initESPNow();
+            restorePeers();
+          }
+        } else {
+          if (isEspNowActive) {
+            esp_now_deinit();
+            isEspNowActive = false;
+          }
+        }
+      }
+    }
     if (doc.containsKey("name")) {
       String newName = doc["name"].as<String>();
       if (newName != config.hostname) {
@@ -1027,150 +1061,41 @@ void processCommand(String jsonStr) {
 }
 
 // ===============================
-// PROPER WiFi Initialization  SİLMEYE BURADAN BAŞLA
+// PROPER WiFi Initialization
 // ===============================
 void initWiFi() {
   WiFi.mode(WIFI_AP_STA);
-
   uint64_t chipid = ESP.getEfuseMac();
   char macBuf[18];
+
   myMacAddress = WiFi.macAddress();
   if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
-    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X",
-            (uint8_t)(chipid >> 0), (uint8_t)(chipid >> 8),
-            (uint8_t)(chipid >> 16), (uint8_t)(chipid >> 24),
-            (uint8_t)(chipid >> 32), (uint8_t)(chipid >> 40));
+    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
+            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
+            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
+            (uint8_t)(chipid >> 40));
     myMacAddress = String(macBuf);
   }
 
+  // AP naming always uses Suffix
   String apBase = "horus";
   if (config.hostname != "") {
     apBase = slugify(config.hostname);
   }
   String apName = apBase + "-" + deviceSuffix;
 
-  // KRİTİK DEĞİŞİKLİK: Kanal parametresi kaldırıldı
-  WiFi.softAP(apName.c_str(), "");   // Şifre boş, kanal otomatik
+  // Kanal sabitleme kaldırıldı, otomatik seçilecek
+  WiFi.softAP(apName.c_str(), "");
 
+  // Set Hostname for DHCP (optional to be same as AP)
   WiFi.setHostname(apName.c_str());
 
   Serial.println("WiFi AP Başlatıldı: " + apName);
   Serial.println("MAC Adresi: " + myMacAddress);
   Serial.print("AP IP Adresi: ");
   Serial.println(WiFi.softAPIP());
-  // Kanal bilgisi artık otomatik, debug için yazdırılabilir:
-  Serial.println("WiFi Kanal: Otomatik (tarama için serbest)");
+  Serial.println("WiFi Kanal: 1");
 }
-
-// ===============================
-void deinitESPNow() {
-  if (isEspNowActive) {
-    esp_now_deinit();
-    isEspNowActive = false;
-    Serial.println("ESP-NOW deinit edildi.");
-  }
-}
-
-void initESPNow() {
-  if (isEspNowActive) return;
-
-  // STA bağlı değilse ESP-NOW başlatma (kanal uyumu için)
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("ESP-NOW başlatılamadı: WiFi STA bağlı değil.");
-    return;
-  }
-
-  // Mevcut WiFi kanalını al ve ESP-NOW'a uygula
-  uint8_t currentChannel;
-  esp_wifi_get_channel(&currentChannel, nullptr);
-  wifi_config_t conf;
-  esp_wifi_get_config(WIFI_IF_STA, &conf);
-  conf.sta.channel = currentChannel;
-
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("ESP-NOW init başarısız!");
-    return;
-  }
-
-  isEspNowActive = true;
-  restorePeers();
-  Serial.println("ESP-NOW başlatıldı (Kanal: " + String(currentChannel) + ")");
-}
-
-// ===============================
-void initWebServer() {
-  // Diğer endpoint'ler aynı kaldı...
-
-  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!wifiScanning) {
-      deinitESPNow();                    // <-- Tarama öncesi ESP-NOW kapat
-      wifiScanning = true;
-      WiFi.scanNetworks(true);           // Async tarama
-      Serial.println("WiFi tarama başlatıldı (ESP-NOW geçici olarak kapatıldı).");
-      request->send(202, "application/json", "{\"status\":\"scanning\"}");
-    } else {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
-    }
-  });
-
-  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
-    int scanResult = WiFi.scanComplete();
-    if (scanResult == -2) {  // Henüz tamamlanmadı
-      request->send(200, "application/json", "[]");
-      return;
-    }
-
-    // Tarama tamamlandı
-    wifiScanning = false;
-
-    // KRİTİK: Tarama sonrası ESP-NOW yeniden başlat (eğer ayarlıysa)
-    if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
-      initESPNow();
-    }
-
-    String json = "[";
-    for (int i = 0; i < scanResult; ++i) {
-      if (i > 0) json += ",";
-      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + String(WiFi.RSSI(i)) + "}";
-    }
-    json += "]";
-    WiFi.scanDelete();  // Belleği temizle
-    request->send(200, "application/json", json);
-  });
-
-  // WebSocket event (settings kısmında espnow toggle)
-  // processCommand içinde aşağıdaki gibi güncellendi:
-}
-
-void processCommand(String jsonStr) {
-  DynamicJsonDocument doc(1024);
-  deserializeJson(doc, jsonStr);
-
-  if (doc["type"] == "settings") {
-    if (doc.containsKey("espnow")) {
-      bool requested = doc["espnow"];
-      config.espNowEnabled = requested;
-      saveConfig();
-
-      if (requested) {
-        if (WiFi.status() == WL_CONNECTED) {
-          initESPNow();
-        } else {
-          Serial.println("ESP-NOW açılamadı: WiFi bağlı değil.");
-          config.espNowEnabled = false;  // Zorla kapat
-          saveConfig();
-        }
-      } else {
-        deinitESPNow();
-      }
-
-      // Client'a güncel durumu bildir
-      String resp = "{\"espnow\":" + String(config.espNowEnabled ? "true" : "false") + "}";
-      ws.textAll(resp);
-    }
-
-    // Diğer ayarlar (tpd, dur, dir, name) aynı kaldı...
-  }
 
 // ===============================
 // Web Server Initialization
@@ -1197,6 +1122,7 @@ void initWebServer() {
         isEspNowActive = false;
       }
       wifiScanning = true;
+      scanStartTime = millis();
       WiFi.scanNetworks(true); // Async scan
       request->send(202, "application/json", "{\"status\":\"scanning\"}");
     } else {
