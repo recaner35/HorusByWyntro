@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.73"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -68,6 +68,7 @@ struct Config {
   int duration = 10; // Bir tur süresi (sn) (5-15)
   int direction = 2; // 0: CW, 1: CCW, 2: Bi-Directional (Varsayılan 2)
   String hostname = "";
+  bool espNowEnabled = false; // ESP-NOW toggle (default false)
 };
 Config config;
 
@@ -362,7 +363,11 @@ void setup() {
   initMotor();
   initWiFi();
   delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
-  initESPNow();
+
+  if (config.espNowEnabled) {
+    initESPNow();
+  }
+
   initWebServer();
 
   // MDNS Name logic: slugify(hostname) + "-" + suffix
@@ -377,11 +382,15 @@ void setup() {
   }
 
   loadPeers();
-  restorePeers(); // Load peers to ESP-NOW list initially
+  if (config.espNowEnabled) {
+    restorePeers(); // Load peers to ESP-NOW list initially
+  }
 
   updateSchedule();
   delay(100); // ESP-NOW'un hazır olması için kısa bekleme
-  broadcastDiscovery();
+  if (config.espNowEnabled) {
+    broadcastDiscovery();
+  }
 }
 
 // ===============================
@@ -424,15 +433,16 @@ void loop() {
   static unsigned long lastEspNowCheck = 0;
   if (millis() - lastEspNowCheck > 5000) {
     lastEspNowCheck = millis();
-    bool shouldBeActive = (WiFi.status() == WL_CONNECTED) && !wifiScanning;
+    bool shouldBeActive = (WiFi.status() == WL_CONNECTED) && !wifiScanning &&
+                          config.espNowEnabled;
 
     if (shouldBeActive && !isEspNowActive) {
-      Serial.println("WiFi bağlı, ESP-NOW başlatılıyor...");
+      Serial.println("WiFi bağlı ve ESP-NOW aktif, başlatılıyor...");
       initESPNow();
       restorePeers();
     } else if (!shouldBeActive && isEspNowActive) {
-      Serial.println(
-          "WiFi bağlantısı yok veya tarama aktif, ESP-NOW durduruluyor...");
+      Serial.println("WiFi bağlantısı yok, tarama aktif veya ESP-NOW kapalı, "
+                     "durduruluyor...");
       esp_now_deinit();
       isEspNowActive = false;
     }
@@ -443,7 +453,7 @@ void loop() {
   static unsigned long lastDiscovery = 0;
 
   // Her 10 saniyede bir discovery broadcast gönder
-  if (millis() - lastDiscovery > 10000) {
+  if (config.espNowEnabled && (millis() - lastDiscovery > 10000)) {
     lastDiscovery = millis();
     broadcastDiscovery();
   }
@@ -514,6 +524,7 @@ void loadConfig() {
     config.duration = doc["dur"] | 10;
     config.direction = doc["dir"] | 2;
     config.hostname = doc["name"] | "";
+    config.espNowEnabled = doc["espnow"] | false;
     file.close();
   }
 }
@@ -525,6 +536,7 @@ void saveConfig() {
   doc["dur"] = config.duration;
   doc["dir"] = config.direction;
   doc["name"] = config.hostname;
+  doc["espnow"] = config.espNowEnabled;
   serializeJson(doc, file);
   file.close();
 }
@@ -919,6 +931,8 @@ void processCommand(String jsonStr) {
       config.duration = doc["dur"];
     if (doc.containsKey("dir"))
       config.direction = doc["dir"];
+    if (doc.containsKey("espnow"))
+      config.espNowEnabled = doc["espnow"];
     if (doc.containsKey("name")) {
       String newName = doc["name"].as<String>();
       if (newName != config.hostname) {
@@ -928,8 +942,9 @@ void processCommand(String jsonStr) {
         // WS yanıtını gönderip restart atalım
         String resp = "{\"tpd\":" + String(config.tpd) +
                       ",\"dur\":" + String(config.duration) +
-                      ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                      config.hostname + "\"}";
+                      ",\"dir\":" + String(config.direction) + ",\"espnow\":" +
+                      (config.espNowEnabled ? "true" : "false") +
+                      ",\"name\":\"" + config.hostname + "\"}";
         ws.textAll(resp);
         delay(500); // Mesajın gitmesi için kısa bekleme
         ESP.restart();
@@ -942,8 +957,9 @@ void processCommand(String jsonStr) {
 
     String resp = "{\"tpd\":" + String(config.tpd) +
                   ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                  config.hostname + "\"}";
+                  ",\"dir\":" + String(config.direction) +
+                  ",\"espnow\":" + (config.espNowEnabled ? "true" : "false") +
+                  ",\"name\":\"" + config.hostname + "\"}";
     ws.textAll(resp);
   } else if (type == "check_peers") {
     Serial.println(
@@ -1148,19 +1164,3 @@ void initWebServer() {
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  if (type == WS_EVT_CONNECT) {
-    String json = "{\"running\":" + String(isRunning ? "true" : "false") +
-                  ",\"tpd\":" + String(config.tpd) +
-                  ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                  config.hostname + "\",\"suffix\":\"" + deviceSuffix + "\"}";
-    client->text(json);
-  } else if (type == WS_EVT_DATA) {
-    AwsFrameInfo *info = (AwsFrameInfo *)arg;
-    if (info->final && info->index == 0 && info->len == len &&
-        info->opcode == WS_TEXT) {
-      data[len] = 0;
-      processCommand(String((char *)data));
-    }
-  }
-}
