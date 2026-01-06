@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.83"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -111,7 +111,7 @@ struct_message myData;
 struct_message incomingData;
 
 // WiFi & Connection State
-bool wifiScanning = false;
+bool isScanning = false;
 long lastWifiCheck = 0;
 String wifiStatusStr = "disconnected";
 bool tryConnect = false;
@@ -434,8 +434,8 @@ void loop() {
   static unsigned long lastEspNowCheck = 0;
   if (millis() - lastEspNowCheck > 5000) {
     lastEspNowCheck = millis();
-    bool shouldBeActive = (WiFi.status() == WL_CONNECTED) && !wifiScanning &&
-                          config.espNowEnabled;
+    bool shouldBeActive =
+        (WiFi.status() == WL_CONNECTED) && !isScanning && config.espNowEnabled;
 
     if (shouldBeActive && !isEspNowActive) {
       Serial.println("WiFi bağlı ve ESP-NOW aktif, başlatılıyor...");
@@ -454,7 +454,8 @@ void loop() {
   static unsigned long lastDiscovery = 0;
 
   // Her 10 saniyede bir discovery broadcast gönder
-  if (config.espNowEnabled && (millis() - lastDiscovery > 10000)) {
+  if (!isScanning && config.espNowEnabled &&
+      (millis() - lastDiscovery > 10000)) {
     lastDiscovery = millis();
     broadcastDiscovery();
   }
@@ -543,11 +544,11 @@ void saveConfig() {
 }
 
 void handleWifiScan() {
-  if (wifiScanning) {
+  if (isScanning) {
     int n = WiFi.scanComplete();
     if (n >= 0) { // Tarama tamamlandı
       Serial.printf("WiFi tarama tamamlandı: %d ağ bulundu\n", n);
-      wifiScanning = false;
+      isScanning = false;
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix,
                   ""); // Kanal otomatik
 
@@ -558,7 +559,7 @@ void handleWifiScan() {
       }
     } else if (n == -2 || (millis() - scanStartTime > 20000)) {
       Serial.println("WiFi tarama hatası veya zaman aşımı.");
-      wifiScanning = false;
+      isScanning = false;
       WiFi.scanDelete();
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "");
       ws.textAll("{\"type\":\"wifi_scan_error\"}");
@@ -998,6 +999,10 @@ void processCommand(String jsonStr) {
                   ",\"name\":\"" + config.hostname + "\"}";
     ws.textAll(resp);
   } else if (type == "check_peers") {
+    if (isScanning) {
+      Serial.println("Tarama devam ediyor, peer sorgusu yoksayılıyor.");
+      return;
+    }
     Serial.println(
         "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
     broadcastDiscovery();
@@ -1115,15 +1120,21 @@ void initWebServer() {
   });
 
   server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!wifiScanning) {
+    if (!isScanning) {
       // ESP-NOW'ı durdur (Tarama için)
       if (isEspNowActive) {
         esp_now_deinit();
         isEspNowActive = false;
       }
-      wifiScanning = true;
+      isScanning = true;
       scanStartTime = millis();
-      WiFi.scanNetworks(true); // Async scan
+
+      // Radyonun sakinleşmesi için kısa bir bekleme (Loop içinde handle
+      // edilecek şekilde) Ancak AsyncRequest içinde beklemek riskli olabilir, o
+      // yüzden sadece bayrağı çekip loop'un bir sonraki turunda taramayı
+      // başlatabiliriz. Şimdilik burada direkt başlatıp loop'u kilitlemek
+      // yerine bayrakla yönetelim.
+      WiFi.scanNetworks(true);
       request->send(202, "application/json", "{\"status\":\"scanning\"}");
     } else {
       request->send(200, "application/json", "{\"status\":\"busy\"}");
