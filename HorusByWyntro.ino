@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.89"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -366,9 +366,8 @@ void setup() {
   initWiFi();
   delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
 
-  if (config.espNowEnabled) {
-    initESPNow();
-  }
+  // ESP-NOW setup() içinde direkt başlatılmıyor.
+  // loop() içindeki yönetim döngüsü WiFi bağlandığında otomatik başlatacaktır.
 
   initWebServer();
 
@@ -384,15 +383,11 @@ void setup() {
   }
 
   loadPeers();
-  if (config.espNowEnabled) {
-    restorePeers(); // Load peers to ESP-NOW list initially
-  }
+  // restorePeers() ve broadcastDiscovery() loop içindeki yönetim tarafından
+  // handle edilecek
 
   updateSchedule();
-  delay(100); // ESP-NOW'un hazır olması için kısa bekleme
-  if (config.espNowEnabled) {
-    broadcastDiscovery();
-  }
+  delay(100);
 }
 
 // ===============================
@@ -441,16 +436,23 @@ void loop() {
   static unsigned long lastEspNowCheck = 0;
   if (millis() - lastEspNowCheck > 5000) {
     lastEspNowCheck = millis();
-    bool shouldBeActive = !isScanning && config.espNowEnabled;
+    bool shouldBeActive =
+        !isScanning && config.espNowEnabled && (WiFi.status() == WL_CONNECTED);
 
     if (shouldBeActive && !isEspNowActive) {
-      if (WiFi.status() == WL_CONNECTED || WiFi.softAPgetStationNum() >= 0) {
-        Serial.println("ESP-NOW başlatılıyor...");
-        initESPNow();
-        restorePeers();
-      }
+      Serial.println("WiFi bağlı ve ESP-NOW toggle açık, başlatılıyor...");
+      initESPNow();
+      restorePeers();
     } else if (!shouldBeActive && isEspNowActive) {
-      Serial.println("Tarama aktif veya ESP-NOW kapalı, durduruluyor...");
+      Serial.print("ESP-NOW durduruluyor (Sebep: ");
+      if (isScanning)
+        Serial.print("Tarama aktif");
+      else if (!config.espNowEnabled)
+        Serial.print("Toggle kapalı");
+      else if (WiFi.status() != WL_CONNECTED)
+        Serial.print("WiFi bağlantısı yok");
+      Serial.println(")");
+
       esp_now_deinit();
       isEspNowActive = false;
     }
@@ -581,10 +583,13 @@ void handleWifiScan() {
     Serial.println("AP Kanal 1'e geri çekildi.");
   }
 
-  // 7. ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa)
-  if (config.espNowEnabled) {
+  // 7. ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa ve ŞARTLAR UYGUNSA)
+  if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
     initESPNow();
     restorePeers();
+  } else {
+    Serial.println("Tarama bitti ancak ESP-NOW şartları (Toggle veya WiFi) "
+                   "sağlanmadığı için başlatılmadı.");
   }
 }
 
@@ -967,7 +972,10 @@ void processCommand(String jsonStr) {
       bool targetState = doc["espnow"];
       if (targetState && WiFi.status() != WL_CONNECTED) {
         config.espNowEnabled = false;
-        // User attempted to enable without WiFi connection
+        // WS üzerinden toggle'ı tekrar kapalıya çekmesi için durum gönder
+        String resp = "{\"espnow\":false}";
+        ws.textAll(resp);
+
         String errorMsg =
             "{\"type\":\"error\",\"message\":\"WiFi baglantisi gerekli!\"}";
         ws.textAll(errorMsg);
