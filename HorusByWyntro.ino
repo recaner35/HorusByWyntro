@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.71"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -520,7 +520,11 @@ void handleWifiScan() {
       // Kanalı tekrar 1'e sabitle (ESP-NOW gereği)
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     } else if (n == -2) {
+      // Tarama başarısız olsa bile ESP-NOW'ı geri yükle!
       wifiScanning = false;
+      initESPNow();
+      restorePeers();
+      WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     }
   }
 }
@@ -888,8 +892,23 @@ void processCommand(String jsonStr) {
       config.duration = doc["dur"];
     if (doc.containsKey("dir"))
       config.direction = doc["dir"];
-    if (doc.containsKey("name"))
-      config.hostname = doc["name"].as<String>(); // Save Name
+    if (doc.containsKey("name")) {
+      String newName = doc["name"].as<String>();
+      if (newName != config.hostname) {
+        config.hostname = newName;
+        saveConfig();
+        // İsim değişikliği için restart gerekli
+        // WS yanıtını gönderip restart atalım
+        String resp = "{\"tpd\":" + String(config.tpd) +
+                      ",\"dur\":" + String(config.duration) +
+                      ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
+                      config.hostname + "\"}";
+        ws.textAll(resp);
+        delay(500); // Mesajın gitmesi için kısa bekleme
+        ESP.restart();
+        return;
+      }
+    }
 
     saveConfig();
     updateSchedule();
@@ -899,9 +918,6 @@ void processCommand(String jsonStr) {
                   ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
                   config.hostname + "\"}";
     ws.textAll(resp);
-
-    // If name changed, we should probably reboot for SSID effect, or just let
-    // user restart For now we assume user knows to restart for SSID change.
   } else if (type == "check_peers") {
     Serial.println(
         "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
