@@ -14,7 +14,8 @@ const translations = {
         "wifi_settings": "Wi-Fi Ağları", "scan_networks": "Ağları Tara", "wifi_setup": "Wi-Fi Kurulumu",
         "firmware_version": "Yazılım Sürümü", "update_software": "Yazılım Güncelle",
         "scanning": "Taranıyor...", "no_peers": "Cihaz bulunamadı", "unknown_device": "Bilinmeyen Cihaz",
-        "connecting": "Bağlanıyor...", "connection_started": "Bağlantı başlatıldı!"
+        "connecting": "Bağlanıyor...", "connection_started": "Bağlantı başlatıldı!",
+        "espnow_toggle": "ESP-NOW Aktif"
     },
     "en": {
         "status": "STATUS", "stopped": "STOPPED", "running": "RUNNING", "paused": "PAUSED", "ready": "Ready",
@@ -29,7 +30,8 @@ const translations = {
         "wifi_settings": "Wi-Fi Networks", "scan_networks": "Scan Networks", "wifi_setup": "Wi-Fi Setup",
         "firmware_version": "Firmware Version", "update_software": "Update Software",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Active"
     },
     "de": {
         "status": "STATUS", "stopped": "GESTOPPT", "running": "LÄUFT", "paused": "PAUSIERT", "ready": "Bereit",
@@ -44,7 +46,8 @@ const translations = {
         "wifi_settings": "Wi-Fi-Netzwerke", "scan_networks": "Netzwerke scannen", "wifi_setup": "Wi-Fi-Einrichtung",
         "firmware_version": "Firmware-Version", "update_software": "Software aktualisieren",
         "scanning": "Scannen...", "no_peers": "Keine Geräte gefunden", "unknown_device": "Unbekanntes Gerät",
-        "connecting": "Verbinden...", "connection_started": "Verbindung gestartet!"
+        "connecting": "Verbinden...", "connection_started": "Verbindung gestartet!",
+        "espnow_toggle": "ESP-NOW Aktiv"
     },
     "ru": {
         "status": "СТАТУС", "stopped": "ОСТАНОВЛЕНО", "running": "РАБОТАЕТ", "paused": "ПРИОСТАНОВЛЕНО", "ready": "Готов",
@@ -59,7 +62,8 @@ const translations = {
         "wifi_settings": "Сети Wi-Fi", "scan_networks": "Сканировать сети", "wifi_setup": "Настройка Wi-Fi",
         "firmware_version": "Версия прошивки", "update_software": "Обновить ПО",
         "scanning": "Сканирование...", "no_peers": "Устройства не найдены", "unknown_device": "Неизвестное устройство",
-        "connecting": "Подключение...", "connection_started": "Подключение начато!"
+        "connecting": "Подключение...", "connection_started": "Подключение начато!",
+        "espnow_toggle": "ESP-NOW Активен"
     },
     "uk": {
         "status": "СТАТУС", "stopped": "ЗУПИНЕНО", "running": "ПРАЦЮЄ", "paused": "ПРИЗУПИНЕНО", "ready": "Готовий",
@@ -69,12 +73,13 @@ const translations = {
         "devices": "ПРИСТРОЇ", "general_settings": "Загальні", "no_devices": "Пристрої не знайдено", "scan_devices": "Сканувати пристрої",
         "accent_color": "Колір акценту",
         "device_name": "Ім'я пристр.", "save": "Зберегти", "language": "Мова",
-        "theme": "Тема", "auto": "Авто", "dark": "Темна", "light": "Світла",
+        "theme": "Тема", "auto": "Авто", "dark": "Темная", "light": "Світла",
         "ota_update": "Оновлення", "scan": "Сканувати", "connect": "Підключити",
         "wifi_settings": "Мережі Wi-Fi", "scan_networks": "Сканувати мережі", "wifi_setup": "Налаштування Wi-Fi",
         "firmware_version": "Версія прошивки", "update_software": "Оновити ПЗ",
         "scanning": "Сканування...", "no_peers": "Пристрої не знайдено", "unknown_device": "Невідомий пристрій",
-        "connecting": "Підключення...", "connection_started": "Підключення розпочато!"
+        "connecting": "Підключення...", "connection_started": "Підключення розпочато!",
+        "espnow_toggle": "ESP-NOW Активний"
     },
     "fr": {
         "status": "STATUT", "stopped": "ARRÊtÉ", "running": "EN MARCHE", "paused": "EN PAUSE", "ready": "Prêt",
@@ -89,7 +94,8 @@ const translations = {
         "wifi_settings": "Réseaux Wi-Fi", "scan_networks": "Scanner les réseaux", "wifi_setup": "Configuration Wi-Fi",
         "firmware_version": "Version firmware", "update_software": "Mettre à jour",
         "scanning": "Scan en cours...", "no_peers": "Aucun appareil trouvé", "unknown_device": "Appareil inconnu",
-        "connecting": "Connexion...", "connection_started": "Connexion lancée!"
+        "connecting": "Connexion...", "connection_started": "Connexion lancée!",
+        "espnow_toggle": "ESP-NOW Actif"
     },
     "it": {
         "status": "STATO", "stopped": "FERMATO", "running": "IN ESECUZIONE", "paused": "IN PAUSA", "ready": "Pronto",
@@ -104,7 +110,8 @@ const translations = {
         "wifi_settings": "Reti Wi-Fi", "scan_networks": "Scansiona reti", "wifi_setup": "Configurazione Wi-Fi",
         "firmware_version": "Versione firmware", "update_software": "Aggiorna software",
         "scanning": "Scansione...", "no_peers": "Nessun dispositivo trovato", "unknown_device": "Dispositivo sconosciuto",
-        "connecting": "Connessione...", "connection_started": "Connessione avviata!"
+        "connecting": "Connessione...", "connection_started": "Connessione avviata!",
+        "espnow_toggle": "ESP-NOW Attivo"
     },
     "es": {
         "status": "ESTADO", "stopped": "DETENIDO", "running": "EN MARCHA", "paused": "PAUSADO", "ready": "Listo",
@@ -119,7 +126,8 @@ const translations = {
         "wifi_settings": "Redes Wi-Fi", "scan_networks": "Escanear redes", "wifi_setup": "Configuración Wi-Fi",
         "firmware_version": "Versión firmware", "update_software": "Actualizar software",
         "scanning": "Escaneando...", "no_peers": "No se encontraron dispositivos", "unknown_device": "Dispositivo desconocido",
-        "connecting": "Conectando...", "connection_started": "¡Conexión iniciada!"
+        "connecting": "Conectando...", "connection_started": "¡Conexión iniciada!",
+        "espnow_toggle": "ESP-NOW Activo"
     },
     "rm": {
         "status": "STATUS", "stopped": "FIRMÀ", "running": "EN FUNCZIUN", "ready": "Promt",
@@ -133,7 +141,8 @@ const translations = {
         "ota_update": "Actualisaziun", "scan": "Scannar", "connect": "Colliar",
         "wifi_settings": "Retsas Wi-Fi", "scan_networks": "Scannar retsas", "wifi_setup": "Configuraziun Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Activ"
     },
     "mk": {
         "status": "СТАТУС", "stopped": "ЗАПРЕНО", "running": "РАБОТИ", "ready": "Подготвен",
@@ -147,7 +156,8 @@ const translations = {
         "ota_update": "Ажурирање", "scan": "Скенирај", "connect": "Поврзи",
         "wifi_settings": "Wi-Fi мрежи", "scan_networks": "Скенирај мрежи", "wifi_setup": "Поставување Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Активен"
     },
     "sq": {
         "status": "STATUSI", "stopped": "NDALUAR", "running": "NË PUNË", "ready": "Gati",
@@ -161,7 +171,8 @@ const translations = {
         "ota_update": "Përditësim", "scan": "Skano", "connect": "Lidhu",
         "wifi_settings": "Rrjetet Wi-Fi", "scan_networks": "Skano rrjetet", "wifi_setup": "Konfigurimi Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Aktiv"
     },
     "bs": {
         "status": "STATUS", "stopped": "ZAUSTAVLJENO", "running": "RADI", "ready": "Spremno",
@@ -175,7 +186,8 @@ const translations = {
         "ota_update": "Ažuriranje", "scan": "Skeniraj", "connect": "Spoji",
         "wifi_settings": "Wi-Fi mreže", "scan_networks": "Skeniraj mreže", "wifi_setup": "Podešavanje Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Aktiv"
     },
     "sr": {
         "status": "СТАТУС", "stopped": "ЗАУСТАВЉЕНО", "running": "РАДИ", "ready": "Спремно",
@@ -189,7 +201,8 @@ const translations = {
         "ota_update": "Ажурирање", "scan": "Скенирај", "connect": "Повежи",
         "wifi_settings": "Wi-Fi мреже", "scan_networks": "Скенирај мреже", "wifi_setup": "Подешавање Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Активен"
     },
     "rup": {
         "status": "STATUS", "stopped": "STĂTUTĂ", "running": "LUCREADZĂ", "ready": "Hăzu",
@@ -203,7 +216,8 @@ const translations = {
         "ota_update": "Actualizare", "scan": "Caută", "connect": "Leagă",
         "wifi_settings": "Rețele Wi-Fi", "scan_networks": "Caută rețele", "wifi_setup": "Configurare Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Lucreadză"
     },
     "rom": {
         "status": "STATUSO", "stopped": "TERDI", "running": "KEREL BUTI", "ready": "Gata",
@@ -217,7 +231,8 @@ const translations = {
         "ota_update": "Nevo", "scan": "Rode", "connect": "Phand",
         "wifi_settings": "Wi-Fi rețele", "scan_networks": "Rode rețele", "wifi_setup": "Konfiguracija Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Kerel Buti"
     },
     "zh": {
         "status": "状态", "stopped": "已停止", "running": "运行中", "ready": "就绪",
@@ -231,7 +246,8 @@ const translations = {
         "ota_update": "系统更新", "scan": "扫描", "connect": "连接",
         "wifi_settings": "Wi-Fi网络", "scan_networks": "扫描网络", "wifi_setup": "Wi-Fi设置",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW 已启用"
     },
     "ja": {
         "status": "ステータス", "stopped": "停止中", "running": "稼働中", "ready": "準備完了",
@@ -245,7 +261,8 @@ const translations = {
         "ota_update": "更新", "scan": "スキャン", "connect": "接続",
         "wifi_settings": "Wi-Fiネットワーク", "scan_networks": "ネットワークをスキャン", "wifi_setup": "Wi-Fi設定",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW 有効"
     },
     "az": {
         "status": "STATUS", "stopped": "DAYANDI", "running": "İŞLƏYİR", "ready": "Hazır",
@@ -259,7 +276,7 @@ const translations = {
         "ota_update": "Yeniləmə", "scan": "Axtar", "connect": "Qoşul",
         "wifi_settings": "Wi-Fi şəbəkələri", "scan_networks": "Şəbəkələri axtar", "wifi_setup": "Wi-Fi quraşdırması",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
-        "connecting": "Connecting...", "connection_started": "Connection started!"
+        "connecting": "Connecting...", "connection_started": "Connection started!",
+        "espnow_toggle": "ESP-NOW Aktivdir"
     }
 };
-
