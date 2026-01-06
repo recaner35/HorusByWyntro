@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.78"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -943,7 +943,7 @@ void processCommand(String jsonStr) {
         String resp = "{\"tpd\":" + String(config.tpd) +
                       ",\"dur\":" + String(config.duration) +
                       ",\"dir\":" + String(config.direction) + ",\"espnow\":" +
-                      (config.espNowEnabled ? "true" : "false") +
+                      String(config.espNowEnabled ? "true" : "false") +
                       ",\"name\":\"" + config.hostname + "\"}";
         ws.textAll(resp);
         delay(500); // Mesajın gitmesi için kısa bekleme
@@ -957,8 +957,8 @@ void processCommand(String jsonStr) {
 
     String resp = "{\"tpd\":" + String(config.tpd) +
                   ",\"dur\":" + String(config.duration) +
-                  ",\"dir\":" + String(config.direction) +
-                  ",\"espnow\":" + (config.espNowEnabled ? "true" : "false") +
+                  ",\"dir\":" + String(config.direction) + ",\"espnow\":" +
+                  String(config.espNowEnabled ? "true" : "false") +
                   ",\"name\":\"" + config.hostname + "\"}";
     ws.textAll(resp);
   } else if (type == "check_peers") {
@@ -1164,3 +1164,22 @@ void initWebServer() {
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    String json =
+        "{\"running\":" + String(isRunning ? "true" : "false") +
+        ",\"tpd\":" + String(config.tpd) +
+        ",\"dur\":" + String(config.duration) +
+        ",\"dir\":" + String(config.direction) +
+        ",\"espnow\":" + String(config.espNowEnabled ? "true" : "false") +
+        ",\"name\":\"" + config.hostname + "\",\"suffix\":\"" + deviceSuffix +
+        "\"}";
+    client->text(json);
+  } else if (type == WS_EVT_DATA) {
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    if (info->final && info->index == 0 && info->len == len &&
+        info->opcode == WS_TEXT) {
+      data[len] = 0;
+      processCommand(String((char *)data));
+    }
+  }
+}
