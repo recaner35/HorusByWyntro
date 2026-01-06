@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.72"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -71,8 +71,9 @@ struct Config {
 };
 Config config;
 
-bool isRunning = false;     // Sistem genel olarak aktif mi?
-bool isMotorMoving = false; // Motor şu an dönüyor mu?
+bool isRunning = false;      // Sistem genel olarak aktif mi?
+bool isMotorMoving = false;  // Motor şu an dönüyor mu?
+bool isEspNowActive = false; // ESP-NOW başarıyla başlatıldı mı?
 unsigned long sessionStartTime = 0;
 int turnsThisHour = 0;      // Bu saatlik dilimde atılan tur
 int targetTurnsPerHour = 0; // Saat başı hedef tur
@@ -416,6 +417,27 @@ void loop() {
     }
   }
 
+  // OTA Update check
+  checkAndPerformUpdate();
+
+  // ESP-NOW Yönetimi: Sadece WiFi'a bağlıyken ve tarama yokken çalıştır
+  static unsigned long lastEspNowCheck = 0;
+  if (millis() - lastEspNowCheck > 5000) {
+    lastEspNowCheck = millis();
+    bool shouldBeActive = (WiFi.status() == WL_CONNECTED) && !wifiScanning;
+
+    if (shouldBeActive && !isEspNowActive) {
+      Serial.println("WiFi bağlı, ESP-NOW başlatılıyor...");
+      initESPNow();
+      restorePeers();
+    } else if (!shouldBeActive && isEspNowActive) {
+      Serial.println(
+          "WiFi bağlantısı yok veya tarama aktif, ESP-NOW durduruluyor...");
+      esp_now_deinit();
+      isEspNowActive = false;
+    }
+  }
+
   // Peer Temizliği ve Periyodik Discovery
   static unsigned long lastPrune = 0;
   static unsigned long lastDiscovery = 0;
@@ -512,18 +534,12 @@ void handleWifiScan() {
     int n = WiFi.scanComplete();
     if (n >= 0) { // Tarama tamamlandı
       wifiScanning = false;
-
-      // ESP-NOW Servisini yeniden başlat ve peerları yükle
-      initESPNow();
-      restorePeers();
-
-      // Kanalı tekrar 1'e sabitle (ESP-NOW gereği)
+      // ESP-NOW loop içinde WiFi durumuna göre otomatik geri yükleneceği için
+      // burada anında init etmiyoruz, loop'a bırakıyoruz.
+      // Ancak kanalı resetlemek önemli.
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     } else if (n == -2) {
-      // Tarama başarısız olsa bile ESP-NOW'ı geri yükle!
       wifiScanning = false;
-      initESPNow();
-      restorePeers();
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     }
   }
@@ -730,9 +746,11 @@ void initESPNow() {
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
+    isEspNowActive = false;
     return;
   }
 
+  isEspNowActive = true;
   Serial.println("ESP-NOW Başlatıldı");
   Serial.println("WiFi Kanal: " + String(WiFi.channel()));
 
@@ -828,6 +846,9 @@ String getShortStatusJson() {
 }
 
 void broadcastDiscovery() {
+  if (!isEspNowActive)
+    return;
+
   strcpy(myData.type, "DISCOVER");
   strcpy(myData.sender_mac, myMacAddress.c_str());
   strcpy(myData.sender_name, config.hostname.c_str());
@@ -843,6 +864,9 @@ void broadcastDiscovery() {
 }
 
 void broadcastStatus() {
+  if (!isEspNowActive)
+    return;
+
   strcpy(myData.type, "STATUS");
   strcpy(myData.sender_mac, myMacAddress.c_str());
   strcpy(myData.sender_name, config.hostname.c_str());
@@ -855,6 +879,9 @@ void broadcastStatus() {
 }
 
 void sendToPeer(String targetMac, String payloadJson) {
+  if (!isEspNowActive)
+    return;
+
   uint8_t peerAddr[6];
   sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
          &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
@@ -1037,12 +1064,17 @@ void initWebServer() {
 
   server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!wifiScanning) {
-      esp_now_deinit(); // Tarama öncesi ESP-NOW'ı durdur (Çakışmayı önle)
-      WiFi.scanNetworks(true);
+      // ESP-NOW'ı durdur (Tarama için)
+      if (isEspNowActive) {
+        esp_now_deinit();
+        isEspNowActive = false;
+      }
       wifiScanning = true;
+      WiFi.scanNetworks(true); // Async scan
       request->send(202, "application/json", "{\"status\":\"scanning\"}");
-    } else
+    } else {
       request->send(200, "application/json", "{\"status\":\"busy\"}");
+    }
   });
 
   server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -1121,7 +1153,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                   ",\"tpd\":" + String(config.tpd) +
                   ",\"dur\":" + String(config.duration) +
                   ",\"dir\":" + String(config.direction) + ",\"name\":\"" +
-                  config.hostname + "\"}";
+                  config.hostname + "\",\"suffix\":\"" + deviceSuffix + "\"}";
     client->text(json);
   } else if (type == WS_EVT_DATA) {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
