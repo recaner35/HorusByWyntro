@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.93"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -641,7 +641,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 
   // Kendi paketimizi duyarsak yoksay (MAC byte karşılaştırması)
   uint8_t myRawMac[6];
-  esp_read_mac(myRawMac, ESP_MAC_WIFI_STA);
+  WiFi.macAddress(myRawMac);
   if (memcmp(mac, myRawMac, 6) == 0)
     return;
 
