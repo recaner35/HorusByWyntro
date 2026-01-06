@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.91"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -601,9 +601,17 @@ void handleWifiConnection() {
 }
 
 String getWifiListJson() {
+  if (isScanning) {
+    return "{\"status\":\"scanning\"}";
+  }
   int n = WiFi.scanComplete();
   if (n == -2)
+    return "{\"status\":\"scanning\"}";
+  if (n <= 0) {
+    if (n == 0)
+      WiFi.scanDelete(); // Clear result even if 0
     return "[]";
+  }
   String json = "[";
   for (int i = 0; i < n; ++i) {
     if (i > 0)
