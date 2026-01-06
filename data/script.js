@@ -94,6 +94,10 @@ function initWebSocket() {
             deviceSuffix = data.suffix;
         }
 
+        if (data.espnow !== undefined) {
+            document.getElementById('espNowToggle').checked = data.espnow;
+        }
+
         if (data.peers) {
             renderPeers(data.peers);
         }
@@ -127,6 +131,15 @@ function toggleSystem() {
     var action = isRunning ? "stop" : "start";
     var cmd = { type: "command", action: action };
     socket.send(JSON.stringify(cmd));
+}
+
+function toggleEspNow() {
+    var isEnabled = document.getElementById('espNowToggle').checked;
+    var settings = {
+        type: "settings",
+        espnow: isEnabled
+    };
+    socket.send(JSON.stringify(settings));
 }
 
 function updateSliderLabels() {
