@@ -57,7 +57,7 @@ function initWebSocket() {
 
     // Otomatik durum güncellemesi (10 saniyede bir)
     setInterval(function () {
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (socket && socket.readyState === WebSocket.OPEN && !wifiScanInterval) {
             socket.send(JSON.stringify({ type: "check_peers" }));
         }
     }, 10000);
