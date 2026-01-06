@@ -21,6 +21,7 @@
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
 #include <vector>
 
 // ===============================
@@ -46,7 +47,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.80"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -128,6 +129,7 @@ void saveConfig();
 void initWiFi();
 void initMotor();
 void initWebServer();
+void deinitESPNow();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len);
 void processCommand(String jsonStr);
@@ -406,6 +408,7 @@ void loop() {
   handleWifiScan();
   handleWifiConnection();
   handlePhysicalControl();
+  ws.cleanupClients();
 
   if (isRunning) {
     checkSchedule();
@@ -1024,41 +1027,150 @@ void processCommand(String jsonStr) {
 }
 
 // ===============================
-// PROPER WiFi Initialization
+// PROPER WiFi Initialization  SİLMEYE BURADAN BAŞLA
 // ===============================
 void initWiFi() {
   WiFi.mode(WIFI_AP_STA);
+
   uint64_t chipid = ESP.getEfuseMac();
   char macBuf[18];
-
   myMacAddress = WiFi.macAddress();
   if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
-    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
-            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
-            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
-            (uint8_t)(chipid >> 40));
+    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X",
+            (uint8_t)(chipid >> 0), (uint8_t)(chipid >> 8),
+            (uint8_t)(chipid >> 16), (uint8_t)(chipid >> 24),
+            (uint8_t)(chipid >> 32), (uint8_t)(chipid >> 40));
     myMacAddress = String(macBuf);
   }
 
-  // AP naming always uses Suffix
   String apBase = "horus";
   if (config.hostname != "") {
     apBase = slugify(config.hostname);
   }
   String apName = apBase + "-" + deviceSuffix;
 
-  // ESP-NOW için WiFi kanalını 1'e sabitleme (önemli!)
-  WiFi.softAP(apName.c_str(), "", 1);
+  // KRİTİK DEĞİŞİKLİK: Kanal parametresi kaldırıldı
+  WiFi.softAP(apName.c_str(), "");   // Şifre boş, kanal otomatik
 
-  // Set Hostname for DHCP (optional to be same as AP)
   WiFi.setHostname(apName.c_str());
 
   Serial.println("WiFi AP Başlatıldı: " + apName);
   Serial.println("MAC Adresi: " + myMacAddress);
   Serial.print("AP IP Adresi: ");
   Serial.println(WiFi.softAPIP());
-  Serial.println("WiFi Kanal: 1");
+  // Kanal bilgisi artık otomatik, debug için yazdırılabilir:
+  Serial.println("WiFi Kanal: Otomatik (tarama için serbest)");
 }
+
+// ===============================
+void deinitESPNow() {
+  if (isEspNowActive) {
+    esp_now_deinit();
+    isEspNowActive = false;
+    Serial.println("ESP-NOW deinit edildi.");
+  }
+}
+
+void initESPNow() {
+  if (isEspNowActive) return;
+
+  // STA bağlı değilse ESP-NOW başlatma (kanal uyumu için)
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("ESP-NOW başlatılamadı: WiFi STA bağlı değil.");
+    return;
+  }
+
+  // Mevcut WiFi kanalını al ve ESP-NOW'a uygula
+  uint8_t currentChannel;
+  esp_wifi_get_channel(&currentChannel, nullptr);
+  wifi_config_t conf;
+  esp_wifi_get_config(WIFI_IF_STA, &conf);
+  conf.sta.channel = currentChannel;
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW init başarısız!");
+    return;
+  }
+
+  isEspNowActive = true;
+  restorePeers();
+  Serial.println("ESP-NOW başlatıldı (Kanal: " + String(currentChannel) + ")");
+}
+
+// ===============================
+void initWebServer() {
+  // Diğer endpoint'ler aynı kaldı...
+
+  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!wifiScanning) {
+      deinitESPNow();                    // <-- Tarama öncesi ESP-NOW kapat
+      wifiScanning = true;
+      WiFi.scanNetworks(true);           // Async tarama
+      Serial.println("WiFi tarama başlatıldı (ESP-NOW geçici olarak kapatıldı).");
+      request->send(202, "application/json", "{\"status\":\"scanning\"}");
+    } else {
+      request->send(200, "application/json", "{\"status\":\"busy\"}");
+    }
+  });
+
+  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int scanResult = WiFi.scanComplete();
+    if (scanResult == -2) {  // Henüz tamamlanmadı
+      request->send(200, "application/json", "[]");
+      return;
+    }
+
+    // Tarama tamamlandı
+    wifiScanning = false;
+
+    // KRİTİK: Tarama sonrası ESP-NOW yeniden başlat (eğer ayarlıysa)
+    if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
+      initESPNow();
+    }
+
+    String json = "[";
+    for (int i = 0; i < scanResult; ++i) {
+      if (i > 0) json += ",";
+      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + String(WiFi.RSSI(i)) + "}";
+    }
+    json += "]";
+    WiFi.scanDelete();  // Belleği temizle
+    request->send(200, "application/json", json);
+  });
+
+  // WebSocket event (settings kısmında espnow toggle)
+  // processCommand içinde aşağıdaki gibi güncellendi:
+}
+
+void processCommand(String jsonStr) {
+  DynamicJsonDocument doc(1024);
+  deserializeJson(doc, jsonStr);
+
+  if (doc["type"] == "settings") {
+    if (doc.containsKey("espnow")) {
+      bool requested = doc["espnow"];
+      config.espNowEnabled = requested;
+      saveConfig();
+
+      if (requested) {
+        if (WiFi.status() == WL_CONNECTED) {
+          initESPNow();
+        } else {
+          Serial.println("ESP-NOW açılamadı: WiFi bağlı değil.");
+          config.espNowEnabled = false;  // Zorla kapat
+          saveConfig();
+        }
+      } else {
+        deinitESPNow();
+      }
+
+      // Client'a güncel durumu bildir
+      String resp = "{\"espnow\":" + String(config.espNowEnabled ? "true" : "false") + "}";
+      ws.textAll(resp);
+    }
+
+    // Diğer ayarlar (tpd, dur, dir, name) aynı kaldı...
+  }
 
 // ===============================
 // Web Server Initialization
