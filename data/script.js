@@ -101,6 +101,18 @@ function initWebSocket() {
         if (data.peers) {
             renderPeers(data.peers);
         }
+
+        if (data.type === "error") {
+            alert(data.message);
+        }
+
+        if (data.type === "wifi_scan_error") {
+            if (wifiScanInterval) {
+                clearTimeout(wifiScanInterval);
+                wifiScanInterval = null;
+            }
+            document.getElementById('wifiList').innerHTML = '<div class="list-item placeholder" style="color:#f66;">WiFi taraması zaman aşımına uğradı.</div>';
+        }
     };
 
     socket.onclose = function () {
