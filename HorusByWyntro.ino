@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.92"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -639,13 +639,14 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 #endif
   memcpy(&incomingData, incomingDataPtr, sizeof(incomingData));
 
-  String type = String(incomingData.type);
-  String senderMac = String(incomingData.sender_mac);
-
-  // Kendi paketimizi duyarsak yoksay
-  if (senderMac == myMacAddress)
+  // Kendi paketimizi duyarsak yoksay (MAC byte karşılaştırması)
+  uint8_t myRawMac[6];
+  esp_read_mac(myRawMac, ESP_MAC_WIFI_STA);
+  if (memcmp(mac, myRawMac, 6) == 0)
     return;
 
+  String type = String(incomingData.type);
+  String senderMac = String(incomingData.sender_mac);
   String senderName = String(incomingData.sender_name);
 
   Serial.println("ESP-NOW Paket Alındı!");
@@ -708,7 +709,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 1; // WiFi kanalıyla aynı
+    peerInfo.channel = 0; // 0 = Home channel (Auto)
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       if (esp_now_add_peer(&peerInfo) == ESP_OK) {
@@ -817,7 +818,7 @@ void initESPNow() {
   // Broadcast peer ekleme
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = currentChannel; // WiFi kanalıyla aynı olmalı
+  peerInfo.channel = 0; // 0 = Home channel (Auto)
   peerInfo.encrypt = false;
 
   if (esp_now_add_peer(&peerInfo) == ESP_OK) {
@@ -835,7 +836,7 @@ void restorePeers() {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = WiFi.channel();
+    peerInfo.channel = 0; // Auto follow home channel
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       esp_now_add_peer(&peerInfo);
@@ -908,7 +909,9 @@ void broadcastDiscovery() {
 
   strcpy(myData.type, "DISCOVER");
   strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
+  String displayName =
+      (config.hostname != "") ? config.hostname : "Horus-Device";
+  strcpy(myData.sender_name, displayName.c_str());
 
   String payload = getShortStatusJson();
   payload.toCharArray(myData.payload, 64);
@@ -926,7 +929,9 @@ void broadcastStatus() {
 
   strcpy(myData.type, "STATUS");
   strcpy(myData.sender_mac, myMacAddress.c_str());
-  strcpy(myData.sender_name, config.hostname.c_str());
+  String displayName =
+      (config.hostname != "") ? config.hostname : "Horus-Device";
+  strcpy(myData.sender_name, displayName.c_str());
 
   String payload = getShortStatusJson();
   payload.toCharArray(myData.payload, 64);
