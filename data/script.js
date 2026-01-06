@@ -413,14 +413,18 @@ function checkWifiScanResult() {
     fetch('/api/wifi-list')
         .then(response => response.json())
         .then(data => {
-            if (data.length == 0 && !wifiScanInterval) {
-                // Still scanning or empty
-                if (!wifiScanInterval)
-                    wifiScanInterval = setTimeout(checkWifiScanResult, 2000);
-            } else {
+            if (data.status === "scanning") {
+                // Still scanning, wait and try again
+                wifiScanInterval = setTimeout(checkWifiScanResult, 2000);
+            } else if (Array.isArray(data)) {
+                // Scan finished (results might be empty but scan is done)
                 renderWifiList(data);
                 wifiScanInterval = null;
             }
+        }).catch(err => {
+            console.error("WiFi list fetch error:", err);
+            // Retry once more on network error
+            wifiScanInterval = setTimeout(checkWifiScanResult, 4000);
         });
 }
 
