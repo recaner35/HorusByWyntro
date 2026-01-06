@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.85"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -958,7 +958,7 @@ void processCommand(String jsonStr) {
       } else {
         config.espNowEnabled = targetState;
         if (config.espNowEnabled) {
-          if (!isEspNowActive && !wifiScanning) {
+          if (!isEspNowActive && !isScanning) {
             initESPNow();
             restorePeers();
           }
