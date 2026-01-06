@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.70"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -429,35 +429,8 @@ void loop() {
   // Her 10 saniyede bir eski peer'ları temizle
   // Her 10 saniyede bir eski peer'ları temizle -- DEVRE DIŞI BIRAKILDI
   // (Persistence için)
-  /*
-  if (millis() - lastPrune > 10000) {
-    lastPrune = millis();
-    for (int i = peers.size() - 1; i >= 0; i--) {
-      if (millis() - peers[i].lastSeen > PEER_TIMEOUT) {
-        Serial.println("Peer timeout: " + peers[i].name + " (" + peers[i].mac +
-                       ")");
-        peers.erase(peers.begin() + i);
-        // ... WS update logic
-      }
-    }
-  }
-  */
-  for (int j = 0; j < peers.size(); j++) {
-    if (j > 0)
-      json += ",";
-    json += "{\"mac\":\"" + peers[j].mac + "\",\"name\":\"" + peers[j].name +
-            "\",\"tpd\":" + String(peers[j].tpd) +
-            ",\"dur\":" + String(peers[j].duration) +
-            ",\"dir\":" + String(peers[j].direction) +
-            ",\"running\":" + (peers[j].isRunning ? "true" : "false") + "}";
-  }
-  json += "] }";
-  ws.textAll(json);
-}
-}
-}
 
-delay(2); // CPU ve WiFi stack için kısa bekleme
+  delay(2); // CPU ve WiFi stack için kısa bekleme
 }
 
 // ===============================
