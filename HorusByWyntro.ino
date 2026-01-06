@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.87"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -156,7 +156,7 @@ String slugify(String text);
 // ===============================
 String slugify(String text) {
   String out = "";
-  text.toLowerCase();
+  text = text.toLowerCase();
 
   for (int i = 0; i < text.length(); i++) {
     char c = text[i];
@@ -310,7 +310,7 @@ void checkAndPerformUpdate() {
       String fwUrl = baseUrl + "HorusByWyntro.ino.bin";
 
       Serial.println("LittleFS indiriliyor: " + fsUrl);
-      if (execOTA(fsUrl, U_SPIFFS)) {
+      if (execOTA(fsUrl, U_LITTLEFS)) {
         Serial.println("LittleFS guncellendi.");
       } else {
         Serial.println("LittleFS guncelleme hatasi!");
@@ -441,16 +441,16 @@ void loop() {
   static unsigned long lastEspNowCheck = 0;
   if (millis() - lastEspNowCheck > 5000) {
     lastEspNowCheck = millis();
-    bool shouldBeActive =
-        (WiFi.status() == WL_CONNECTED) && !isScanning && config.espNowEnabled;
+    bool shouldBeActive = !isScanning && config.espNowEnabled;
 
     if (shouldBeActive && !isEspNowActive) {
-      Serial.println("WiFi bağlı ve ESP-NOW aktif, başlatılıyor...");
-      initESPNow();
-      restorePeers();
+      if (WiFi.status() == WL_CONNECTED || WiFi.softAPgetStationNum() >= 0) {
+        Serial.println("ESP-NOW başlatılıyor...");
+        initESPNow();
+        restorePeers();
+      }
     } else if (!shouldBeActive && isEspNowActive) {
-      Serial.println("WiFi bağlantısı yok, tarama aktif veya ESP-NOW kapalı, "
-                     "durduruluyor...");
+      Serial.println("Tarama aktif veya ESP-NOW kapalı, durduruluyor...");
       esp_now_deinit();
       isEspNowActive = false;
     }
@@ -575,8 +575,14 @@ void handleWifiScan() {
   // 5. İşlem bitti, kilidi aç
   isScanning = false;
 
-  // 6. ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa)
-  if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
+  // 6. AP'yi kararlı bir kanala geri çek (Eğer STA bağlı değilse)
+  if (WiFi.status() != WL_CONNECTED) {
+    WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
+    Serial.println("AP Kanal 1'e geri çekildi.");
+  }
+
+  // 7. ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa)
+  if (config.espNowEnabled) {
     initESPNow();
     restorePeers();
   }
@@ -779,7 +785,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void initESPNow() {
-  WiFi.disconnect(); // STA modundaki eski bağlantıları temizle
+  // WiFi.disconnect() kaldırıldı - Bağlantıyı koparıp döngüye girmemesi için
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
@@ -1013,6 +1019,10 @@ void processCommand(String jsonStr) {
       Serial.println("Tarama devam ediyor, peer sorgusu yoksayılıyor.");
       return;
     }
+    if (!isEspNowActive) {
+      Serial.println("ESP-NOW aktif değil, peer sorgusu yapılamaz.");
+      return;
+    }
     Serial.println(
         "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
     broadcastDiscovery();
@@ -1222,8 +1232,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
     if (info->final && info->index == 0 && info->len == len &&
         info->opcode == WS_TEXT) {
-      data[len] = 0;
-      processCommand(String((char *)data));
+      // Create null-terminated string safely
+      String cmd = String((char *)data, len);
+      processCommand(cmd);
     }
   }
 }
