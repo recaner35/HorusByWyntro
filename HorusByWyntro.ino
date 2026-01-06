@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.79"
+#define FIRMWARE_VERSION "1.0.0"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -426,8 +426,8 @@ void loop() {
     }
   }
 
-  // OTA Update check
-  checkAndPerformUpdate();
+  // OTA Update check - REMOVED unconditional call causing spam
+  // checkAndPerformUpdate();
 
   // ESP-NOW Yönetimi: Sadece WiFi'a bağlıyken ve tarama yokken çalıştır
   static unsigned long lastEspNowCheck = 0;
@@ -545,12 +545,11 @@ void handleWifiScan() {
   if (wifiScanning) {
     int n = WiFi.scanComplete();
     if (n >= 0) { // Tarama tamamlandı
+      Serial.printf("WiFi tarama tamamlandı: %d ağ bulundu\n", n);
       wifiScanning = false;
-      // ESP-NOW loop içinde WiFi durumuna göre otomatik geri yükleneceği için
-      // burada anında init etmiyoruz, loop'a bırakıyoruz.
-      // Ancak kanalı resetlemek önemli.
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     } else if (n == -2) {
+      Serial.println("WiFi tarama başlatılamadı veya başarısız oldu.");
       wifiScanning = false;
       WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
     }
