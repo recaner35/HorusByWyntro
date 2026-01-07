@@ -3,10 +3,10 @@
 const translations = {
     "tr": {
         "status": "DURUM", "stopped": "DURDURULDU", "running": "ÇALIŞIYOR", "paused": "DURAKLATILDI", "ready": "Hazır",
-        "start": "BAŞLAT", "stop": "DURDUR", "settings": "AYARLAR", "dashboard": "Panel", "network": "Ağ",
+        "start": "BAŞLAT", "stop": "DURDUR", "settings": "Ayarlar", "dashboard": "Panel", "network": "Ağ",
         "cw": "Saat Yönü", "ccw": "Saat Yönü Tersi", "bidirectional": "Çift Yön", "direction": "Yön",
         "tpd": "Günlük Tur (TPD)", "duration": "Tur Süresi (sn)", "motor_settings": "Motor Ayarları",
-        "devices": "CİHAZLAR", "general_settings": "Genel Ayarlar", "no_devices": "Cihaz bulunamadı", "scan_devices": "Cihazları Tara",
+        "devices": "Diğer Horus'lar", "general_settings": "Genel Ayarlar", "no_devices": "Cihaz bulunamadı", "scan_devices": "Cihazları Tara",
         "accent_color": "Vurgu Rengi",
         "device_name": "Cihaz Adı", "save": "Kaydet", "language": "Dil",
         "theme": "Tema", "auto": "Otomatik", "dark": "Karanlık", "light": "Aydınlık",
@@ -15,14 +15,18 @@ const translations = {
         "firmware_version": "Yazılım Sürümü", "update_software": "Yazılım Güncelle",
         "scanning": "Taranıyor...", "no_peers": "Cihaz bulunamadı", "unknown_device": "Bilinmeyen Cihaz",
         "connecting": "Bağlanıyor...", "connection_started": "Bağlantı başlatıldı!",
-        "espnow_toggle": "ESP-NOW Aktif"
+        "espnow_toggle": "Paylaşım Aktif", "delete": "Sil",
+        "confirm_delete": "Cihazı silmek istediğinize emin misiniz?",
+        "no_networks": "Ağ bulunamadı",
+        "confirm_update": "Yazılım güncellensin mi?",
+        "saved": "Kaydedildi"
     },
     "en": {
         "status": "STATUS", "stopped": "STOPPED", "running": "RUNNING", "paused": "PAUSED", "ready": "Ready",
-        "start": "START", "stop": "STOP", "settings": "SETTINGS", "dashboard": "Dashboard", "network": "Network",
+        "start": "START", "stop": "STOP", "settings": "Settings", "dashboard": "Dashboard", "network": "Network",
         "cw": "Clockwise", "ccw": "Counter-Clockwise", "bidirectional": "Bidirectional", "direction": "Direction",
         "tpd": "Daily Turns (TPD)", "duration": "Turn Duration (s)", "motor_settings": "Motor Settings",
-        "devices": "DEVICES", "general_settings": "General Settings", "no_devices": "No devices found", "scan_devices": "Scan Devices",
+        "devices": "Devices", "general_settings": "General Settings", "no_devices": "No devices found", "scan_devices": "Scan Devices",
         "accent_color": "Accent Color",
         "device_name": "Device Name", "save": "Save", "language": "Language",
         "theme": "Theme", "auto": "Auto", "dark": "Dark", "light": "Light",
@@ -31,7 +35,11 @@ const translations = {
         "firmware_version": "Firmware Version", "update_software": "Update Software",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Active"
+        "espnow_toggle": "ESP-NOW Active", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "de": {
         "status": "STATUS", "stopped": "GESTOPPT", "running": "LÄUFT", "paused": "PAUSIERT", "ready": "Bereit",
@@ -47,7 +55,11 @@ const translations = {
         "firmware_version": "Firmware-Version", "update_software": "Software aktualisieren",
         "scanning": "Scannen...", "no_peers": "Keine Geräte gefunden", "unknown_device": "Unbekanntes Gerät",
         "connecting": "Verbinden...", "connection_started": "Verbindung gestartet!",
-        "espnow_toggle": "ESP-NOW Aktiv"
+        "espnow_toggle": "ESP-NOW Aktiv", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "ru": {
         "status": "СТАТУС", "stopped": "ОСТАНОВЛЕНО", "running": "РАБОТАЕТ", "paused": "ПРИОСТАНОВЛЕНО", "ready": "Готов",
@@ -63,7 +75,11 @@ const translations = {
         "firmware_version": "Версия прошивки", "update_software": "Обновить ПО",
         "scanning": "Сканирование...", "no_peers": "Устройства не найдены", "unknown_device": "Неизвестное устройство",
         "connecting": "Подключение...", "connection_started": "Подключение начато!",
-        "espnow_toggle": "ESP-NOW Активен"
+        "espnow_toggle": "ESP-NOW Активен", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "uk": {
         "status": "СТАТУС", "stopped": "ЗУПИНЕНО", "running": "ПРАЦЮЄ", "paused": "ПРИЗУПИНЕНО", "ready": "Готовий",
@@ -79,7 +95,11 @@ const translations = {
         "firmware_version": "Версія прошивки", "update_software": "Оновити ПЗ",
         "scanning": "Сканування...", "no_peers": "Пристрої не знайдено", "unknown_device": "Невідомий пристрій",
         "connecting": "Підключення...", "connection_started": "Підключення розпочато!",
-        "espnow_toggle": "ESP-NOW Активний"
+        "espnow_toggle": "ESP-NOW Активний", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "fr": {
         "status": "STATUT", "stopped": "ARRÊtÉ", "running": "EN MARCHE", "paused": "EN PAUSE", "ready": "Prêt",
@@ -95,7 +115,11 @@ const translations = {
         "firmware_version": "Version firmware", "update_software": "Mettre à jour",
         "scanning": "Scan en cours...", "no_peers": "Aucun appareil trouvé", "unknown_device": "Appareil inconnu",
         "connecting": "Connexion...", "connection_started": "Connexion lancée!",
-        "espnow_toggle": "ESP-NOW Actif"
+        "espnow_toggle": "ESP-NOW Actif", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "it": {
         "status": "STATO", "stopped": "FERMATO", "running": "IN ESECUZIONE", "paused": "IN PAUSA", "ready": "Pronto",
@@ -111,7 +135,11 @@ const translations = {
         "firmware_version": "Versione firmware", "update_software": "Aggiorna software",
         "scanning": "Scansione...", "no_peers": "Nessun dispositivo trovato", "unknown_device": "Dispositivo sconosciuto",
         "connecting": "Connessione...", "connection_started": "Connessione avviata!",
-        "espnow_toggle": "ESP-NOW Attivo"
+        "espnow_toggle": "ESP-NOW Attivo", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "es": {
         "status": "ESTADO", "stopped": "DETENIDO", "running": "EN MARCHA", "paused": "PAUSADO", "ready": "Listo",
@@ -127,7 +155,11 @@ const translations = {
         "firmware_version": "Versión firmware", "update_software": "Actualizar software",
         "scanning": "Escaneando...", "no_peers": "No se encontraron dispositivos", "unknown_device": "Dispositivo desconocido",
         "connecting": "Conectando...", "connection_started": "¡Conexión iniciada!",
-        "espnow_toggle": "ESP-NOW Activo"
+        "espnow_toggle": "ESP-NOW Activo", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "rm": {
         "status": "STATUS", "stopped": "FIRMÀ", "running": "EN FUNCZIUN", "ready": "Promt",
@@ -142,7 +174,11 @@ const translations = {
         "wifi_settings": "Retsas Wi-Fi", "scan_networks": "Scannar retsas", "wifi_setup": "Configuraziun Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Activ"
+        "espnow_toggle": "ESP-NOW Activ", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "mk": {
         "status": "СТАТУС", "stopped": "ЗАПРЕНО", "running": "РАБОТИ", "ready": "Подготвен",
@@ -157,7 +193,11 @@ const translations = {
         "wifi_settings": "Wi-Fi мрежи", "scan_networks": "Скенирај мрежи", "wifi_setup": "Поставување Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Активен"
+        "espnow_toggle": "ESP-NOW Активен", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "sq": {
         "status": "STATUSI", "stopped": "NDALUAR", "running": "NË PUNË", "ready": "Gati",
@@ -172,7 +212,11 @@ const translations = {
         "wifi_settings": "Rrjetet Wi-Fi", "scan_networks": "Skano rrjetet", "wifi_setup": "Konfigurimi Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Aktiv"
+        "espnow_toggle": "ESP-NOW Aktiv", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "bs": {
         "status": "STATUS", "stopped": "ZAUSTAVLJENO", "running": "RADI", "ready": "Spremno",
@@ -187,7 +231,11 @@ const translations = {
         "wifi_settings": "Wi-Fi mreže", "scan_networks": "Skeniraj mreže", "wifi_setup": "Podešavanje Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Aktiv"
+        "espnow_toggle": "ESP-NOW Aktiv", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "sr": {
         "status": "СТАТУС", "stopped": "ЗАУСТАВЉЕНО", "running": "РАДИ", "ready": "Спремно",
@@ -202,7 +250,11 @@ const translations = {
         "wifi_settings": "Wi-Fi мреже", "scan_networks": "Скенирај мреже", "wifi_setup": "Подешавање Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Активен"
+        "espnow_toggle": "ESP-NOW Активен", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "rup": {
         "status": "STATUS", "stopped": "STĂTUTĂ", "running": "LUCREADZĂ", "ready": "Hăzu",
@@ -217,7 +269,11 @@ const translations = {
         "wifi_settings": "Rețele Wi-Fi", "scan_networks": "Caută rețele", "wifi_setup": "Configurare Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Lucreadză"
+        "espnow_toggle": "ESP-NOW Lucreadză", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "rom": {
         "status": "STATUSO", "stopped": "TERDI", "running": "KEREL BUTI", "ready": "Gata",
@@ -232,7 +288,11 @@ const translations = {
         "wifi_settings": "Wi-Fi rețele", "scan_networks": "Rode rețele", "wifi_setup": "Konfiguracija Wi-Fi",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Kerel Buti"
+        "espnow_toggle": "ESP-NOW Kerel Buti", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "zh": {
         "status": "状态", "stopped": "已停止", "running": "运行中", "ready": "就绪",
@@ -247,7 +307,11 @@ const translations = {
         "wifi_settings": "Wi-Fi网络", "scan_networks": "扫描网络", "wifi_setup": "Wi-Fi设置",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW 已启用"
+        "espnow_toggle": "ESP-NOW 已启用", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "ja": {
         "status": "ステータス", "stopped": "停止中", "running": "稼働中", "ready": "準備完了",
@@ -262,7 +326,11 @@ const translations = {
         "wifi_settings": "Wi-Fiネットワーク", "scan_networks": "ネットワークをスキャン", "wifi_setup": "Wi-Fi設定",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW 有効"
+        "espnow_toggle": "ESP-NOW 有効", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     },
     "az": {
         "status": "STATUS", "stopped": "DAYANDI", "running": "İŞLƏYİR", "ready": "Hazır",
@@ -277,6 +345,11 @@ const translations = {
         "wifi_settings": "Wi-Fi şəbəkələri", "scan_networks": "Şəbəkələri axtar", "wifi_setup": "Wi-Fi quraşdırması",
         "scanning": "Scanning...", "no_peers": "No peers found", "unknown_device": "Unknown Device",
         "connecting": "Connecting...", "connection_started": "Connection started!",
-        "espnow_toggle": "ESP-NOW Aktivdir"
+        "espnow_toggle": "ESP-NOW Aktivdir", "delete": "Delete",
+        "confirm_delete": "Are you sure you want to delete this device?",
+        "no_networks": "No networks found",
+        "confirm_update": "Update firmware?",
+        "saved": "Saved"
     }
 };
+
