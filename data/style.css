@@ -4,7 +4,7 @@
     --card-bg: #1a1a20;
     --text-primary: #ffffff;
     --text-secondary: #a0a0b0;
-    --accent-color: #ffd700;
+    --accent-color: #fdcb6e;
     --success-color: #00ff88;
     --danger-color: #ff4444;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -1069,3 +1069,4 @@ input[type="range"]::-moz-range-thumb {
 .switch input:checked + .slider:before {
     transform: translateX(24px);
 }
+
