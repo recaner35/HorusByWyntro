@@ -41,7 +41,7 @@ window.onload = function () {
     setTheme(savedTheme);
 
     // Renk Yükleme
-    var savedColor = localStorage.getItem('horus_accent_color') || '#ffd700';
+    var savedColor = localStorage.getItem('horus_accent_color') || '#fdcb6e';
     setAccentColor(savedColor);
 
     // Check Version
@@ -625,5 +625,6 @@ function showToast(message, type = "info", duration = 2500) {
         setTimeout(() => toast.remove(), 300);
     }, duration);
 }
+
 
 
