@@ -312,23 +312,32 @@ function renderPeers(peers) {
             
             <div class="peer-controls-grid">
                 <div class="control-group">
-                    <label>TPD</label>
-                    <input type="number" id="p-tpd-${p.mac}" value="${tpd}">
+                    <label>TPD: <span id="p-tpd-val-${p.mac}">${tpd}</span></label>
+                    <input
+                        type="range"
+                        min="100"
+                        max="3000"
+                        step="10"
+                        value="${tpd}"
+                        id="p-tpd-${p.mac}"
+                        oninput="document.getElementById('p-tpd-val-${p.mac}').innerText = this.value"
+                    >
                 </div>
+
                 <div class="control-group">
-                    <label>${getTrans('duration') || 'Süre'}</label>
-                    <input type="number" id="p-dur-${p.mac}" value="${dur}">
+                    <label>${getTrans('duration') || 'Süre'}:
+                        <span id="p-dur-val-${p.mac}">${dur}</span>
+                    </label>
+                        <input
+                        type="range"
+                        min="1"
+                        max="120"
+                        step="1"
+                        value="${dur}"
+                        id="p-dur-${p.mac}"
+                        oninput="document.getElementById('p-dur-val-${p.mac}').innerText = this.value"
+                    >
                 </div>
-            </div>
-            
-            <div class="control-group">
-                <label>${getTrans('direction') || 'Yön'}</label>
-                <div class="direction-selector">
-                    <button class="dir-btn ${dir == 0 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 0)">CW</button>
-                    <button class="dir-btn ${dir == 1 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 1)">CCW</button>
-                    <button class="dir-btn ${dir == 2 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 2)">⇄</button>
-                </div>
-                <input type="hidden" id="p-dir-${p.mac}" value="${dir}">
             </div>
             
             <div class="peer-actions" style="display:flex; gap:10px; margin-top:15px;">
@@ -625,6 +634,7 @@ function showToast(message, type = "info", duration = 2500) {
         setTimeout(() => toast.remove(), 300);
     }, duration);
 }
+
 
 
 
