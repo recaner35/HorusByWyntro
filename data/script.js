@@ -1,8 +1,10 @@
+var currentLang = 'tr';
 var socket;
 var isRunning = false;
 var currentDirection = 2; // 0: CW, 1: CCW, 2: Bi-Directional
 var wifiScanInterval;
 var otaStatusInterval;
+var statusInterval;
 var deviceSuffix = ""; // WebSocket'ten gelecek
 
 // Dil dosyasından çeviri al
@@ -53,10 +55,13 @@ window.onload = function () {
 };
 
 function initWebSocket() {
-    socket = new WebSocket('ws://' + window.location.hostname + '/ws');
+    var protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    socket = new WebSocket(protocol + location.host + '/ws');
 
     // Otomatik durum güncellemesi (10 saniyede bir)
-    setInterval(function () {
+    if (statusInterval) clearInterval(statusInterval);
+
+    statusInterval = setInterval(function () {
         if (socket && socket.readyState === WebSocket.OPEN && !wifiScanInterval) {
             socket.send(JSON.stringify({ type: "check_peers" }));
         }
@@ -68,14 +73,18 @@ function initWebSocket() {
     };
 
     socket.onmessage = function (event) {
-        var data = JSON.parse(event.data);
+        var data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            console.error("Bozuk WS verisi:", event.data);
+        return;
+        }
         console.log("WS Data:", data);
-
         if (data.running !== undefined) {
             isRunning = data.running;
             updateStatusUI();
         }
-
         if (data.tpd !== undefined) {
             document.getElementById('tpdPayload').value = data.tpd;
             document.getElementById('tpdValue').innerText = data.tpd;
@@ -142,16 +151,19 @@ function updateStatusUI() {
 function toggleSystem() {
     var action = isRunning ? "stop" : "start";
     var cmd = { type: "command", action: action };
-    socket.send(JSON.stringify(cmd));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(cmd));
+    }
 }
-
 function toggleEspNow() {
     var isEnabled = document.getElementById('espNowToggle').checked;
     var settings = {
         type: "settings",
         espnow: isEnabled
     };
+    if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(settings));
+    }
 }
 
 function updateSliderLabels() {
@@ -254,10 +266,12 @@ function switchTab(tabId) {
 // ================= DEVICE DISCOVERY & CONTROL =================
 function refreshPeers() {
     var cmd = { type: "check_peers" };
-    socket.send(JSON.stringify(cmd));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(cmd));
     // Placeholder kaldırıldı - akıcı güncelleme için
+    }
 }
-
+    
 function renderPeers(peers) {
     var list = document.getElementById('deviceList');
     list.innerHTML = "";
@@ -276,7 +290,8 @@ function renderPeers(peers) {
 
         var div = document.createElement('div');
         div.className = 'card peer-card' + (isOnline ? '' : ' offline');
-        div.id = 'peer-' + p.mac;
+        var safeMac = p.mac.replace(/[^a-zA-Z0-9]/g, '');
+        div.id = 'peer-' + safeMac;
 
         var statusColor = isOnline ? (isRunning ? 'var(--success-color)' : 'var(--text-secondary)') : '#555';
 
@@ -359,9 +374,11 @@ window.pushPeerSettings = function (mac, currentRunningState) {
         running: currentRunningState // Statusu koru
     };
 
-    socket.send(JSON.stringify(cmd));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(cmd));
     // Görsel geri bildirim
     alert('Ayarlar cihaza gönderildi!');
+    }    
 };
 
 window.togglePeer = function (mac, newState) {
@@ -378,7 +395,9 @@ window.togglePeer = function (mac, newState) {
         dir: dir,
         running: newState
     };
-    socket.send(JSON.stringify(cmd));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(cmd));
+        }
 };
 
 window.deletePeer = function (mac) {
@@ -388,7 +407,9 @@ window.deletePeer = function (mac) {
             type: "del_peer",
             target: mac
         };
-        socket.send(JSON.stringify(cmd));
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(cmd));
+        }
     }
 };
 
@@ -587,3 +608,4 @@ function setAccentColor(color) {
         }
     });
 }
+
