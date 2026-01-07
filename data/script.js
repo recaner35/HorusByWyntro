@@ -112,7 +112,7 @@ function initWebSocket() {
         }
 
         if (data.type === "error") {
-            alert(data.message);
+            showToast(data.message);
         }
 
         if (data.type === "wifi_scan_error") {
@@ -195,14 +195,14 @@ function sendSettings() {
         dir: dir
     };
     socket.send(JSON.stringify(settings));
-    alert(getTrans('saved'));
+    showToast(getTrans('kaydedildi'));
 }
 
 function saveDeviceName() {
     var name = document.getElementById('deviceName').value;
 
     if (!name || name.trim() === '') {
-        alert('Lütfen geçerli bir cihaz adı girin.');
+       showToast('Lütfen geçerli bir cihaz adı girin.');
         return;
     }
 
@@ -214,7 +214,7 @@ function saveDeviceName() {
     socket.send(JSON.stringify(settings));
 
     // Kullanıcıya bilgi ver
-    alert('Cihaz adı kaydedildi. Cihaz yeniden başlatılıyor...');
+    showToast('Cihaz adı kaydedildi. Cihaz yeniden başlatılıyor...');
 
     // 3 saniye bekle, sonra yeni hostname'e yönlendir
     setTimeout(function () {
@@ -377,7 +377,7 @@ window.pushPeerSettings = function (mac, currentRunningState) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(cmd));
     // Görsel geri bildirim
-    alert('Ayarlar cihaza gönderildi!');
+    showToast('Ayarlar kutuya gönderildi!');
     }    
 };
 
@@ -510,7 +510,7 @@ function connectWifi() {
                     location.reload();
                 }
             } else {
-                alert("Error connecting.");
+                showToast("Bağlantı hatası");
             }
         });
 }
@@ -523,15 +523,15 @@ function triggerAutoUpdate() {
         .then(response => response.json())
         .then(data => {
             if (data.status == "started" || data.status == "updating") {
-                alert("Update started! Please wait...");
+                showToast("Güncelleme başlatıldı! 5 Dakika bekleyip yeniden bağlanın");
                 if (!otaStatusInterval) {
                     otaStatusInterval = setInterval(checkOtaStatus, 2000);
                 }
             } else if (data.status == "busy") {
-                alert("Update already in progress.");
+                showToast("Güncelleştirmeye devam ediyor.");
             }
         })
-        .catch(e => alert("Error triggering update"));
+        .catch(e => showToast("Güncelleştirme hatası"));
 }
 
 function checkOtaStatus() {
@@ -546,11 +546,11 @@ function checkOtaStatus() {
             if (data.status == "up_to_date") {
                 clearInterval(otaStatusInterval);
                 otaStatusInterval = null;
-                alert("System is already up to date.");
+                showToast("Yazılım zaten güncel!");
             } else if (data.status == "error") {
                 clearInterval(otaStatusInterval);
                 otaStatusInterval = null;
-                alert("Update failed!");
+                showToast("Güncelleme yapılmadı!");
             } else if (data.status == "idle") {
                 // finished successfully (rebooted) or not started
                 clearInterval(otaStatusInterval);
@@ -625,4 +625,5 @@ function showToast(message, type = "info", duration = 2500) {
         setTimeout(() => toast.remove(), 300);
     }, duration);
 }
+
 
