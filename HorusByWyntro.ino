@@ -1158,6 +1158,9 @@ void initWebServer() {
   server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/512x512.png", "image/png");
   });
+  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send(LittleFS, "/sw.js", "application/javascript");
+  });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/style.css", "text/css");
   });
