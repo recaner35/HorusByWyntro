@@ -119,12 +119,12 @@
         <!-- Devices Tab -->
         <section id="devices" class="tab-content">
             <div class="card">
-                <h2 data-i18n="devices">CİHAZLAR</h2>
+                <h2 data-i18n="devices">Cihazlar</h2>
                 <div class="control-group espnow-toggle-container">
-                    <label data-i18n="espnow_toggle">ESP-NOW Aktif</label>
+                    <label data-i18n="espnow_toggle">Diğer Horus'larla Paylaş</label>
                     <label class="switch">
                         <input type="checkbox" id="espNowToggle" onchange="toggleEspNow()">
-                        <span class="slider round"></span>
+                        <span class="slider"></span>
                     </label>
                 </div>
                 <div class="control-group">
@@ -153,11 +153,11 @@
         <!-- Settings Tab -->
         <section id="settings" class="tab-content">
             <div class="card">
-                <h2 data-i18n="settings">AYARLAR</h2>
+                <h2 data-i18n="settings">Ayarlar</h2>
 
                 <div class="control-group">
-                    <label data-i18n="device_name">Cihaz Adı</label>
-                    <input type="text" id="deviceName" placeholder="Horus Device">
+                    <label data-i18n="device_name">Horus Adı</label>
+                    <input type="text" id="deviceName" placeholder="Horus Adı">
                     <small style="color:var(--text-secondary); display:block; margin-top:5px;">Değişiklik sonrası cihaz
                         yeniden başlar.</small>
                     <button class="btn-primary" style="margin-top: 10px;" onclick="saveDeviceName()"
@@ -240,8 +240,8 @@
     <div id="wifiModal" class="modal">
         <div class="modal-content" id="wifiConnectCard">
             <span class="close-modal" onclick="closeWifiModal()">&times;</span>
-            <h3 id="modalSSID">Network Name</h3>
-            <input type="password" id="wifiPass" placeholder="Password">
+            <h3 id="modalSSID">Ağ Adı</h3>
+            <input type="password" id="wifiPass" placeholder="Şifre">
             <button class="btn-primary" onclick="connectWifi()" data-i18n="connect">Bağlan</button>
         </div>
     </div>
@@ -294,5 +294,6 @@
 </body>
 
 </html>
+
 
 
