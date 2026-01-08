@@ -46,7 +46,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.111"
+#define FIRMWARE_VERSION "1.0.112"
 #define PEER_FILE "/peers.json"
 
 // ===============================
