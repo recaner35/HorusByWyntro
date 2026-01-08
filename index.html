@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" class="scroll-smooth bg-black">
+<html lang="tr" class="scroll-smooth bg-black snap-y snap-mandatory h-screen overflow-y-scroll">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +8,8 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <link rel="stylesheet" href="style.css">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
@@ -38,86 +40,23 @@
       }
     }
   </script>
-
-  <style>
-    body {
-      overflow-x: hidden;
-      background-color: #050505;
-      color: #d4d4d4;
-    }
-
-    /* 3D CUBE STYLES */
-    .scene {
-      width: 200px;
-      height: 200px;
-      perspective: 800px;
-      margin: 0 auto 3rem auto;
-      cursor: pointer;
-    }
-    .cube {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      transform-style: preserve-3d;
-    }
-    .cube__face {
-      position: absolute;
-      width: 200px;
-      height: 200px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.01);
-      backdrop-filter: blur(2px);
-      box-shadow: 0 0 30px rgba(255, 255, 255, 0.01);
-    }
-    .cube__face--front  { transform: rotateY(  0deg) translateZ(100px); }
-    .cube__face--right  { transform: rotateY( 90deg) translateZ(100px); }
-    .cube__face--back   { transform: rotateY(180deg) translateZ(100px); }
-    .cube__face--left   { transform: rotateY(-90deg) translateZ(100px); }
-    .cube__face--top    { transform: rotateX( 90deg) translateZ(100px); }
-    .cube__face--bottom { transform: rotateX(-90deg) translateZ(100px); }
-
-    /* Animasyon Başlangıç Durumları */
-    .gsap-fade-up { opacity: 0; transform: translateY(30px); }
-    .gsap-glow { opacity: 0; transform: scale(0.8); }
-    .gsap-obj { opacity: 0; transform: translateY(50px); }
-    
-    /* Atmosferik Işıklar */
-    .section-light {
-      position: absolute;
-      width: 800px;
-      height: 800px;
-      background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 70%);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 0;
-      border-radius: 50%;
-    }
-  </style>
 </head>
 
 <body class="font-light tracking-wide selection:bg-white/20">
 
-<header id="navbar" class="fixed top-0 left-0 w-full z-50 py-6 px-6 md:px-12 flex justify-between items-center transition-all duration-500 opacity-0 mix-blend-difference">
-  <a href="#hero" class="block text-white hover:opacity-80 transition duration-300">
-    <svg class="h-8 md:h-10 w-auto fill-current" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 99.34 49.67" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd">
-        <defs><style type="text/css">.fil0 { fill: none } .fil1 { fill: currentColor; fill-rule: nonzero } </style></defs>
-        <g id="Layer_x0020_1">
-            <polygon class="fil0" points="0,0 99.34,0 99.34,49.67 0,49.67 " />
-            <path class="fil1" d="M17.51 29.03l2.99 0 1.57 0c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.63,0 -1.16,-0.5 -1.17,-1.11l0 -17.13c0.01,-0.62 0.54,-1.12 1.17,-1.12 0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4l-2.88 0 0 0 -1.68 0c-0.22,0 -0.4,0.18 -0.4,0.4 0,0.21 0.18,0.39 0.4,0.39 0.64,0 1.17,0.5 1.17,1.13l0 6.61c0,0.35 0.11,0.69 0.3,0.97l-11.34 0 0 -7.58c0,-0.63 0.53,-1.13 1.17,-1.13 0.22,0 0.4,-0.18 0.4,-0.39 0,-0.22 -0.18,-0.4 -0.4,-0.4l-2.89 0 0 0 -1.67 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.21 0.19,0.39 0.41,0.39 0.64,0 1.16,0.5 1.17,1.12l0 17.12c-0.01,0.62 -0.53,1.12 -1.17,1.12 -0.22,0 -0.41,0.18 -0.41,0.4 0,0.21 0.19,0.39 0.41,0.39l4.56 0c0.22,0 0.4,-0.18 0.4,-0.39 0,-0.22 -0.18,-0.4 -0.4,-0.4 -0.64,0 -1.17,-0.51 -1.17,-1.12l0 -7.77c0,-0.36 -0.11,-0.69 -0.3,-0.98l11.34 0 0 8.64 0 0 0 0.11c0,0.61 -0.52,1.12 -1.17,1.12 -0.22,0 -0.4,0.18 -0.4,0.4 0,0.21 0.18,0.39 0.4,0.39l0 0zm16.82 0.38c0.06,0 0.12,0 0.19,0 0,0 0.22,-0.01 0.25,-0.01l0.08 0 0.01 -0.01c5.54,-0.28 9.87,-5.03 9.87,-10.83 0,-5.99 -4.67,-10.85 -10.4,-10.85 -0.15,0 -0.3,0 -0.44,0.01l-0.15 0 0 0.01c-5.51,0.31 -9.81,5.05 -9.81,10.83 0,5.98 4.67,10.85 10.4,10.85l0 0zm-8.43 -10.45c0.22,0 0.41,-0.18 0.41,-0.4 0,-1.16 0.15,-2.29 0.46,-3.37 1.09,-3.86 3.9,-6.48 7.15,-6.68 0.14,-0.01 0.28,-0.02 0.41,-0.02 5.15,0 9.37,4.31 9.57,9.68l-1.14 0c-0.23,0 -0.41,0.17 -0.41,0.39 0,1.49 -0.26,2.92 -0.75,4.26 -1.26,3.38 -3.89,5.61 -6.86,5.79l-0.2 0.01c-0.07,0 -0.14,0.01 -0.21,0.01 -5.15,0 -9.37,-4.31 -9.57,-9.67l1.14 0zm37.16 10.07c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.06,0 -0.12,0 -0.18,0 -0.87,-0.06 -1.65,-0.53 -2.08,-1.27l0 0 -0.05 -0.08 0 -0.01 -4.21 -6.82 -0.03 -0.04c-0.3,-0.42 -0.67,-0.78 -1.10,-1.07 3.13,-0.12 5.64,-2.51 5.64,-5.43 0,-2.96 -2.6,-5.39 -5.76,-5.42l-0.01 -0.01 -8.72 0c-0.23,0 -0.41,0.18 -0.41,0.4 0,0.21 0.18,0.39 0.41,0.39 0.64,0 1.17,0.5 1.17,1.13l0 17.11c-0.01,0.62 -0.53,1.12 -1.17,1.12 -0.23,0 -0.41,0.18 -0.41,0.4 0,0.21 0.18,0.39 0.41,0.39l4.55 0c0.23,0 0.41,-0.18 0.41,-0.39 0,-0.22 -0.18,-0.4 -0.41,-0.4 -0.64,0 -1.16,-0.51 -1.16,-1.12l0 -7.2c0,-0.35 -0.11,-0.68 -0.3,-0.97l3.1 0 0.01 0 0.1 0c0.26,0 0.5,0.13 0.64,0.32l4.07 6.64c1.09,1.88 3.06,3.04 5.25,3.11 0.08,0 0.16,0.01 0.24,0.01l0 0zm-7.82 -10.86l-5.29 0 0 -8.32c0,-0.35 -0.11,-0.69 -0.3,-0.97l5.42 0 0 0 0.1 0c1.93,0 3.51,2.08 3.51,4.64 0,2.53 -1.54,4.6 -3.43,4.65l-0.01 0zm16.35 11.24c1.46,0 2.85,-0.42 4.01,-1.2 0.1,-0.05 0.2,-0.12 0.28,-0.19 0.26,-0.18 0.5,-0.39 0.72,-0.6 1.37,-1.31 2.13,-3.06 2.13,-4.92l0 -12.5c0.01,-0.62 0.53,-1.12 1.17,-1.12 0.22,0 0.41,-0.17 0.41,-0.39 0,-0.22 -0.19,-0.4 -0.41,-0.4l-3.15 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.22 0.19,0.39 0.41,0.39 0.65,0 1.17,0.51 1.17,1.13l0 12.49c0,1.65 -0.67,3.2 -1.91,4.39 -0.17,0.16 -0.36,0.31 -0.56,0.46l-0.07 0.05c-0.07,0.05 -0.14,0.1 -0.21,0.14 -0.89,0.58 -1.94,0.88 -3.01,0.88 -1.48,0 -2.86,-0.56 -3.89,-1.55 -1.04,-1.01 -1.61,-2.34 -1.61,-3.76l0 -12.99 0 -0.01 0 -0.1c0,-0.62 0.52,-1.13 1.17,-1.13 0.22,0 0.41,-0.17 0.41,-0.39 0,-0.22 -0.19,-0.4 -0.41,-0.4l-4.56 0c-0.22,0 -0.41,0.18 -0.41,0.4 0,0.22 0.19,0.39 0.41,0.39 0.64,0 1.16,0.5 1.17,1.13l0 12.49c0,3.81 3.2,6.91 7.15,6.91l0 0zm16.99 0c0.12,0 0.23,0 0.35,-0.01 0.09,0 0.17,0 0.26,-0.01l0.17 -0.02 0.06 -0.01 0.05 0 0.02 0c3.43,-0.37 6.01,-2.79 6.01,-5.64 0,-2.11 -1.4,-4.03 -3.65,-5.02l-5.87 -2.6c-1.54,-0.74 -2.5,-2.09 -2.5,-3.52 0,-2.1 1.96,-3.85 4.56,-4.06l0.22 -0.02c0.1,0 0.21,0 0.32,0 0.1,0 0.21,0 0.31,0l0.22 0.02c2.53,0.21 4.49,1.9 4.57,3.93 0,0.12 0.06,0.22 0.15,0.29 0.07,0.06 0.16,0.09 0.25,0.09l0.04 0 0.86 -0.14c0.11,-0.02 0.21,-0.08 0.27,-0.17l0.09 -0.17 -0.03 -0.14c-0.61,-2.43 -3.13,-4.27 -6.14,-4.48l-0.24 -0.01c-0.12,-0.01 -0.23,-0.01 -0.35,-0.01 -0.12,0 -0.24,0 -0.36,0.01l-0.23 0.01c-3.53,0.24 -6.29,2.72 -6.29,5.63 0,1.99 1.31,3.86 3.42,4.88l5.93 2.62c1.66,0.73 2.69,2.12 2.69,3.63 0,2.03 -1.88,3.79 -4.36,4.09 -0.03,0 -0.26,0.03 -0.26,0.03l-0.22 0.01c-0.11,0 -0.22,0 -0.32,0 -0.11,0 -0.22,0 -0.31,0l-0.23 -0.01c-2.64,-0.22 -4.62,-2 -4.62,-4.12 0,-0.1 0,-0.18 0.01,-0.26 0.02,-0.11 -0.02,-0.23 -0.11,-0.32 -0.07,-0.08 -0.18,-0.12 -0.32,-0.12 0,0 -0.94,0.08 -0.94,0.08 -0.11,0.01 -0.21,0.06 -0.28,0.15l-0.11 0.15 0.02 0.14c0.34,2.71 2.99,4.85 6.3,5.08l0.24 0.01c0.11,0.01 0.23,0.01 0.35,0.01l0 0z" />
-        </g>
-    </svg>
+<header id="navbar" class="fixed top-0 left-0 w-full z-50 py-6 px-6 md:px-12 flex justify-between items-center transition-all duration-1000 opacity-0 mix-blend-difference pointer-events-none md:pointer-events-auto">
+  <a href="#hero" class="block text-white hover:opacity-80 transition duration-300 pointer-events-auto">
+    <img src="logo.svg" alt="Horus by Wyntro Logo" class="h-8 md:h-10 w-auto">
   </a>
 
-  <nav class="hidden md:flex gap-8 items-center">
+  <nav class="hidden md:flex gap-8 items-center pointer-events-auto">
       <a href="#story" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Hikaye</a>
       <a href="#design" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Tasarım</a>
       <a href="#experience" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Deneyim</a>
       <a href="#lab" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">The Lab</a>
   </nav>
 
-  <div class="flex items-center gap-6">
+  <div class="flex items-center gap-6 pointer-events-auto">
       <div class="hidden md:block text-[10px] tracking-widest text-white/50 cursor-pointer hover:text-white transition">TR / EN</div>
       <button id="menu-btn" class="group flex flex-col items-end gap-1.5 cursor-pointer z-[60]">
           <span class="w-6 h-px bg-white group-hover:w-8 transition-all duration-300"></span>
@@ -139,7 +78,7 @@
     </div>
 </div>
 
-<section id="hero" class="min-h-screen flex flex-col items-center justify-center relative z-10">
+<section id="hero">
   <div class="scene" id="hero-product">
     <div class="cube">
       <div class="cube__face cube__face--front"></div>
@@ -166,33 +105,34 @@
   </div>
 </section>
 
-<section id="story" class="min-h-screen flex items-center justify-center relative py-32">
+<section id="story">
   <div class="section-light gsap-glow"></div>
-  <div class="max-w-4xl px-6 relative z-10 text-center">
-    <div class="w-px h-24 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-auto mb-12 gsap-obj"></div>
-    <h2 class="text-3xl md:text-4xl font-extralight mb-12 text-white gsap-fade-up tracking-widest">HİKAYEMİZ</h2>
-    <div class="space-y-8 text-lg font-light leading-relaxed text-neutral-400">
+  <div class="max-w-4xl px-6 relative z-10 text-center w-full flex flex-col h-full justify-center">
+    <div class="w-px h-16 md:h-24 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-auto mb-8 md:mb-12 gsap-obj shrink-0"></div>
+    <h2 class="text-2xl md:text-4xl font-extralight mb-6 md:mb-12 text-white gsap-fade-up tracking-widest shrink-0">HİKAYEMİZ</h2>
+    
+    <div class="inner-scroll-container space-y-4 md:space-y-8 text-xs md:text-lg font-light leading-relaxed text-neutral-400">
       <p class="gsap-fade-up">Zaman, insanlığın en eski takıntılarından biri. Onu ölçtük, ona hükmetmek istedik. Fakat zaman asla bizim olmadı — sadece ona uyum sağladık.</p>
       <p class="gsap-fade-up">Horus by Wyntro, zamanı korumak ve ona hak ettiği değeri vermek için doğdu. İsmini, zarif dönüşlerden ve soğukkanlı mühendislikten alır. Her Horus by Wyntro kutusu, bir ustalığın, modern mühendisliğin ve minimalist estetiğin birleşimidir. Sessizce döner, tıpkı zaman gibi; durmaz, tıpkı hayat gibi…</p>
       <p class="gsap-fade-up">Ancak zamanın sadece mekanik bir şey olmadığını biliyoruz. Horus by Wyntro, bu anlayışın sembolüdür.</p>
       <p class="gsap-fade-up">Antik Mısır’da Horus, gökyüzünün ve zamanın tanrısıydı. Onun gözü, zamanı gözeten ve her anı kollayan bir semboldü. Bizim HORUS’umuz da aynı şekilde çalışır: akıllı, sezgisel ve sizin için zamanı koruyan bir sistem.</p>
       <p class="gsap-fade-up">Horus by Wyntro, sadece bir saat kurma kutusu değil — bir zaman küratörüdür. Modüler yapısı ile kişisel koleksiyonlara uyum sağlar; dokunmatik anahtarı ve web arayüzüyle saatinizle bağ kurmanızı mümkün kılar.</p>
       
-      <div class="gsap-fade-up text-white/80 border-t border-white/10 pt-8 inline-block mt-8">
+      <div class="gsap-fade-up text-white/80 border-t border-white/10 pt-4 md:pt-8 inline-block mt-4 md:mt-8">
         <p class="mb-4">Bu, yalnızca saatleri kuran bir cihaz değil.<br>Bu, zamanı anlamanın ve ona değer vermenin yeni yoludur.</p>
-        <p class="text-xl tracking-[0.2em] font-light">Bu, Horus by Wyntro.</p>
+        <p class="text-lg md:text-xl tracking-[0.2em] font-light">Bu, Horus by Wyntro.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section id="why" class="min-h-screen flex items-center justify-center relative py-32 bg-neutral-900/20">
+<section id="why" class="bg-neutral-900/20">
   <div class="section-light gsap-glow bg-blue-900/5"></div>
   <div class="max-w-6xl px-6 relative z-10 w-full">
-     <div class="mb-16 border-b border-white/10 pb-4 gsap-obj">
-        <h2 class="text-3xl font-thin text-white">Neden Horus by Wyntro?</h2>
+     <div class="mb-12 md:mb-16 border-b border-white/10 pb-4 gsap-obj">
+        <h2 class="text-2xl md:text-3xl font-thin text-white">Neden Horus by Wyntro?</h2>
      </div>
-     <div class="grid md:grid-cols-2 gap-16 text-lg text-neutral-400">
+     <div class="inner-scroll-container grid md:grid-cols-2 gap-8 md:gap-16 text-sm md:text-lg text-neutral-400">
         <div class="gsap-fade-up">
           <p class="mb-6">Saat takılmadığında, zaman kendi yoluna gider.</p>
           <p class="mb-6">Güç rezervi yavaşça tükenir, mekanizma durur. Bir sonraki kullanımda, zaman yeniden kurulmak zorundadır.</p>
@@ -200,19 +140,20 @@
         </div>
         <div class="space-y-6 gsap-fade-up">
           <p>Ay fazı, daimi takvim veya karmaşık komplikasyonlar…</p>
-          <p>Bu detayları yeniden ayarlamak, bir keyif değil; çoğu zaman zahmettir. Üstelik her kurulumda tepe çekilir, itilir; contalar ve mekanizma fark edilmeden yıpranır.</p>
+          <p>Bu detayları yeniden ayarlamak, bir keyif değil; çoğu zaman zahmettir.</p>
+          <p>Üstelik her kurulumda tepe çekilir, itilir; contalar ve mekanizma fark edilmeden yıpranır.</p>
           <p class="pt-4 text-white">Horus by Wyntro, otomatik saatlerinizi sürekli ve zahmetsiz bir hazırlık halinde tutar.</p>
         </div>
      </div>
   </div>
 </section>
 
-<section id="design" class="min-h-screen flex items-center justify-center relative py-32">
+<section id="design">
   <div class="section-light gsap-glow"></div>
   <div class="max-w-5xl px-6 relative z-10 text-center md:text-left">
     <div class="gsap-obj w-16 h-1 bg-white mb-8"></div>
     <h2 class="text-3xl md:text-5xl font-thin mb-12 text-white gsap-fade-up">Dokunduğunuz Şey<br/>Bir Ürün Değil</h2>
-    <div class="grid md:grid-cols-2 gap-12 text-neutral-400 leading-relaxed">
+    <div class="inner-scroll-container grid md:grid-cols-2 gap-12 text-neutral-400 leading-relaxed text-sm md:text-base">
         <div class="gsap-fade-up space-y-6">
             <p>Horus by Wyntro, bir objeden çok daha fazlasıdır. Elinizin altında, her gün sessizce çalışan bir hizmettir.</p>
             <p>Birinci sınıf deri ve masif ahşabın doğal dokusunu, dijital dünyanın hızıyla birleştirdik. Web uygulaması üzerinden sezgisel kontrol, modern Type‑C altyapısıyla zahmetsiz enerji yönetimiyle buluşur.</p>
@@ -225,117 +166,126 @@
   </div>
 </section>
 
-<section id="experience" class="py-32 relative">
-  <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-16">
-    <div class="gsap-fade-up border-t border-white/10 pt-8">
-      <h3 class="text-xl mb-4 text-white">Sessizlik</h3>
-      <p class="text-neutral-300 mb-2">Geceleri, yatak odanızda bile… neredeyse duyulmayacak kadar sessiz.</p>
-      <p class="text-neutral-500 text-sm">Sadece saatinizi izlersiniz. Dönüşü izlemek bile ayrı bir keyiftir.</p>
-    </div>
-    <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 100ms;">
-      <h3 class="text-xl mb-4 text-white">Modülerlik</h3>
-      <p class="text-neutral-300 mb-2">Tek bir merkezden beslenen, birbirine sessizce bağlanan bir koleksiyon.</p>
-      <p class="text-neutral-500 text-sm">Tek bir enerji kaynağından, kusursuz bir düzen. Oyuncak kadar kolay, bir mücevher kadar zarif.</p>
-    </div>
-    <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 200ms;">
-      <h3 class="text-xl mb-4 text-white">Kişiselleştirme</h3>
-      <p class="text-neutral-300 mb-2">Her kutu benzersizdir.</p>
-      <p class="text-neutral-500 text-sm">Ona bir isim verin; sizinle konuşsun.</p>
+<section id="experience">
+  <div class="max-w-7xl mx-auto px-6 w-full">
+    <div class="inner-scroll-container grid md:grid-cols-3 gap-16">
+        <div class="gsap-fade-up border-t border-white/10 pt-8">
+          <h3 class="text-xl mb-4 text-white">Sessizlik</h3>
+          <p class="text-neutral-300 mb-2">Geceleri, yatak odanızda bile… neredeyse duyulmayacak kadar sessiz.</p>
+          <p class="text-neutral-500 text-sm">Sadece saatinizi izlersiniz. Dönüşü izlemek bile ayrı bir keyiftir.</p>
+        </div>
+        <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 100ms;">
+          <h3 class="text-xl mb-4 text-white">Modülerlik</h3>
+          <p class="text-neutral-300 mb-2">Tek bir merkezden beslenen, birbirine sessizce bağlanan bir koleksiyon.</p>
+          <p class="text-neutral-500 text-sm">Tek bir enerji kaynağından, kusursuz bir düzen. Oyuncak kadar kolay, bir mücevher kadar zarif.</p>
+        </div>
+        <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 200ms;">
+          <h3 class="text-xl mb-4 text-white">Kişiselleştirme</h3>
+          <p class="text-neutral-300 mb-2">Her kutu benzersizdir.</p>
+          <p class="text-neutral-500 text-sm">Ona bir isim verin; sizinle konuşsun.</p>
+        </div>
     </div>
   </div>
 </section>
 
-<section id="control" class="min-h-screen flex items-center justify-center relative py-24 bg-neutral-900/30">
+<section id="control" class="bg-neutral-900/30">
   <div class="section-light gsap-glow bg-purple-900/10"></div>
-  <div class="max-w-6xl w-full px-6 grid md:grid-cols-2 gap-24 items-center relative z-10">
-    <div class="gsap-obj relative group">
-      <div class="absolute inset-0 bg-white/5 blur-3xl rounded-full opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-      <div class="bg-glass-border backdrop-blur-2xl border border-white/10 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
-        <div class="text-neutral-600 font-mono text-xs tracking-widest">[ SYSTEM INTERFACE ]</div>
-        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-full w-full translate-y-[-100%] animate-[scan_4s_infinite]"></div>
-      </div>
-    </div>
-    <div class="text-left">
-      <h3 class="text-xs uppercase tracking-[0.4em] text-neutral-500 mb-6 gsap-fade-up">KONTROL</h3>
-      <h2 class="text-4xl font-thin text-white mb-8 gsap-fade-up">Kontrol,<br/>parmak uçlarınızda.</h2>
-      <p class="text-neutral-400 leading-relaxed mb-8 gsap-fade-up">Sessiz, sezgisel ve tamamen size ait.</p>
+  <div class="max-w-6xl w-full px-6 relative z-10">
+    <div class="inner-scroll-container grid md:grid-cols-2 gap-24 items-center">
+        <div class="gsap-obj relative group">
+          <div class="absolute inset-0 bg-white/5 blur-3xl rounded-full opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+          <div class="bg-glass-border backdrop-blur-2xl border border-white/10 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
+            <div class="text-neutral-600 font-mono text-xs tracking-widest">[ SYSTEM INTERFACE ]</div>
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-full w-full translate-y-[-100%] animate-[scan_4s_infinite]"></div>
+          </div>
+        </div>
+        <div class="text-left">
+          <h3 class="text-xs uppercase tracking-[0.4em] text-neutral-500 mb-6 gsap-fade-up">KONTROL</h3>
+          <h2 class="text-4xl font-thin text-white mb-8 gsap-fade-up">Kontrol, parmak uçlarınızda.</h2>
+          <p class="text-neutral-400 leading-relaxed mb-8 gsap-fade-up">Sessiz, sezgisel ve tamamen size ait.</p>
+        </div>
     </div>
   </div>
 </section>
 
-<section id="intelligence" class="py-32 relative z-10">
-    <div class="max-w-4xl mx-auto px-6 text-center">
+<section id="intelligence">
+    <div class="max-w-4xl mx-auto px-6 text-center w-full">
       <div class="gsap-obj w-2 h-2 bg-white rounded-full mx-auto mb-8"></div>
       <h2 class="text-3xl text-white font-light mb-12 gsap-fade-up">Sessizce Düşünen Bir Sistem</h2>
-      <p class="text-neutral-400 text-lg font-light mb-12 gsap-fade-up max-w-2xl mx-auto">
-        Horus by Wyntro, saatinizi sürekli hareket halinde tutmak için değil; doğru zamanda, doğru şekilde hareket etmesini sağlamak için tasarlandı.
-      </p>
       
-      <ul class="space-y-6 text-neutral-400 text-lg font-light inline-block text-left gsap-fade-up w-full max-w-3xl mx-auto">
-        <li class="flex items-center gap-6 py-4 border-b border-white/5">
-            <span class="text-white/30 font-mono text-sm">01</span> 
-            <span>Üç farklı dönüş yönü: Saat yönü, saat yönünün tersi ve çift yönlü.</span>
-        </li>
-        <li class="flex items-center gap-6 py-4 border-b border-white/5">
-            <span class="text-white/30 font-mono text-sm">02</span> 
-            <span>650’den 1800’e kadar ayarlanabilir dönüş döngüleri ile farklı mekanizmalara uyum.</span>
-        </li>
-        <li class="flex items-center gap-6 py-4 border-b border-white/5">
-            <span class="text-white/30 font-mono text-sm">03</span> 
-            <span>Akıllı duraklama modu sayesinde motor ve mekanizma için programlı dinlenme periyotları.</span>
-        </li>
-        <li class="flex items-center gap-6 py-4 border-b border-white/5">
-            <span class="text-white/30 font-mono text-sm">04</span> 
-            <span>Ortalama enerji tüketimi, evinizdeki tek bir LED ampulün çok altında.</span>
-        </li>
-        <li class="flex items-center gap-6 py-4 border-b border-white/5">
-            <span class="text-white/30 font-mono text-sm">05</span> 
-            <span>18 farklı dil desteği ile dünyanın her yerinde aynı sezgisel deneyim.</span>
-        </li>
-      </ul>
-      
-      <p class="mt-12 text-white gsap-fade-up">Horus by Wyntro, gücü göstermek için değil; dengeyi korumak için çalışır.</p>
+      <div class="inner-scroll-container">
+          <p class="text-neutral-400 text-sm md:text-lg font-light mb-12 gsap-fade-up max-w-2xl mx-auto">
+            Horus by Wyntro, saatinizi sürekli hareket halinde tutmak için değil; doğru zamanda, doğru şekilde hareket etmesini sağlamak için tasarlandı.
+          </p>
+          
+          <ul class="space-y-4 md:space-y-6 text-neutral-400 text-sm md:text-lg font-light inline-block text-left gsap-fade-up w-full max-w-3xl mx-auto">
+            <li class="flex items-center gap-6 py-4 border-b border-white/5">
+                <span class="text-white/30 font-mono text-sm shrink-0">01</span> 
+                <span>Üç farklı dönüş yönü: Saat yönü, saat yönünün tersi ve çift yönlü.</span>
+            </li>
+            <li class="flex items-center gap-6 py-4 border-b border-white/5">
+                <span class="text-white/30 font-mono text-sm shrink-0">02</span> 
+                <span>650’den 1800’e kadar ayarlanabilir dönüş döngüleri ile farklı mekanizmalara uyum.</span>
+            </li>
+            <li class="flex items-center gap-6 py-4 border-b border-white/5">
+                <span class="text-white/30 font-mono text-sm shrink-0">03</span> 
+                <span>Akıllı duraklama modu sayesinde motor ve mekanizma için programlı dinlenme periyotları.</span>
+            </li>
+            <li class="flex items-center gap-6 py-4 border-b border-white/5">
+                <span class="text-white/30 font-mono text-sm shrink-0">04</span> 
+                <span>Ortalama enerji tüketimi, evinizdeki tek bir LED ampulün çok altında.</span>
+            </li>
+            <li class="flex items-center gap-6 py-4 border-b border-white/5">
+                <span class="text-white/30 font-mono text-sm shrink-0">05</span> 
+                <span>18 farklı dil desteği ile dünyanın her yerinde aynı sezgisel deneyim.</span>
+            </li>
+          </ul>
+          
+          <p class="mt-8 md:mt-12 text-white gsap-fade-up text-sm md:text-base">Horus by Wyntro, gücü göstermek için değil; dengeyi korumak için çalışır.</p>
+      </div>
     </div>
   </section>
   
-  <section id="blueprint" class="py-32 relative">
+  <section id="blueprint">
       <div class="section-light gsap-glow"></div>
-      <div class="max-w-6xl mx-auto px-6 relative z-10">
+      <div class="max-w-6xl mx-auto px-6 relative z-10 w-full">
           <h2 class="text-3xl mb-8 tracking-widest text-center text-white gsap-fade-up">Ömür Boyu Güven</h2>
           
-          <div class="max-w-3xl mx-auto text-center mb-16 space-y-4 gsap-fade-up">
-              <p class="text-neutral-400 text-lg font-light">
-                  Horus by Wyntro, yalnızca bir kez satın alınan bir ürün değildir. Ömür boyu süren bir sorumluluğun taahhüdüdür.
-              </p>
-              <p class="text-neutral-400 text-lg font-light">
-                  Bu yüzden her Horus by Wyntro, ömür boyu garanti anlayışıyla tasarlanır. Çünkü binlerce dolarlık saatlerin kalbi, geçici çözümlere emanet edilemez.
-              </p>
-          </div>
-          
-          <div class="grid md:grid-cols-2 gap-12">
-              <div class="gsap-fade-up bg-white/5 p-10 rounded-sm border-l border-white/20">
-                  <p class="text-lg text-neutral-300 italic mb-6 leading-relaxed">
-                      “Horus, sadece mekanik bir aygıt değil; binlerce dolarlık saatlerin kalbini emanet ettiğiniz bir güven mekanizmasıdır. Bu yüzden zarafet ve ömür boyu garanti ekledik.”
+          <div class="inner-scroll-container">
+              <div class="max-w-3xl mx-auto text-center mb-8 md:mb-16 space-y-4 gsap-fade-up text-sm md:text-lg">
+                  <p class="text-neutral-400 font-light">
+                      Horus by Wyntro, yalnızca bir kez satın alınan bir ürün değildir. Ömür boyu süren bir sorumluluğun taahhüdüdür.
                   </p>
-                  <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Caner Kocacık, Kreatif Direktör</span>
+                  <p class="text-neutral-400 font-light">
+                      Bu yüzden her Horus by Wyntro, ömür boyu garanti anlayışıyla tasarlanır. Çünkü binlerce dolarlık saatlerin kalbi, geçici çözümlere emanet edilemez.
+                  </p>
               </div>
               
-              <div class="gsap-fade-up bg-white/5 p-10 rounded-sm border-l border-white/20">
-                  <p class="text-lg text-neutral-300 italic mb-6 leading-relaxed">
-                      “Plastik parçalar görünmez olabilir, ama dokunulan her detayın kusursuz olması gerekir. Horus için çizdiğimiz her parça, sessizce yıllarca çalışacak şekilde tasarlandı.”
-                  </p>
-                  <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Özgür Erdoğan, Endüstriyel Tasarım</span>
+              <div class="grid md:grid-cols-2 gap-6 md:gap-12">
+                  <div class="gsap-fade-up bg-white/5 p-6 md:p-10 rounded-sm border-l border-white/20">
+                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed">
+                          “Horus, sadece mekanik bir aygıt değil; binlerce dolarlık saatlerin kalbini emanet ettiğiniz bir güven mekanizmasıdır. Bu yüzden zarafet ve ömür boyu garanti ekledik.”
+                      </p>
+                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Caner Kocacık, Kreatif Direktör</span>
+                  </div>
+                  
+                  <div class="gsap-fade-up bg-white/5 p-6 md:p-10 rounded-sm border-l border-white/20">
+                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed">
+                          “Plastik parçalar görünmez olabilir, ama dokunulan her detayın kusursuz olması gerekir. Horus için çizdiğimiz her parça, sessizce yıllarca çalışacak şekilde tasarlandı.”
+                      </p>
+                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Özgür Erdoğan, Endüstriyel Tasarım</span>
+                  </div>
               </div>
           </div>
       </div>
   </section>
   
-  <section id="collector" class="py-32 min-h-[50vh] flex items-center justify-center relative bg-neutral-900/10">
-      <div class="max-w-4xl px-6 text-center relative z-10">
+  <section id="collector" class="bg-neutral-900/10">
+      <div class="max-w-4xl px-6 text-center relative z-10 w-full">
           <h2 class="text-3xl md:text-5xl text-white font-thin leading-tight mb-10 gsap-fade-up">
               Koleksiyon Sahipliği Biriktirmek Değil, Seçmektir
           </h2>
-          <div class="text-neutral-400 space-y-6 gsap-fade-up font-light text-xl leading-relaxed max-w-3xl mx-auto text-left md:text-center">
+          <div class="inner-scroll-container text-neutral-400 space-y-6 gsap-fade-up font-light text-sm md:text-xl leading-relaxed max-w-3xl mx-auto text-left md:text-center">
               <p>Gerçek koleksiyoncular her saati aynı gözle görmez. Bazıları günlük kullanım içindir. Bazıları özel anlar için saklanır. Bazıları ise sadece varlığıyla anlam taşır.</p>
               <p>Ortak noktaları şudur: <span class="text-white">Hiçbiri rastgele bir yere bırakılmaz.</span></p>
               <p>Horus by Wyntro, saatlerinizi bekleme moduna almaz. Onları her an hazır tutar.</p>
@@ -345,145 +295,60 @@
       </div>
   </section>
 
-  <section id="availability" class="py-32 relative text-center">
-      <div class="max-w-4xl mx-auto px-6 relative z-10">
+  <section id="availability">
+      <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
           <h2 class="text-3xl text-white font-thin mb-8 gsap-fade-up">Hazır Olduğunuzda</h2>
-          <p class="text-neutral-400 mb-12 text-lg gsap-fade-up">
-              Horus by Wyntro, çok yakında dünya çapında seçkin saat mağazalarında ve resmi web sayfalarında satışa sunulacaktır.
-          </p>
-          <button class="gsap-fade-up px-10 py-4 border border-white/20 rounded-full text-sm tracking-[0.2em] text-white hover:bg-white hover:text-black transition duration-500 hover:scale-105">
-              Zamanı Keşfet
+          <div class="inner-scroll-container">
+              <p class="text-neutral-400 mb-12 text-lg gsap-fade-up">
+                  Horus by Wyntro, çok yakında dünya çapında seçkin saat mağazalarında ve resmi web sayfalarında satışa sunulacaktır.
+              </p>
+              <button class="gsap-fade-up px-10 py-4 border border-white/20 rounded-full text-sm tracking-[0.2em] text-white hover:bg-white hover:text-black transition duration-500 hover:scale-105">
+                  Zamanı Keşfet
           </button>
+          </div>
       </div>
   </section>
 
-<section id="lab" class="py-32 relative">
+<section id="lab">
     <div class="section-light gsap-glow bg-green-900/5"></div>
-    <div class="max-w-3xl mx-auto px-6 text-center relative z-10">
+    <div class="max-w-3xl mx-auto px-6 text-center relative z-10 w-full">
         
-        <div class="gsap-obj bg-[#0a0a0a] border border-white/10 rounded-lg p-6 mb-12 text-left font-mono text-xs text-neutral-500 shadow-2xl overflow-hidden relative group">
-             <div class="flex gap-2 mb-4 border-b border-white/5 pb-2">
-                 <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-                 <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-                 <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
-                 <div class="ml-auto text-[10px] text-white/20">bash — v.2.0</div>
-             </div>
-             <div class="mb-4">
-                 <span class="text-green-400 mr-2">➜</span>
-                 <span class="text-blue-400">~</span> 
-                 <span class="text-neutral-300">curl GET api.github.com/repos/recaner35/HorusByWyntro/releases</span>
-             </div>
-             <div id="release-info" class="text-neutral-400 pt-2 min-h-[100px] transition-all duration-500">
-                 <span class="animate-pulse text-green-500">_</span> Bağlantı kuruluyor...
-             </div>
-             <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[20%] w-full animate-[scan_3s_linear_infinite] pointer-events-none opacity-50"></div>
+        <div class="inner-scroll-container">
+            <div class="gsap-obj bg-[#0a0a0a] border border-white/10 rounded-lg p-6 mb-12 text-left font-mono text-xs text-neutral-500 shadow-2xl overflow-hidden relative group">
+                 <div class="flex gap-2 mb-4 border-b border-white/5 pb-2">
+                     <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                     <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                     <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                     <div class="ml-auto text-[10px] text-white/20">bash — v.2.0</div>
+                 </div>
+                 <div class="mb-4">
+                     <span class="text-green-400 mr-2">➜</span>
+                     <span class="text-blue-400">~</span> 
+                     <span class="text-neutral-300">curl GET api.github.com/repos/recaner35/HorusByWyntro/releases</span>
+                 </div>
+                 <div id="release-info" class="text-neutral-400 pt-2 min-h-[100px] transition-all duration-500">
+                     <span class="animate-pulse text-green-500">_</span> Bağlantı kuruluyor...
+                 </div>
+                 <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[20%] w-full animate-[scan_3s_linear_infinite] pointer-events-none opacity-50"></div>
+            </div>
+            
+            <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up">The Lab</h2>
+            <p class="text-neutral-400 gsap-fade-up mb-8 max-w-lg mx-auto leading-relaxed">
+                Yazılımımız canlıdır. GitHub üzerinden anlık olarak çekilen en son firmware notlarını buradan takip edebilirsiniz.
+            </p>
         </div>
-        
-        <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up">The Lab</h2>
-        <p class="text-neutral-400 gsap-fade-up mb-8 max-w-lg mx-auto leading-relaxed">
-            Yazılımımız canlıdır. GitHub üzerinden anlık olarak çekilen en son firmware notlarını buradan takip edebilirsiniz.
-        </p>
     </div>
 </section>
 
-<footer class="py-12 text-center text-[10px] text-neutral-600 tracking-widest uppercase border-t border-white/5 relative z-10 bg-black">
-  <p class="mb-2">Zamana hâkim olanlar için.</p>
-  <p class="mb-2">Zamanın ruhuna sadakatle tasarlandı.</p>
-  <p>Horus by Wyntro · 2026</p>
-</footer>
+<section id="footer" class="h-auto min-h-[30vh] justify-end pb-12">
+    <div class="text-center text-[10px] text-neutral-600 tracking-widest uppercase relative z-10">
+      <p class="mb-2">Zamana hâkim olanlar için.</p>
+      <p class="mb-2">Zamanın ruhuna sadakatle tasarlandı.</p>
+      <p>Horus by Wyntro · 2026</p>
+    </div>
+</section>
 
-<script>
-  gsap.registerPlugin(ScrollTrigger);
+<script src="script.js"></script>
 
-  // --- 1. HERO ANIMATION ---
-  const cube = document.querySelector('.cube');
-  const heroProduct = document.getElementById('hero-product');
-  const rotationTimeline = gsap.to(cube, { rotationX: -15, rotationY: 360, duration: 25, repeat: -1, ease: "none" });
-
-  heroProduct.addEventListener('mouseenter', () => { gsap.to(rotationTimeline, { timeScale: 0.1, duration: 1.5 }); gsap.to(cube, { scale: 1.05, duration: 1 }); });
-  heroProduct.addEventListener('mouseleave', () => { gsap.to(rotationTimeline, { timeScale: 1, duration: 1 }); gsap.to(cube, { scale: 1, duration: 1 }); });
-
-  const heroTl = gsap.timeline();
-  heroTl.to('#navbar', { opacity: 1, duration: 1.5 })
-        .to('.hero-text', { opacity: 1, filter: "blur(0px)", y: 0, stagger: 0.2, duration: 1.5, ease: "power3.out" }, "-=1");
-
-  // --- 2. SCROLL STORYTELLING ---
-  const sections = document.querySelectorAll('section:not(#hero)');
-  sections.forEach(section => {
-    const light = section.querySelector('.gsap-glow');
-    const obj = section.querySelector('.gsap-obj');
-    const texts = section.querySelectorAll('.gsap-fade-up');
-    const tl = gsap.timeline({ scrollTrigger: { trigger: section, start: "top 70%", end: "bottom center", toggleActions: "play none none reverse" } });
-    if(light) tl.to(light, { opacity: 1, scale: 1.2, duration: 2, ease: "power2.out" });
-    if(obj) tl.to(obj, { opacity: 1, y: 0, duration: 1.2, ease: "power3.out" }, "-=1.5");
-    if(texts.length > 0) tl.to(texts, { opacity: 1, y: 0, stagger: 0.1, duration: 1, ease: "power2.out" }, "-=0.8");
-  });
-
-  // --- 3. MOBILE MENU ---
-  const menuBtn = document.getElementById('menu-btn');
-  const mobileMenu = document.getElementById('mobile-menu');
-  const mobileLinks = document.querySelectorAll('.mobile-link');
-  let isMenuOpen = false;
-
-  menuBtn.addEventListener('click', () => {
-    isMenuOpen = !isMenuOpen;
-    if (isMenuOpen) {
-        gsap.to(mobileMenu, { opacity: 1, pointerEvents: 'all', duration: 0.5, ease: 'power2.out' });
-        gsap.fromTo('.mobile-link', { y: 50, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.8, ease: 'power3.out', delay: 0.2 });
-        gsap.to(menuBtn.children[0], { rotation: 45, y: 4, width: '24px' });
-        gsap.to(menuBtn.children[1], { rotation: -45, y: -4, width: '24px' });
-    } else {
-        gsap.to(mobileMenu, { opacity: 0, pointerEvents: 'none', duration: 0.5 });
-        gsap.to(menuBtn.children[0], { rotation: 0, y: 0, width: '24px' });
-        gsap.to(menuBtn.children[1], { rotation: 0, y: 0, width: '16px' });
-    }
-  });
-
-  mobileLinks.forEach(link => {
-      link.addEventListener('click', () => {
-          isMenuOpen = false;
-          gsap.to(mobileMenu, { opacity: 0, pointerEvents: 'none', duration: 0.5 });
-          gsap.to(menuBtn.children[0], { rotation: 0, y: 0 });
-          gsap.to(menuBtn.children[1], { rotation: 0, y: 0, width: '16px' });
-      });
-  });
-
-  // --- 4. GITHUB API (RECANER35/HORUSBYWYNTRO) ---
-  async function fetchLatestRelease() {
-      const user = 'recaner35'; 
-      const repo = 'HorusByWyntro'; 
-      const container = document.getElementById('release-info');
-      if(!container) return;
-
-      try {
-        const response = await fetch(`https://api.github.com/repos/${user}/${repo}/releases`);
-        if (!response.ok) throw new Error("API Hatası");
-        const data = await response.json();
-        
-        // Eğer release yoksa
-        if (!Array.isArray(data) || data.length === 0) throw new Error("Henüz release yok");
-        
-        // En son release'i al
-        const latest = data[0]; 
-        const date = new Date(latest.published_at).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
-
-        container.innerHTML = `
-          <div class="opacity-0 translate-y-2 animate-[fadeIn_0.5s_ease-out_forwards]">
-              <div class="flex items-center justify-between mb-3">
-                  <span class="text-white font-bold tracking-wide text-sm">${latest.name || latest.tag_name}</span>
-                  <a href="${latest.html_url}" target="_blank" class="text-[10px] border border-green-500/40 text-green-400 px-2 py-0.5 rounded hover:bg-green-500/10 transition">${latest.tag_name}</a>
-              </div>
-              <div class="text-[10px] text-neutral-500 mb-3 font-sans">Yayınlanma: ${date}</div>
-              <div class="text-xs text-neutral-300 font-mono whitespace-pre-wrap leading-relaxed border-l-2 border-white/10 pl-3 mb-4 opacity-80">${latest.body ? latest.body : 'Versiyon notu bulunamadı.'}</div>
-              <a href="${latest.html_url}" target="_blank" class="inline-flex items-center gap-2 text-[10px] text-white/40 hover:text-white transition group/link">
-                  <span>GitHub'da İncele / İndir</span><span class="group-hover/link:translate-x-1 transition-transform">→</span>
-              </a>
-          </div>`;
-      } catch (e) { 
-        container.innerHTML = `<div class="text-red-400/80 text-[10px] mt-4">[Error]: Bağlantı kurulamadı veya release yok.<br><a href="https://github.com/${user}/${repo}/releases" target="_blank" class="underline">Manuel Kontrol →</a></div>`; 
-      }
-  }
-  document.addEventListener('DOMContentLoaded', fetchLatestRelease);
-</script>
 </body>
 </html>
