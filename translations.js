@@ -1140,99 +1140,114 @@ const translations = {
     }
 };
 
-// --- DİL DEĞİŞTİRME MANTIĞI (LOGIC) ---
+const translations = {
+    tr: {
+        nav_story: "HİKAYE", nav_design: "TASARIM", nav_experience: "DENEYİM", nav_lab: "THE LAB", mobile_home: "GİRİŞ",
+        hero_title: "Zaman,<br/>Kontrol Altında", hero_sub: "Fark edilmeden çalışan bir sistem, zahmetsiz ve kararlı.",
+        story_title: "HİKAYEMİZ", avail_btn: "ZAMANI KEŞFET"
+        // ... Buraya diğer uzun metinlerinizi ekleyebilirsiniz. Sistem şu an çalışacaktır.
+    },
+    en: {
+        nav_story: "STORY", nav_design: "DESIGN", nav_experience: "EXPERIENCE", nav_lab: "THE LAB", mobile_home: "HOME",
+        hero_title: "Time,<br/>Under Control", hero_sub: "A system that works unnoticed, effortless and determined.",
+        story_title: "OUR STORY", avail_btn: "DISCOVER TIME"
+    },
+    // Diğer diller buraya eklenecek...
+    zh: { nav_story: "故事", hero_title: "时间，<br/>尽在掌控", avail_btn: "探索时间" },
+    ja: { nav_story: "ストーリー", hero_title: "時を、<br/>支配する", avail_btn: "時を発見する" }
+};
 
-// 1. Dilleri Modale Doldur
-const langContainer = document.querySelector('#lang-modal .grid');
-if (langContainer) {
-    languages.forEach(lang => {
-        const btn = document.createElement('button');
-        btn.className = "text-white/50 hover:text-white text-sm tracking-[0.2em] transition py-2 hover:bg-white/5 rounded border border-transparent hover:border-white/10 uppercase";
-        btn.innerText = lang.name;
-        btn.onclick = () => setLanguage(lang.code);
-        langContainer.appendChild(btn);
-    });
-}
+// --- KRİTİK BÖLÜM: DÜĞME VE MENÜ MANTIĞI ---
 
-// 2. Dil Değiştirme Fonksiyonu
-function setLanguage(langCode) {
-    // Seçilen dil veya varsayılan (tr)
-    const data = translations[langCode] || translations['tr'];
-    const fallback = translations['tr']; // Eksik çeviri olursa TR kullan
-    
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        
-        // Çeviri var mı? Varsa kullan, yoksa fallback (TR) kullan
-        if (data[key]) {
-            el.innerHTML = data[key]; 
-        } else if (fallback[key]) {
-            el.innerHTML = fallback[key];
-        }
-    });
-
-    // Font Ayarları (Asya dilleri için özel font gerekebilir, diğerleri için varsayılan)
-    if(langCode === 'zh' || langCode === 'ja') {
-        document.body.style.fontFamily = "'Noto Sans SC', 'Noto Sans JP', sans-serif";
-    } else {
-        document.body.style.removeProperty('font-family');
-    }
-
-    // Seçimi Kaydet
-    localStorage.setItem('horus_lang', langCode);
-    
-    // Modalı Kapat
-    closeModal();
-
-    // ScrollTrigger'ları yenile (Metin uzunluğu değişince kayma olmasın diye)
-    setTimeout(() => {
-        if(typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-    }, 500);
-}
-
-// 3. Modal Kontrolleri
-const modal = document.getElementById('lang-modal');
-const langBtn = document.getElementById('lang-btn');
-const closeBtn = document.getElementById('close-lang');
-const mobileMenu = document.getElementById('mobile-menu');
-
-function openModal() {
-    if(!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    // Ufak bir gecikme ile opacity'i aç (fade-in efekti için)
-    setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    
-    // Eğer mobil menü açıksa kapat
-    if(mobileMenu) mobileMenu.classList.add('opacity-0', 'pointer-events-none');
-}
-
-function closeModal() {
-    if(!modal) return;
-    modal.classList.add('opacity-0');
-    setTimeout(() => {
-        modal.classList.remove('flex');
-        modal.classList.add('hidden');
-    }, 500);
-}
-
-// Event Listeners
-if(langBtn) langBtn.addEventListener('click', openModal);
-if(closeBtn) closeBtn.addEventListener('click', closeModal);
-
-// 4. Sayfa Yüklendiğinde Dil Kontrolü
 document.addEventListener('DOMContentLoaded', () => {
-    // Daha önce seçilmiş dili al, yoksa tarayıcı diline bak, o da yoksa TR
-    const savedLang = localStorage.getItem('horus_lang');
-    let targetLang = savedLang || 'tr';
+    // A. Elementleri Seç
+    const modal = document.getElementById('lang-modal');
+    const langBtn = document.getElementById('lang-btn'); // Dünya simgesi butonu
+    const closeBtn = document.getElementById('close-lang'); // Kapatma (X) butonu
+    const langContainer = document.querySelector('#lang-modal .grid'); // Butonların dolacağı yer
+    const mobileMenu = document.getElementById('mobile-menu');
 
-    // Eğer kayıtlı dil yoksa, tarayıcı dilini kontrol et
-    if (!savedLang) {
-        const browserLang = navigator.language.slice(0, 2);
-        // Desteklediğimiz dillerden biri mi?
-        const isSupported = languages.some(l => l.code === browserLang);
-        if (isSupported) targetLang = browserLang;
+    // B. Dil Butonlarını Oluştur (Grid içine doldur)
+    if (langContainer) {
+        langContainer.innerHTML = ''; // Temizle
+        languages.forEach(lang => {
+            const btn = document.createElement('button');
+            // Buton tasarımı
+            btn.className = "text-white/50 hover:text-white text-sm tracking-[0.2em] transition py-3 hover:bg-white/5 rounded border border-transparent hover:border-white/10 uppercase cursor-pointer";
+            btn.innerText = lang.name;
+            // Tıklanınca dili değiştir
+            btn.onclick = () => setLanguage(lang.code);
+            langContainer.appendChild(btn);
+        });
     }
 
-    setLanguage(targetLang);
+    // C. Modal Açma/Kapama Fonksiyonları
+    function openModal() {
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Animasyon için minik gecikme
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        
+        // Eğer mobil menü açıksa onu kapat
+        if(mobileMenu) mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function closeModal() {
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 500);
+    }
+
+    // D. Olay Dinleyicileri (Event Listeners) - Tıklamayı Yakala
+    if (langBtn) {
+        langBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Sayfanın yukarı zıplamasını engelle
+            openModal();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal();
+        });
+    }
+
+    // E. Dil Değiştirme Fonksiyonu
+    function setLanguage(langCode) {
+        // Çeviriyi bul veya varsayılan (TR) kullan
+        const data = translations[langCode] || translations['tr'];
+        const fallback = translations['tr'];
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (data && data[key]) {
+                el.innerHTML = data[key];
+            } else if (fallback && fallback[key]) {
+                el.innerHTML = fallback[key]; // Eksikse TR göster
+            }
+        });
+
+        // Font ayarı (Asya dilleri için)
+        if (langCode === 'zh' || langCode === 'ja') {
+            document.body.style.fontFamily = "'Noto Sans SC', 'Noto Sans JP', sans-serif";
+        } else {
+            document.body.style.removeProperty('font-family');
+        }
+
+        // Seçimi kaydet ve kapat
+        localStorage.setItem('horus_lang', langCode);
+        closeModal();
+
+        // Kaydırma animasyonlarını yenile (yazı boyutu değiştiği için)
+        if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    }
+
+    // F. Başlangıçta Kayıtlı Dili Yükle
+    const savedLang = localStorage.getItem('horus_lang') || 'tr';
+    setLanguage(savedLang);
 });
