@@ -75,14 +75,24 @@ section {
 }
 
 /* İç Scroll Alanı Standartı */
-.inner-scroll-container {
+inner-scroll-container {
     width: 100%;
     overflow-y: auto;
-    /* Mobilde ekranın %65'ini kaplasın, geri kalanı başlık vb. Desktopta sınırsız */
+    /* Mobilde ekranın %65'ini kaplasın */
     max-height: 65vh; 
-    padding-bottom: 6rem; /* Son cümle kesilmesin diye alt boşluk */
-    scrollbar-width: none; /* Firefox gizleme */
-    overscroll-behavior-y: auto; /* Scroll zincirlemesini engeller, yumuşak his verir */
+    
+    /* ÖNEMLİ DÜZELTME 1: Alt boşluğu azalttık. 
+       Böylece kullanıcı metin bitince hemen sayfa geçişini tetikleyebilecek. */
+    padding-bottom: 2rem; 
+    
+    scrollbar-width: none;
+    
+    /* ÖNEMLİ DÜZELTME 2: 'contain' yerine 'auto' yaptık.
+       Bu, iç kaydırma bitince hareketin ana sayfaya geçmesini sağlar. */
+    overscroll-behavior-y: auto; 
+    
+    /* İsteğe bağlı: Mobilde kaydırmanın daha akıcı olması için */
+    -webkit-overflow-scrolling: touch;
 }
 .inner-scroll-container::-webkit-scrollbar { 
     display: none; /* Chrome/Safari gizleme */
@@ -94,4 +104,5 @@ section {
         padding-bottom: 0;
     }
 }
+
 
