@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Site Haritası Yolu (Domaininizi düzenleyin)
+Sitemap: https://recaner35.github.io/HorusByWyntro/sitemap.xml
