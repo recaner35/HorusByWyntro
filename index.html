@@ -380,8 +380,243 @@
       <p>Horus by Wyntro · 2026</p>
     </div>
 </section>
+  
+<script src="script.js"></script>
+</section>
 
-<script src="translations.js"></script>
+<script>
+    // 1. Dil Tanımları
+    const languages = [
+        { code: 'tr', name: 'TÜRKÇE' },
+        { code: 'en', name: 'ENGLISH' },
+        { code: 'de', name: 'DEUTSCH' },
+        { code: 'fr', name: 'FRANÇAIS' },
+        { code: 'it', name: 'ITALIANO' },
+        { code: 'es', name: 'ESPAÑOL' },
+        { code: 'az', name: 'AZƏRBAYCAN' },
+        // Hata riskini azaltmak için şimdilik ana dilleri ekledim. 
+        // Sistem çalışınca diğerlerini buraya eklersiniz.
+    ];
+
+    const translations = {
+        tr: {
+            nav_story: "HİKAYE",
+            nav_design: "TASARIM",
+            nav_experience: "DENEYİM",
+            nav_lab: "THE LAB",
+            mobile_home: "GİRİŞ",
+            hero_title: "Zaman,<br/>Kontrol Altında",
+            hero_sub: "Fark edilmeden çalışan bir sistem, zahmetsiz ve kararlı.",
+            story_title: "HİKAYEMİZ",
+            story_p1: "Zaman, insanlığın en eski takıntılarından biri. Onu ölçtük, ona hükmetmek istedik. Fakat zaman asla bizim olmadı — sadece ona uyum sağladık.",
+            story_p2: "Horus by Wyntro, zamanı korumak ve ona hak ettiği değeri vermek için doğdu. İsmini, zarif dönüşlerden ve soğukkanlı mühendislikten alır.",
+            story_p3: "Ancak zamanın sadece mekanik bir şey olmadığını biliyoruz. Horus by Wyntro, bu anlayışın sembolüdür.",
+            story_p4: "Antik Mısır’da Horus, gökyüzünün ve zamanın tanrısıydı. Onun gözü, zamanı gözeten ve her anı kollayan bir semboldü.",
+            story_p5: "Horus by Wyntro, sadece bir saat kurma kutusu değil — bir zaman küratörüdür.",
+            story_quote1: "Bu, yalnızca saatleri kuran bir cihaz değil.<br>Bu, zamanı anlamanın ve ona değer vermenin yeni yoludur.",
+            story_quote2: "Bu, Horus by Wyntro.",
+            why_title: "Neden Horus by Wyntro?",
+            why_left_p1: "Saat takılmadığında, zaman kendi yoluna gider.",
+            why_left_p2: "Güç rezervi yavaşça tükenir, mekanizma durur.",
+            why_left_p3: "Horus by Wyntro, bu kopukluğu ortadan kaldırır.",
+            why_right_p1: "Ay fazı, daimi takvim veya karmaşık komplikasyonlar…",
+            why_right_p2: "Bu detayları yeniden ayarlamak, bir keyif değil; çoğu zaman zahmettir.",
+            why_right_p3: "Üstelik her kurulumda tepe çekilir, itilir; contalar ve mekanizma yıpranır.",
+            why_right_p4: "Horus by Wyntro, otomatik saatlerinizi sürekli ve zahmetsiz bir hazırlık halinde tutar.",
+            design_title: "Dokunduğunuz Şey<br/>Bir Ürün Değil",
+            design_left_p1: "Horus by Wyntro, bir objeden çok daha fazlasıdır. Sessizce çalışan bir hizmettir.",
+            design_left_p2: "Birinci sınıf deri ve masif ahşabın doğal dokusunu, dijital dünyanın hızıyla birleştirdik.",
+            design_right_p1: "Dış yüzeyde kullanılan her malzeme bilinçle seçildi. El işçiliğiyle şekillendirilmiş ahşaplar.",
+            design_right_p2: "İç yastık, saatinizin kasasına zarar vermeyen, yumuşak dokulu özel bir yapıdadır.",
+            exp_item1_title: "Sessizlik",
+            exp_item1_desc: "Geceleri, yatak odanızda bile… neredeyse duyulmayacak kadar sessiz.",
+            exp_item1_sub: "Sadece saatinizi izlersiniz. Dönüşü izlemek bile ayrı bir keyiftir.",
+            exp_item2_title: "Modülerlik",
+            exp_item2_desc: "Tek bir merkezden beslenen, birbirine sessizce bağlanan bir koleksiyon.",
+            exp_item2_sub: "Tek bir enerji kaynağından, kusursuz bir düzen.",
+            exp_item3_title: "Kişiselleştirme",
+            exp_item3_desc: "Her kutu benzersizdir.",
+            exp_item3_sub: "Ona bir isim verin; sizinle konuşsun.",
+            ctrl_eyebrow: "KONTROL",
+            ctrl_title: "Kontrol, parmak uçlarınızda.",
+            ctrl_desc: "Sessiz, sezgisel ve tamamen size ait.",
+            int_title: "Sessizce Düşünen Bir Sistem",
+            int_desc: "Horus by Wyntro, saatinizi doğru zamanda, doğru şekilde hareket ettirmek için tasarlandı.",
+            int_li1: "Üç farklı dönüş yönü: Saat yönü, saat yönünün tersi ve çift yönlü.",
+            int_li2: "650’den 1800’e kadar ayarlanabilir dönüş döngüleri.",
+            int_li3: "Akıllı duraklama modu sayesinde motor ve mekanizma için dinlenme periyotları.",
+            int_li4: "Ortalama enerji tüketimi, evinizdeki tek bir LED ampulün çok altında.",
+            int_li5: "18 farklı dil desteği ile dünyanın her yerinde aynı sezgisel deneyim.",
+            int_footer: "Horus by Wyntro, gücü göstermek için değil; dengeyi korumak için çalışır.",
+            warranty_title: "Ömür Boyu Güven",
+            warranty_p1: "Horus by Wyntro, yalnızca bir kez satın alınan bir ürün değildir.",
+            warranty_p2: "Bu yüzden her Horus by Wyntro, ömür boyu garanti anlayışıyla tasarlanır.",
+            warranty_q1: "“Horus, sadece mekanik bir aygıt değil; binlerce dolarlık saatlerin kalbini emanet ettiğiniz bir güvendi.”",
+            warranty_role1: "— Caner Kocacık, Kreatif Direktör",
+            warranty_q2: "“Plastik parçalar görünmez olabilir, ama dokunulan her detayın kusursuz olması gerekir.”",
+            warranty_role2: "— Özgür Erdoğan, Endüstriyel Tasarım",
+            col_title: "Koleksiyon Sahipliği Seçmektir",
+            col_p1: "Gerçek koleksiyoncular her saati aynı gözle görmez.",
+            col_p2: "Ortak noktaları şudur: <span class=\"text-white\">Hiçbiri rastgele bir yere bırakılmaz.</span>",
+            col_p3: "Horus by Wyntro, saatlerinizi bekleme moduna almaz. Onları her an hazır tutar.",
+            col_p4: "Çünkü koleksiyonculuk, zamanı durdurmak değil; ona her an saygı göstermektir.",
+            col_p5: "Bu yüzden Horus by Wyntro, koleksiyonun doğal bir parçası haline gelir.",
+            avail_title: "Hazır Olduğunuzda",
+            avail_desc: "Horus by Wyntro, çok yakında dünya çapında seçkin saat mağazalarında.",
+            avail_btn: "Zamanı Keşfet",
+            lab_title: "The Lab",
+            lab_desc: "Yazılımımız canlıdır. GitHub üzerinden anlık olarak çekilen en son firmware notlarını buradan takip edebilirsiniz.",
+            foot_p1: "Zamana hâkim olanlar için.",
+            foot_p2: "Zamanın ruhuna sadakatle tasarlandı."
+        },
+        en: {
+            nav_story: "STORY",
+            nav_design: "DESIGN",
+            nav_experience: "EXPERIENCE",
+            nav_lab: "THE LAB",
+            mobile_home: "HOME",
+            hero_title: "Time,<br/>Under Control",
+            hero_sub: "A system that works unnoticed, effortless and determined.",
+            story_title: "OUR STORY",
+            story_p1: "Time is one of humanity's oldest obsessions. We measured it, we wanted to rule it.",
+            story_p2: "Horus by Wyntro was born to protect time and give it the value it deserves.",
+            story_p3: "We know that time is not just mechanical. Horus by Wyntro is the symbol of this understanding.",
+            story_p4: "In Ancient Egypt, Horus was the god of the sky and time. His eye was a symbol watching over every moment.",
+            story_p5: "This is not just a watch winder — it is a curator of time.",
+            story_quote1: "This is not just a device.<br>This is the new way of understanding time.",
+            story_quote2: "This is Horus by Wyntro.",
+            why_title: "Why Horus by Wyntro?",
+            why_left_p1: "When the watch is not worn, time goes its own way.",
+            why_left_p2: "Power reserve runs out, the mechanism stops.",
+            why_left_p3: "Horus by Wyntro eliminates this disconnection.",
+            why_right_p1: "Moon phase, perpetual calendar or complex complications...",
+            why_right_p2: "Resetting these details is not a pleasure; it is often a burden.",
+            why_right_p3: "Moreover, with every setting, the mechanism wears out unnoticed.",
+            why_right_p4: "Horus keeps your automatic watches in constant readiness.",
+            design_title: "What You Touch<br/>Is Not A Product",
+            design_left_p1: "Horus by Wyntro is much more than an object. It is a service that works quietly every day.",
+            design_left_p2: "We combined the natural texture of first-class leather and solid wood with the speed of the digital world.",
+            design_right_p1: "Every material is consciously selected. Wood is shaped by hand.",
+            design_right_p2: "The inner cushion has a special structure that does not damage your watch case.",
+            exp_item1_title: "Silence",
+            exp_item1_desc: "Even in your bedroom at night... almost inaudible.",
+            exp_item1_sub: "You just watch your watch. It is a pleasure to watch the rotation.",
+            exp_item2_title: "Modularity",
+            exp_item2_desc: "A collection fed from a single center, quietly connected.",
+            exp_item2_sub: "Perfect order from a single energy source.",
+            exp_item3_title: "Personalization",
+            exp_item3_desc: "Every box is unique.",
+            exp_item3_sub: "Give it a name; let it speak to you.",
+            ctrl_eyebrow: "CONTROL",
+            ctrl_title: "Control at your fingertips.",
+            ctrl_desc: "Silent, intuitive and completely yours.",
+            int_title: "A System That Thinks Silently",
+            int_desc: "Designed to move your watch in the right way.",
+            int_li1: "Three rotation directions.",
+            int_li2: "Adjustable cycles from 650 to 1800 TPD.",
+            int_li3: "Smart pause mode for mechanism rest.",
+            int_li4: "Minimal energy consumption.",
+            int_li5: "Support for 18 different languages.",
+            int_footer: "Horus works to maintain balance, not to show power.",
+            warranty_title: "Lifetime Trust",
+            warranty_p1: "Horus by Wyntro is a lifetime commitment.",
+            warranty_p2: "That's why every Horus comes with a lifetime warranty.",
+            warranty_q1: "“Horus is a trust mechanism to which you entrust the heart of your watches.”",
+            warranty_role1: "— Caner Kocacık, Creative Director",
+            warranty_q2: "“Every part is designed to work silently for years.”",
+            warranty_role2: "— Özgür Erdoğan, Industrial Design",
+            col_title: "Collecting is Choosing",
+            col_p1: "True collectors do not look at every watch the same way.",
+            col_p2: "Common point: None is left to a random place.",
+            col_p3: "Horus by Wyntro keeps your watches ready at any moment.",
+            col_p4: "Because collecting is respect for time.",
+            col_p5: "That's why Horus becomes a natural part of the collection.",
+            avail_title: "When You Are Ready",
+            avail_desc: "Horus by Wyntro soon at selected stores worldwide.",
+            avail_btn: "DISCOVER TIME",
+            lab_title: "The Lab",
+            lab_desc: "Our software is alive. Follow the latest firmware updates directly from GitHub.",
+            foot_p1: "For those who master time.",
+            foot_p2: "Designed with loyalty to the spirit of time."
+        }
+    };
+
+    // --- MANTIK KODU ---
+    
+    // 1. Dilleri Modale Doldur
+    const langContainer = document.querySelector('#lang-modal .grid');
+    if (langContainer) {
+        langContainer.innerHTML = ''; // Temizle
+        languages.forEach(lang => {
+            const btn = document.createElement('button');
+            btn.className = "text-white/50 hover:text-white text-sm tracking-[0.2em] transition py-2 hover:bg-white/5 rounded border border-transparent hover:border-white/10 uppercase";
+            btn.innerText = lang.name;
+            btn.onclick = () => setLanguage(lang.code);
+            langContainer.appendChild(btn);
+        });
+    }
+
+    // 2. Dil Değiştirme Fonksiyonu
+    function setLanguage(langCode) {
+        const data = translations[langCode] || translations['tr'];
+        const fallback = translations['tr'];
+        
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (data[key]) {
+                el.innerHTML = data[key]; 
+            } else if (fallback[key]) {
+                el.innerHTML = fallback[key];
+            }
+        });
+
+        if(langCode === 'zh' || langCode === 'ja') {
+            document.body.style.fontFamily = "'Noto Sans SC', 'Noto Sans JP', sans-serif";
+        } else {
+            document.body.style.removeProperty('font-family');
+        }
+
+        localStorage.setItem('horus_lang', langCode);
+        closeModal();
+        
+        setTimeout(() => {
+            if(typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        }, 500);
+    }
+
+    // 3. Modal Kontrolleri
+    const modal = document.getElementById('lang-modal');
+    const langBtn = document.getElementById('lang-btn');
+    const closeBtn = document.getElementById('close-lang');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    function openModal() {
+        if(!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        if(mobileMenu) mobileMenu.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function closeModal() {
+        if(!modal) return;
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 500);
+    }
+
+    if(langBtn) langBtn.addEventListener('click', openModal);
+    if(closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    // 4. Başlat
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedLang = localStorage.getItem('horus_lang') || 'tr';
+        setLanguage(savedLang);
+    });
+</script>
+
 <script src="script.js"></script>
 
 </body>
