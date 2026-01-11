@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Horus by Wyntro — Zaman Kontrol Altında</title>
-  <meta name="description" content="Horus by Wyntro, otomatik saatleriniz için sessiz, akıllı ve estetik bir saat kurma kutusu (İng. watch winder) deneyimi sunar. Zamanı kontrol altına alın." />
-  <meta name="keywords" content="watch winder, saat kurma kutusu, otomatik saat kutusu, akıllı saat kutusu, horus by wyntro, saat aksesuarı, koleksiyoner kutu, el yapımı kutu, deri kutu, ahşap kutu" />
+  <title>Horus by Wyntro — Premium Akıllı Saat Kurma Kutusu</title>
+  <meta name="description" content="Horus by Wyntro, otomatik saatleriniz için sessiz, akıllı ve estetik bir watch winder (saat kurma kutusu) deneyimi sunar. Zamanı kontrol altına alın." />
+  <meta name="keywords" content="watch winder, saat kurma kutusu, otomatik saat kutusu, akıllı saat kutusu, horus by wyntro, saat aksesuarı" />
   <meta name="author" content="Wyntro" />
   <meta name="robots" content="index, follow" />
   
-  <link rel="canonical" href="https://recaner35.github.io/HorusByWyntro/" />
+  <link rel="canonical" href="https://www.horusbywyntro.com/" />
 
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -19,19 +19,16 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Horus by Wyntro — Zaman, Kontrol Altında" />
-  <meta property="og:description" content="Otomatik saatleriniz için mühendislik ve estetiğin buluştuğu sessiz güç. Horus by Wyntro ile tanışın." />
-  <meta property="og:url" content="https://recaner35.github.io/HorusByWyntro/" />
-  <meta property="og:image" content="https://recaner35.github.io/HorusByWyntro/social-share-image.jpg" /> <meta property="og:site_name" content="Horus by Wyntro" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Horus by Wyntro — Akıllı Saat Kurma Kutusu" />
-  <meta name="twitter:description" content="Zamanı koruyan sessiz teknoloji. Otomatik saat koleksiyonunuz için en iyi seçim." />
-  <meta name="twitter:image" content="https://recaner35.github.io/HorusByWyntro/social-share-image.jpg" />
+  <meta property="og:description" content="Otomatik saatleriniz için mühendislik ve estetiğin buluştuğu sessiz güç. Horus ile tanışın." />
+  <meta property="og:url" content="https://www.horusbywyntro.com/" />
+  <meta property="og:site_name" content="Horus by Wyntro" />
 
   <meta name="theme-color" content="#000000" />
   
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <link rel="stylesheet" href="style.css">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
@@ -66,20 +63,34 @@
 
 <body class="font-light tracking-wide selection:bg-white/20">
 
+<div id="lang-modal" class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl hidden flex-col items-center justify-center opacity-0 transition-opacity duration-500">
+    <button id="close-lang" class="absolute top-8 right-8 text-white/50 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+    <h2 class="text-white text-xl tracking-[0.3em] font-thin mb-8">SELECT LANGUAGE</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-6 text-center h-[70vh] overflow-y-auto inner-scroll-container">
+        </div>
+</div>
+
 <header id="navbar" class="fixed top-0 left-0 w-full z-50 py-6 px-6 md:px-12 flex justify-between items-center transition-all duration-1000 opacity-0 mix-blend-difference pointer-events-none md:pointer-events-auto">
   <a href="#hero" class="block text-white hover:opacity-80 transition duration-300 pointer-events-auto">
     <img src="logo.svg" alt="Horus by Wyntro Logo" class="h-8 md:h-10 w-auto">
   </a>
 
   <nav class="hidden md:flex gap-8 items-center pointer-events-auto">
-      <a href="#story" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Hikaye</a>
-      <a href="#design" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Tasarım</a>
-      <a href="#experience" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">Deneyim</a>
-      <a href="#lab" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition">The Lab</a>
+      <a href="#story" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition" data-i18n="nav_story">Hikaye</a>
+      <a href="#design" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition" data-i18n="nav_design">Tasarım</a>
+      <a href="#experience" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition" data-i18n="nav_experience">Deneyim</a>
+      <a href="#lab" class="text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition" data-i18n="nav_lab">The Lab</a>
   </nav>
 
   <div class="flex items-center gap-6 pointer-events-auto">
-      <div class="hidden md:block text-[10px] tracking-widest text-white/50 cursor-pointer hover:text-white transition">TR / EN</div>
+      <button id="lang-btn" class="hidden md:flex items-center justify-center w-8 h-8 rounded-full border border-white/10 text-white/50 hover:text-white hover:border-white/50 transition pointer-events-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.546-3.146 1.457-4.409" />
+        </svg>
+      </button>
+
       <button id="menu-btn" class="group flex flex-col items-end gap-1.5 cursor-pointer z-[60]">
           <span class="w-6 h-px bg-white group-hover:w-8 transition-all duration-300"></span>
           <span class="w-4 h-px bg-white group-hover:w-8 transition-all duration-300 delay-75"></span>
@@ -89,11 +100,11 @@
 
 <div id="mobile-menu" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col justify-center items-center opacity-0 pointer-events-none">
     <nav class="flex flex-col gap-8 text-center">
-        <a href="#hero" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition">GİRİŞ</a>
-        <a href="#story" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition">HİKAYE</a>
-        <a href="#design" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition">TASARIM</a>
-        <a href="#experience" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition">DENEYİM</a>
-        <a href="#lab" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition">THE LAB</a>
+        <a href="#hero" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition" data-i18n="mobile_home">GİRİŞ</a>
+        <a href="#story" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition" data-i18n="nav_story">HİKAYE</a>
+        <a href="#design" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition" data-i18n="nav_design">TASARIM</a>
+        <a href="#experience" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition" data-i18n="nav_experience">DENEYİM</a>
+        <a href="#lab" class="mobile-link text-3xl font-thin text-white tracking-widest hover:opacity-50 transition" data-i18n="nav_lab">THE LAB</a>
     </nav>
     <div class="absolute bottom-12 text-[10px] tracking-[0.4em] text-neutral-500 uppercase">
         Horus by Wyntro
@@ -114,10 +125,10 @@
   </div>
 
   <div class="text-center z-20 space-y-8 px-4">
-    <h1 class="text-5xl md:text-7xl font-thin tracking-tighter text-white opacity-0 hero-text blur-sm">
+    <h1 class="text-5xl md:text-7xl font-thin tracking-tighter text-white opacity-0 hero-text blur-sm" data-i18n="hero_title">
       Zaman,<br/>Kontrol Altında
     </h1>
-    <p class="text-neutral-400 text-sm md:text-lg tracking-[0.1em] font-light opacity-0 hero-text">
+    <p class="text-neutral-400 text-sm md:text-lg tracking-[0.1em] font-light opacity-0 hero-text" data-i18n="hero_sub">
       Fark edilmeden çalışan bir sistem, zahmetsiz ve kararlı.
     </p>
   </div>
@@ -131,18 +142,18 @@
   <div class="section-light gsap-glow"></div>
   <div class="max-w-4xl px-6 relative z-10 text-center w-full flex flex-col h-full justify-center">
     <div class="w-px h-16 md:h-24 bg-gradient-to-b from-transparent via-white/40 to-transparent mx-auto mb-8 md:mb-12 gsap-obj shrink-0"></div>
-    <h2 class="text-2xl md:text-4xl font-extralight mb-6 md:mb-12 text-white gsap-fade-up tracking-widest shrink-0">HİKAYEMİZ</h2>
+    <h2 class="text-2xl md:text-4xl font-extralight mb-6 md:mb-12 text-white gsap-fade-up tracking-widest shrink-0" data-i18n="story_title">HİKAYEMİZ</h2>
     
     <div class="inner-scroll-container space-y-4 md:space-y-8 text-xs md:text-lg font-light leading-relaxed text-neutral-400">
-      <p class="gsap-fade-up">Zaman, insanlığın en eski takıntılarından biri. Onu ölçtük, ona hükmetmek istedik. Fakat zaman asla bizim olmadı — sadece ona uyum sağladık.</p>
-      <p class="gsap-fade-up">Horus by Wyntro, zamanı korumak ve ona hak ettiği değeri vermek için doğdu. İsmini, zarif dönüşlerden ve soğukkanlı mühendislikten alır. Her Horus by Wyntro kutusu, bir ustalığın, modern mühendisliğin ve minimalist estetiğin birleşimidir. Sessizce döner, tıpkı zaman gibi; durmaz, tıpkı hayat gibi…</p>
-      <p class="gsap-fade-up">Ancak zamanın sadece mekanik bir şey olmadığını biliyoruz. Horus by Wyntro, bu anlayışın sembolüdür.</p>
-      <p class="gsap-fade-up">Antik Mısır’da Horus, gökyüzünün ve zamanın tanrısıydı. Onun gözü, zamanı gözeten ve her anı kollayan bir semboldü. Bizim HORUS’umuz da aynı şekilde çalışır: akıllı, sezgisel ve sizin için zamanı koruyan bir sistem.</p>
-      <p class="gsap-fade-up">Horus by Wyntro, sadece bir saat kurma kutusu değil — bir zaman küratörüdür. Modüler yapısı ile kişisel koleksiyonlara uyum sağlar; dokunmatik anahtarı ve web arayüzüyle saatinizle bağ kurmanızı mümkün kılar.</p>
+      <p class="gsap-fade-up" data-i18n="story_p1">Zaman, insanlığın en eski takıntılarından biri. Onu ölçtük, ona hükmetmek istedik. Fakat zaman asla bizim olmadı — sadece ona uyum sağladık.</p>
+      <p class="gsap-fade-up" data-i18n="story_p2">Horus by Wyntro, zamanı korumak ve ona hak ettiği değeri vermek için doğdu. İsmini, zarif dönüşlerden ve soğukkanlı mühendislikten alır. Her Horus by Wyntro kutusu, bir ustalığın, modern mühendisliğin ve minimalist estetiğin birleşimidir. Sessizce döner, tıpkı zaman gibi; durmaz, tıpkı hayat gibi…</p>
+      <p class="gsap-fade-up" data-i18n="story_p3">Ancak zamanın sadece mekanik bir şey olmadığını biliyoruz. Horus by Wyntro, bu anlayışın sembolüdür.</p>
+      <p class="gsap-fade-up" data-i18n="story_p4">Antik Mısır’da Horus, gökyüzünün ve zamanın tanrısıydı. Onun gözü, zamanı gözeten ve her anı kollayan bir semboldü. Bizim HORUS’umuz da aynı şekilde çalışır: akıllı, sezgisel ve sizin için zamanı koruyan bir sistem.</p>
+      <p class="gsap-fade-up" data-i18n="story_p5">Horus by Wyntro, sadece bir saat kurma kutusu değil — bir zaman küratörüdür. Modüler yapısı ile kişisel koleksiyonlara uyum sağlar; dokunmatik anahtarı ve web arayüzüyle saatinizle bağ kurmanızı mümkün kılar.</p>
       
       <div class="gsap-fade-up text-white/80 border-t border-white/10 pt-4 md:pt-8 inline-block mt-4 md:mt-8">
-        <p class="mb-4">Bu, yalnızca saatleri kuran bir cihaz değil.<br>Bu, zamanı anlamanın ve ona değer vermenin yeni yoludur.</p>
-        <p class="text-lg md:text-xl tracking-[0.2em] font-light">Bu, Horus by Wyntro.</p>
+        <p class="mb-4" data-i18n="story_quote1">Bu, yalnızca saatleri kuran bir cihaz değil.<br>Bu, zamanı anlamanın ve ona değer vermenin yeni yoludur.</p>
+        <p class="text-lg md:text-xl tracking-[0.2em] font-light" data-i18n="story_quote2">Bu, Horus by Wyntro.</p>
       </div>
     </div>
   </div>
@@ -152,19 +163,19 @@
   <div class="section-light gsap-glow bg-blue-900/5"></div>
   <div class="max-w-6xl px-6 relative z-10 w-full">
      <div class="mb-12 md:mb-16 border-b border-white/10 pb-4 gsap-obj">
-        <h2 class="text-2xl md:text-3xl font-thin text-white">Neden Horus by Wyntro?</h2>
+        <h2 class="text-2xl md:text-3xl font-thin text-white" data-i18n="why_title">Neden Horus by Wyntro?</h2>
      </div>
      <div class="inner-scroll-container grid md:grid-cols-2 gap-8 md:gap-16 text-sm md:text-lg text-neutral-400">
         <div class="gsap-fade-up">
-          <p class="mb-6">Saat takılmadığında, zaman kendi yoluna gider.</p>
-          <p class="mb-6">Güç rezervi yavaşça tükenir, mekanizma durur. Bir sonraki kullanımda, zaman yeniden kurulmak zorundadır.</p>
-          <p class="text-white">Horus by Wyntro, bu kopukluğu ortadan kaldırır.</p>
+          <p class="mb-6" data-i18n="why_left_p1">Saat takılmadığında, zaman kendi yoluna gider.</p>
+          <p class="mb-6" data-i18n="why_left_p2">Güç rezervi yavaşça tükenir, mekanizma durur. Bir sonraki kullanımda, zaman yeniden kurulmak zorundadır.</p>
+          <p class="text-white" data-i18n="why_left_p3">Horus by Wyntro, bu kopukluğu ortadan kaldırır.</p>
         </div>
         <div class="space-y-6 gsap-fade-up">
-          <p>Ay fazı, daimi takvim veya karmaşık komplikasyonlar…</p>
-          <p>Bu detayları yeniden ayarlamak, bir keyif değil; çoğu zaman zahmettir.</p>
-          <p>Üstelik her kurulumda tepe çekilir, itilir; contalar ve mekanizma fark edilmeden yıpranır.</p>
-          <p class="pt-4 text-white">Horus by Wyntro, otomatik saatlerinizi sürekli ve zahmetsiz bir hazırlık halinde tutar.</p>
+          <p data-i18n="why_right_p1">Ay fazı, daimi takvim veya karmaşık komplikasyonlar…</p>
+          <p data-i18n="why_right_p2">Bu detayları yeniden ayarlamak, bir keyif değil; çoğu zaman zahmettir.</p>
+          <p data-i18n="why_right_p3">Üstelik her kurulumda tepe çekilir, itilir; contalar ve mekanizma fark edilmeden yıpranır.</p>
+          <p class="pt-4 text-white" data-i18n="why_right_p4">Horus by Wyntro, otomatik saatlerinizi sürekli ve zahmetsiz bir hazırlık halinde tutar.</p>
         </div>
      </div>
   </div>
@@ -174,15 +185,15 @@
   <div class="section-light gsap-glow"></div>
   <div class="max-w-5xl px-6 relative z-10 text-center md:text-left">
     <div class="gsap-obj w-16 h-1 bg-white mb-8"></div>
-    <h2 class="text-3xl md:text-5xl font-thin mb-12 text-white gsap-fade-up">Dokunduğunuz Şey<br/>Bir Ürün Değil</h2>
+    <h2 class="text-3xl md:text-5xl font-thin mb-12 text-white gsap-fade-up" data-i18n="design_title">Dokunduğunuz Şey<br/>Bir Ürün Değil</h2>
     <div class="inner-scroll-container grid md:grid-cols-2 gap-12 text-neutral-400 leading-relaxed text-sm md:text-base">
         <div class="gsap-fade-up space-y-6">
-            <p>Horus by Wyntro, bir objeden çok daha fazlasıdır. Elinizin altında, her gün sessizce çalışan bir hizmettir.</p>
-            <p>Birinci sınıf deri ve masif ahşabın doğal dokusunu, dijital dünyanın hızıyla birleştirdik. Web uygulaması üzerinden sezgisel kontrol, modern Type‑C altyapısıyla zahmetsiz enerji yönetimiyle buluşur.</p>
+            <p data-i18n="design_left_p1">Horus by Wyntro, bir objeden çok daha fazlasıdır. Elinizin altında, her gün sessizce çalışan bir hizmettir.</p>
+            <p data-i18n="design_left_p2">Birinci sınıf deri ve masif ahşabın doğal dokusunu, dijital dünyanın hızıyla birleştirdik. Web uygulaması üzerinden sezgisel kontrol, modern Type‑C altyapısıyla zahmetsiz enerji yönetimiyle buluşur.</p>
         </div>
         <div class="gsap-fade-up space-y-6">
-            <p>Dış yüzeyde kullanılan her malzeme bilinçle seçildi. El işçiliğiyle şekillendirilmiş ahşaplar, zamana karşı dayanıklıdır. Plastik aksamlar ise doğa dostu, dönüştürülmüş ve yeniden dönüştürülebilir malzemelerden üretilir.</p>
-            <p>İç yastık, saatinizin kasasına zarar vermeyen, yumuşak dokulu özel bir yapıdadır. Saat, baskı altında değil; olması gerektiği gibi güvende durur.</p>
+            <p data-i18n="design_right_p1">Dış yüzeyde kullanılan her malzeme bilinçle seçildi. El işçiliğiyle şekillendirilmiş ahşaplar, zamana karşı dayanıklıdır. Plastik aksamlar ise doğa dostu, dönüştürülmüş ve yeniden dönüştürülebilir malzemelerden üretilir.</p>
+            <p data-i18n="design_right_p2">İç yastık, saatinizin kasasına zarar vermeyen, yumuşak dokulu özel bir yapıdadır. Saat, baskı altında değil; olması gerektiği gibi güvende durur.</p>
         </div>
     </div>
   </div>
@@ -192,19 +203,19 @@
   <div class="max-w-7xl mx-auto px-6 w-full">
     <div class="inner-scroll-container grid md:grid-cols-3 gap-16">
         <div class="gsap-fade-up border-t border-white/10 pt-8">
-          <h3 class="text-xl mb-4 text-white">Sessizlik</h3>
-          <p class="text-neutral-300 mb-2">Geceleri, yatak odanızda bile… neredeyse duyulmayacak kadar sessiz.</p>
-          <p class="text-neutral-500 text-sm">Sadece saatinizi izlersiniz. Dönüşü izlemek bile ayrı bir keyiftir.</p>
+          <h3 class="text-xl mb-4 text-white" data-i18n="exp_item1_title">Sessizlik</h3>
+          <p class="text-neutral-300 mb-2" data-i18n="exp_item1_desc">Geceleri, yatak odanızda bile… neredeyse duyulmayacak kadar sessiz.</p>
+          <p class="text-neutral-500 text-sm" data-i18n="exp_item1_sub">Sadece saatinizi izlersiniz. Dönüşü izlemek bile ayrı bir keyiftir.</p>
         </div>
         <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 100ms;">
-          <h3 class="text-xl mb-4 text-white">Modülerlik</h3>
-          <p class="text-neutral-300 mb-2">Tek bir merkezden beslenen, birbirine sessizce bağlanan bir koleksiyon.</p>
-          <p class="text-neutral-500 text-sm">Tek bir enerji kaynağından, kusursuz bir düzen. Oyuncak kadar kolay, bir mücevher kadar zarif.</p>
+          <h3 class="text-xl mb-4 text-white" data-i18n="exp_item2_title">Modülerlik</h3>
+          <p class="text-neutral-300 mb-2" data-i18n="exp_item2_desc">Tek bir merkezden beslenen, birbirine sessizce bağlanan bir koleksiyon.</p>
+          <p class="text-neutral-500 text-sm" data-i18n="exp_item2_sub">Tek bir enerji kaynağından, kusursuz bir düzen. Oyuncak kadar kolay, bir mücevher kadar zarif.</p>
         </div>
         <div class="gsap-fade-up border-t border-white/10 pt-8" style="transition-delay: 200ms;">
-          <h3 class="text-xl mb-4 text-white">Kişiselleştirme</h3>
-          <p class="text-neutral-300 mb-2">Her kutu benzersizdir.</p>
-          <p class="text-neutral-500 text-sm">Ona bir isim verin; sizinle konuşsun.</p>
+          <h3 class="text-xl mb-4 text-white" data-i18n="exp_item3_title">Kişiselleştirme</h3>
+          <p class="text-neutral-300 mb-2" data-i18n="exp_item3_desc">Her kutu benzersizdir.</p>
+          <p class="text-neutral-500 text-sm" data-i18n="exp_item3_sub">Ona bir isim verin; sizinle konuşsun.</p>
         </div>
     </div>
   </div>
@@ -222,9 +233,9 @@
           </div>
         </div>
         <div class="text-left">
-          <h3 class="text-xs uppercase tracking-[0.4em] text-neutral-500 mb-6 gsap-fade-up">KONTROL</h3>
-          <h2 class="text-4xl font-thin text-white mb-8 gsap-fade-up">Kontrol, parmak uçlarınızda.</h2>
-          <p class="text-neutral-400 leading-relaxed mb-8 gsap-fade-up">Sessiz, sezgisel ve tamamen size ait.</p>
+          <h3 class="text-xs uppercase tracking-[0.4em] text-neutral-500 mb-6 gsap-fade-up" data-i18n="ctrl_eyebrow">KONTROL</h3>
+          <h2 class="text-4xl font-thin text-white mb-8 gsap-fade-up" data-i18n="ctrl_title">Kontrol, parmak uçlarınızda.</h2>
+          <p class="text-neutral-400 leading-relaxed mb-8 gsap-fade-up" data-i18n="ctrl_desc">Sessiz, sezgisel ve tamamen size ait.</p>
         </div>
     </div>
   </div>
@@ -233,37 +244,37 @@
 <section id="intelligence">
     <div class="max-w-4xl mx-auto px-6 text-center w-full">
       <div class="gsap-obj w-2 h-2 bg-white rounded-full mx-auto mb-8"></div>
-      <h2 class="text-3xl text-white font-light mb-12 gsap-fade-up">Sessizce Düşünen Bir Sistem</h2>
+      <h2 class="text-3xl text-white font-light mb-12 gsap-fade-up" data-i18n="int_title">Sessizce Düşünen Bir Sistem</h2>
       
       <div class="inner-scroll-container">
-          <p class="text-neutral-400 text-sm md:text-lg font-light mb-12 gsap-fade-up max-w-2xl mx-auto">
+          <p class="text-neutral-400 text-sm md:text-lg font-light mb-12 gsap-fade-up max-w-2xl mx-auto" data-i18n="int_desc">
             Horus by Wyntro, saatinizi sürekli hareket halinde tutmak için değil; doğru zamanda, doğru şekilde hareket etmesini sağlamak için tasarlandı.
           </p>
           
           <ul class="space-y-4 md:space-y-6 text-neutral-400 text-sm md:text-lg font-light inline-block text-left gsap-fade-up w-full max-w-3xl mx-auto">
             <li class="flex items-center gap-6 py-4 border-b border-white/5">
                 <span class="text-white/30 font-mono text-sm shrink-0">01</span> 
-                <span>Üç farklı dönüş yönü: Saat yönü, saat yönünün tersi ve çift yönlü.</span>
+                <span data-i18n="int_li1">Üç farklı dönüş yönü: Saat yönü, saat yönünün tersi ve çift yönlü.</span>
             </li>
             <li class="flex items-center gap-6 py-4 border-b border-white/5">
                 <span class="text-white/30 font-mono text-sm shrink-0">02</span> 
-                <span>650’den 1800’e kadar ayarlanabilir dönüş döngüleri ile farklı mekanizmalara uyum.</span>
+                <span data-i18n="int_li2">650’den 1800’e kadar ayarlanabilir dönüş döngüleri ile farklı mekanizmalara uyum.</span>
             </li>
             <li class="flex items-center gap-6 py-4 border-b border-white/5">
                 <span class="text-white/30 font-mono text-sm shrink-0">03</span> 
-                <span>Akıllı duraklama modu sayesinde motor ve mekanizma için programlı dinlenme periyotları.</span>
+                <span data-i18n="int_li3">Akıllı duraklama modu sayesinde motor ve mekanizma için programlı dinlenme periyotları.</span>
             </li>
             <li class="flex items-center gap-6 py-4 border-b border-white/5">
                 <span class="text-white/30 font-mono text-sm shrink-0">04</span> 
-                <span>Ortalama enerji tüketimi, evinizdeki tek bir LED ampulün çok altında.</span>
+                <span data-i18n="int_li4">Ortalama enerji tüketimi, evinizdeki tek bir LED ampulün çok altında.</span>
             </li>
             <li class="flex items-center gap-6 py-4 border-b border-white/5">
                 <span class="text-white/30 font-mono text-sm shrink-0">05</span> 
-                <span>18 farklı dil desteği ile dünyanın her yerinde aynı sezgisel deneyim.</span>
+                <span data-i18n="int_li5">18 farklı dil desteği ile dünyanın her yerinde aynı sezgisel deneyim.</span>
             </li>
           </ul>
           
-          <p class="mt-8 md:mt-12 text-white gsap-fade-up text-sm md:text-base">Horus by Wyntro, gücü göstermek için değil; dengeyi korumak için çalışır.</p>
+          <p class="mt-8 md:mt-12 text-white gsap-fade-up text-sm md:text-base" data-i18n="int_footer">Horus by Wyntro, gücü göstermek için değil; dengeyi korumak için çalışır.</p>
       </div>
     </div>
   </section>
@@ -271,31 +282,31 @@
   <section id="blueprint">
       <div class="section-light gsap-glow"></div>
       <div class="max-w-6xl mx-auto px-6 relative z-10 w-full">
-          <h2 class="text-3xl mb-8 tracking-widest text-center text-white gsap-fade-up">Ömür Boyu Güven</h2>
+          <h2 class="text-3xl mb-8 tracking-widest text-center text-white gsap-fade-up" data-i18n="warranty_title">Ömür Boyu Güven</h2>
           
           <div class="inner-scroll-container">
               <div class="max-w-3xl mx-auto text-center mb-8 md:mb-16 space-y-4 gsap-fade-up text-sm md:text-lg">
-                  <p class="text-neutral-400 font-light">
+                  <p class="text-neutral-400 font-light" data-i18n="warranty_p1">
                       Horus by Wyntro, yalnızca bir kez satın alınan bir ürün değildir. Ömür boyu süren bir sorumluluğun taahhüdüdür.
                   </p>
-                  <p class="text-neutral-400 font-light">
+                  <p class="text-neutral-400 font-light" data-i18n="warranty_p2">
                       Bu yüzden her Horus by Wyntro, ömür boyu garanti anlayışıyla tasarlanır. Çünkü binlerce dolarlık saatlerin kalbi, geçici çözümlere emanet edilemez.
                   </p>
               </div>
               
               <div class="grid md:grid-cols-2 gap-6 md:gap-12">
                   <div class="gsap-fade-up bg-white/5 p-6 md:p-10 rounded-sm border-l border-white/20">
-                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed">
+                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed" data-i18n="warranty_q1">
                           “Horus, sadece mekanik bir aygıt değil; binlerce dolarlık saatlerin kalbini emanet ettiğiniz bir güven mekanizmasıdır. Bu yüzden zarafet ve ömür boyu garanti ekledik.”
                       </p>
-                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Caner Kocacık, Kreatif Direktör</span>
+                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4" data-i18n="warranty_role1">— Caner Kocacık, Kreatif Direktör</span>
                   </div>
                   
                   <div class="gsap-fade-up bg-white/5 p-6 md:p-10 rounded-sm border-l border-white/20">
-                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed">
+                      <p class="text-sm md:text-lg text-neutral-300 italic mb-6 leading-relaxed" data-i18n="warranty_q2">
                           “Plastik parçalar görünmez olabilir, ama dokunulan her detayın kusursuz olması gerekir. Horus için çizdiğimiz her parça, sessizce yıllarca çalışacak şekilde tasarlandı.”
                       </p>
-                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4">— Özgür Erdoğan, Endüstriyel Tasarım</span>
+                      <span class="text-xs tracking-widest text-neutral-500 uppercase block mt-4" data-i18n="warranty_role2">— Özgür Erdoğan, Endüstriyel Tasarım</span>
                   </div>
               </div>
           </div>
@@ -304,27 +315,27 @@
   
   <section id="collector" class="bg-neutral-900/10">
       <div class="max-w-4xl px-6 text-center relative z-10 w-full">
-          <h2 class="text-3xl md:text-5xl text-white font-thin leading-tight mb-10 gsap-fade-up">
+          <h2 class="text-3xl md:text-5xl text-white font-thin leading-tight mb-10 gsap-fade-up" data-i18n="col_title">
               Koleksiyon Sahipliği Biriktirmek Değil, Seçmektir
           </h2>
           <div class="inner-scroll-container text-neutral-400 space-y-6 gsap-fade-up font-light text-sm md:text-xl leading-relaxed max-w-3xl mx-auto text-left md:text-center">
-              <p>Gerçek koleksiyoncular her saati aynı gözle görmez. Bazıları günlük kullanım içindir. Bazıları özel anlar için saklanır. Bazıları ise sadece varlığıyla anlam taşır.</p>
-              <p>Ortak noktaları şudur: <span class="text-white">Hiçbiri rastgele bir yere bırakılmaz.</span></p>
-              <p>Horus by Wyntro, saatlerinizi bekleme moduna almaz. Onları her an hazır tutar.</p>
-              <p>Çünkü koleksiyonculuk, zamanı durdurmak değil; ona her an saygı göstermektir.</p>
-              <p class="text-white pt-4">Bu yüzden Horus by Wyntro, satın alınan bir aksesuar değil, koleksiyonun doğal bir parçası haline gelir.</p>
+              <p data-i18n="col_p1">Gerçek koleksiyoncular her saati aynı gözle görmez. Bazıları günlük kullanım içindir. Bazıları özel anlar için saklanır. Bazıları ise sadece varlığıyla anlam taşır.</p>
+              <p data-i18n="col_p2">Ortak noktaları şudur: <span class="text-white">Hiçbiri rastgele bir yere bırakılmaz.</span></p>
+              <p data-i18n="col_p3">Horus by Wyntro, saatlerinizi bekleme moduna almaz. Onları her an hazır tutar.</p>
+              <p data-i18n="col_p4">Çünkü koleksiyonculuk, zamanı durdurmak değil; ona her an saygı göstermektir.</p>
+              <p class="text-white pt-4" data-i18n="col_p5">Bu yüzden Horus by Wyntro, satın alınan bir aksesuar değil, koleksiyonun doğal bir parçası haline gelir.</p>
           </div>
       </div>
   </section>
 
   <section id="availability">
       <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
-          <h2 class="text-3xl text-white font-thin mb-8 gsap-fade-up">Hazır Olduğunuzda</h2>
+          <h2 class="text-3xl text-white font-thin mb-8 gsap-fade-up" data-i18n="avail_title">Hazır Olduğunuzda</h2>
           <div class="inner-scroll-container">
-              <p class="text-neutral-400 mb-12 text-lg gsap-fade-up">
+              <p class="text-neutral-400 mb-12 text-lg gsap-fade-up" data-i18n="avail_desc">
                   Horus by Wyntro, çok yakında dünya çapında seçkin saat mağazalarında ve resmi web sayfalarında satışa sunulacaktır.
               </p>
-              <button class="gsap-fade-up px-10 py-4 border border-white/20 rounded-full text-sm tracking-[0.2em] text-white hover:bg-white hover:text-black transition duration-500 hover:scale-105">
+              <button class="gsap-fade-up px-10 py-4 border border-white/20 rounded-full text-sm tracking-[0.2em] text-white hover:bg-white hover:text-black transition duration-500 hover:scale-105" data-i18n="avail_btn">
                   Zamanı Keşfet
           </button>
           </div>
@@ -354,9 +365,9 @@
                  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[20%] w-full animate-[scan_3s_linear_infinite] pointer-events-none opacity-50"></div>
             </div>
             
-            <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up">The Lab</h2>
-            <p class="text-neutral-400 gsap-fade-up mb-8 max-w-lg mx-auto leading-relaxed">
-                Yazılımımız canlıdır. GitHub üzerinden anlık olarak çekilen en son firmware notlarını buradan takip edebilirsiniz.
+            <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up" data-i18n="lab_title">The Lab</h2>
+            <p class="text-neutral-400 gsap-fade-up mb-8 max-w-lg mx-auto leading-relaxed" data-i18n="lab_desc">
+                Yazılımımız canlıdır. En son firmware notlarını buradan takip edebilirsiniz.
             </p>
         </div>
     </div>
@@ -364,14 +375,14 @@
 
 <section id="footer" class="h-auto min-h-[30vh] justify-end pb-12">
     <div class="text-center text-[10px] text-neutral-600 tracking-widest uppercase relative z-10">
-      <p class="mb-2">Zamana hâkim olanlar için.</p>
-      <p class="mb-2">Zamanın ruhuna sadakatle tasarlandı.</p>
+      <p class="mb-2" data-i18n="foot_p1">Zamana hâkim olanlar için.</p>
+      <p class="mb-2" data-i18n="foot_p2">Zamanın ruhuna sadakatle tasarlandı.</p>
       <p>Horus by Wyntro · 2026</p>
     </div>
 </section>
 
+<script src="translations.js"></script>
 <script src="script.js"></script>
 
 </body>
 </html>
-
