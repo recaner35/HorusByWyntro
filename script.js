@@ -94,36 +94,72 @@ if(menuBtn && mobileMenu) {
 }
 
 // --- 4. GITHUB API ---
-async function fetchLatestRelease() {
-    const user = 'recaner35'; 
-    const repo = 'HorusByWyntro'; 
+// --- 3. GITHUB RELEASES (SADE & ŞIK VERSİYON) ---
+async function fetchGitHubReleases() {
     const container = document.getElementById('release-info');
     if(!container) return;
 
     try {
-      const response = await fetch(`https://api.github.com/repos/${user}/${repo}/releases`);
-      if (!response.ok) throw new Error("API Hatası");
-      const data = await response.json();
-      
-      if (!Array.isArray(data) || data.length === 0) throw new Error("Henüz release yok");
-      
-      const latest = data[0]; 
-      const date = new Date(latest.published_at).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
+        // GitHub API'den veriyi çek
+        const response = await fetch('https://api.github.com/repos/recaner35/HorusByWyntro/releases');
+        
+        if (!response.ok) throw new Error('Veri alınamadı');
+        
+        const data = await response.json();
+        
+        if (data.length > 0) {
+            const latest = data[0];
+            
+            // 1. Versiyon
+            const version = latest.tag_name;
 
-      container.innerHTML = `
-        <div class="opacity-0 translate-y-2 animate-[fadeIn_0.5s_ease-out_forwards]">
-            <div class="flex items-center justify-between mb-3">
-                <span class="text-white font-bold tracking-wide text-sm">${latest.name || latest.tag_name}</span>
-                <a href="${latest.html_url}" target="_blank" class="text-[10px] border border-green-500/40 text-green-400 px-2 py-0.5 rounded hover:bg-green-500/10 transition">${latest.tag_name}</a>
+            // 2. Not (Boşsa varsayılan metin)
+            const note = (latest.body && latest.body.trim() !== "") 
+                         ? latest.body 
+                         : "İyileştirmeler yapıldı.";
+
+            // 3. ŞIK HTML ÇIKTISI
+            container.innerHTML = `
+            <div class="bg-white/5 border border-white/10 backdrop-blur-md rounded-sm p-8 text-left transition hover:bg-white/10 duration-500">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
+                    <div>
+                        <div class="text-[10px] text-neutral-500 tracking-[0.2em] uppercase mb-1">GÜNCEL FIRMWARE</div>
+                        <div class="text-3xl text-white font-thin tracking-wider">${version}</div>
+                    </div>
+                    <div class="text-[10px] px-3 py-1 border border-green-500/30 text-green-400/80 rounded-full uppercase tracking-widest self-start md:self-center">
+                        Active
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="text-[10px] text-neutral-500 tracking-[0.2em] uppercase mb-2">SÜRÜM NOTU</div>
+                    <div class="text-sm text-neutral-300 font-light leading-relaxed whitespace-pre-line">
+                        ${note}
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            // Release yoksa
+            container.innerHTML = '<div class="text-neutral-500 text-sm tracking-widest italic">Henüz yayınlanmış bir sürüm bulunmuyor.</div>';
+        }
+    } catch (e) {
+        console.error("GitHub hatası:", e);
+        // Hata durumunda (Offline veya API limiti)
+        container.innerHTML = `
+        <div class="bg-white/5 border border-white/10 backdrop-blur-md rounded-sm p-8 text-left">
+             <div class="mb-4">
+                <div class="text-[10px] text-neutral-500 tracking-[0.2em] uppercase mb-1">FIRMWARE</div>
+                <div class="text-xl text-white font-thin">v1.0.0</div>
             </div>
-            <div class="text-[10px] text-neutral-500 mb-3 font-sans">Yayınlanma: ${date}</div>
-            <div class="text-xs text-neutral-300 font-mono whitespace-pre-wrap leading-relaxed border-l-2 border-white/10 pl-3 mb-4 opacity-80">${latest.body ? latest.body : 'Versiyon notu bulunamadı.'}</div>
-            <a href="${latest.html_url}" target="_blank" class="inline-flex items-center gap-2 text-[10px] text-white/40 hover:text-white transition group/link">
-                <span>GitHub'da İncele / İndir</span><span class="group-hover/link:translate-x-1 transition-transform">→</span>
-            </a>
+            <div>
+                <div class="text-[10px] text-neutral-500 tracking-[0.2em] uppercase mb-2">SÜRÜM NOTU</div>
+                <div class="text-sm text-neutral-400 font-light">
+                    Sistem kararlı. İyileştirmeler yapıldı.
+                </div>
+            </div>
         </div>`;
-    } catch (e) { 
-      container.innerHTML = `<div class="text-red-400/80 text-[10px] mt-4">[Error]: Bağlantı kurulamadı veya release yok.<br><a href="https://github.com/${user}/${repo}/releases" target="_blank" class="underline">Manuel Kontrol →</a></div>`; 
     }
 }
-document.addEventListener('DOMContentLoaded', fetchLatestRelease);
+
+// Fonksiyonu Başlat
+fetchGitHubReleases();
