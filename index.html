@@ -344,32 +344,17 @@
 
 <section id="lab">
     <div class="section-light gsap-glow bg-green-900/5"></div>
-    <div class="max-w-3xl mx-auto px-6 text-center relative z-10 w-full">
+    <div class="max-w-3xl mx-auto px-6 text-center relative z-10 w-full flex flex-col items-center justify-center">
         
-        <div class="inner-scroll-container">
-            <div class="gsap-obj bg-[#0a0a0a] border border-white/10 rounded-lg p-6 mb-12 text-left font-mono text-xs text-neutral-500 shadow-2xl overflow-hidden relative group">
-                 <div class="flex gap-2 mb-4 border-b border-white/5 pb-2">
-                     <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-                     <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-                     <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
-                     <div class="ml-auto text-[10px] text-white/20">bash — v.2.0</div>
-                 </div>
-                 <div class="mb-4">
-                     <span class="text-green-400 mr-2">➜</span>
-                     <span class="text-blue-400">~</span> 
-                     <span class="text-neutral-300">curl GET api.github.com/repos/recaner35/HorusByWyntro/releases</span>
-                 </div>
-                 <div id="release-info" class="text-neutral-400 pt-2 min-h-[100px] transition-all duration-500">
-                     <span class="animate-pulse text-green-500">_</span> Bağlantı kuruluyor...
-                 </div>
-                 <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[20%] w-full animate-[scan_3s_linear_infinite] pointer-events-none opacity-50"></div>
-            </div>
-            
-            <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up" data-i18n="lab_title">The Lab</h2>
-            <p class="text-neutral-400 gsap-fade-up mb-8 max-w-lg mx-auto leading-relaxed" data-i18n="lab_desc">
-                Yazılımımız canlıdır. En son firmware notlarını buradan takip edebilirsiniz.
-            </p>
+        <h2 class="text-3xl font-thin text-white mb-6 gsap-fade-up" data-i18n="lab_title">The Lab</h2>
+        <p class="text-neutral-400 gsap-fade-up mb-12 max-w-lg mx-auto leading-relaxed" data-i18n="lab_desc">
+            Yazılımımız canlıdır. GitHub üzerinden anlık olarak çekilen en son firmware notlarını buradan takip edebilirsiniz.
+        </p>
+
+        <div id="release-info" class="w-full max-w-md gsap-fade-up">
+            <div class="animate-pulse text-neutral-600 text-xs tracking-widest">VERİ ALINIYOR...</div>
         </div>
+
     </div>
 </section>
 
@@ -386,5 +371,6 @@
 
 </body>
 </html>
+
 
 
