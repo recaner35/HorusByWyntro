@@ -150,6 +150,14 @@ jobs:
       with:
         tag_name: ${{ env.NEW_VERSION }}
         name: Release ${{ env.NEW_VERSION }}
+        # --- EKLENEN KISIM BAŞLANGIÇ ---
+        generate_release_notes: true
+        make_latest: true
+        body: |
+          ## 🚀 Horus v${{ env.NEW_VERSION }} Yayında!
+          
+          Aşağıda bu sürümle gelen değişikliklerin listesini bulabilirsiniz.
+        # --- EKLENEN KISIM BİTİŞ ---
         files: |
           ./build/HorusByWyntro.ino.bin
           ./build/HorusByWyntro.littlefs.bin
