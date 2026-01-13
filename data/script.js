@@ -17,7 +17,19 @@ function getTrans(key) {
 
 window.onload = function () {
     initWebSocket();
-
+// Setup/Captive Portal Kontrolü
+// Eğer IP 192.168.4.1 ise veya hostname "Horus" ise kurulum ekranını aç
+if (location.hostname === "192.168.4.1" || location.hostname === "horus" || location.hostname === "Horus") {
+    document.getElementById('setupModal').style.display = 'flex';
+    
+    // Cihaz adını WebSocket'ten gelmesini beklemeden varsayılanı doldurmaya çalışalım
+    // Ancak suffix henüz gelmemiş olabilir, WS bağlantısı kurulunca güncellenebilir.
+    setTimeout(() => {
+        if(document.getElementById('setupDeviceName').value === "") {
+             document.getElementById('setupDeviceName').value = "Horus-" + deviceSuffix;
+        }
+    }, 1000);
+}
     // Varsayılan Dil Kontrolü
     var userLang = navigator.language || navigator.userLanguage;
     var savedLang = localStorage.getItem('horus_lang');
@@ -633,6 +645,24 @@ function showToast(message, type = "info", duration = 2500) {
         toast.style.transform = "translateY(10px)";
         setTimeout(() => toast.remove(), 300);
     }, duration);
+}
+
+function skipSetup() {
+    // Kullanıcı isteği: Wifi yok seçeneğine tıklarsa...
+    // mDNS olması gereken "horus-xxxx.local" adresine dönmeli.
+    
+    var targetAddress = "http://horus-" + deviceSuffix + ".local";
+    
+    // Modalı kapat
+    document.getElementById('setupModal').style.display = 'none';
+    
+    // Bilgilendirme
+    showToast("Kontrol paneline yönlendiriliyor: " + targetAddress, "info");
+    
+    // Yönlendirme (Android'de mDNS sorunu olabilir ama istenen tam olarak budur)
+    setTimeout(() => {
+        window.location.href = targetAddress;
+    }, 1500);
 }
 
 
