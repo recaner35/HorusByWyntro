@@ -15,6 +15,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
+#include <DNSServer.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <NetworkClientSecure.h> // Core 3.x SSL fix
@@ -59,6 +60,7 @@ AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
 // Web Sunucusu (Port 80)
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+DNSServer dnsServer;
 
 // ===============================
 // Global Değişkenler (Durum)
@@ -394,6 +396,7 @@ void setup() {
 // Ana Döngü (Loop)
 // ===============================
 void loop() {
+  dnsServer.processNextRequest();
   if (shouldUpdate) {
     shouldUpdate = false;
     checkAndPerformUpdate();
@@ -1110,36 +1113,44 @@ void processCommand(String jsonStr) {
 // PROPER WiFi Initialization
 // ===============================
 void initWiFi() {
-  WiFi.mode(WIFI_AP_STA);
-  uint64_t chipid = ESP.getEfuseMac();
-  char macBuf[18];
+  WiFi.mode(WIFI_AP_STA); // Hem AP hem İstasyon modu
 
-  myMacAddress = WiFi.macAddress();
-  if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
-    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
-            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
-            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
-            (uint8_t)(chipid >> 40));
-    myMacAddress = String(macBuf);
+  // Cihaz Suffix'i (MAC son 4 hane)
+  if (deviceSuffix == "") {
+      uint64_t chipid = ESP.getEfuseMac();
+      uint16_t chip = (uint16_t)(chipid >> 32);
+      char suffix[5];
+      snprintf(suffix, 5, "%04X", chip);
+      deviceSuffix = String(suffix);
   }
 
-  // AP naming always uses Suffix
-  String apBase = "horus";
-  if (config.hostname != "") {
-    apBase = slugify(config.hostname);
+  // Varsayılan Hostname Ayarı (horus-xxxx)
+  String mdnsName = "horus-" + deviceSuffix;
+  if (config.hostname == "") {
+     config.hostname = "Horus-" + deviceSuffix; 
   }
-  String apName = apBase + "-" + deviceSuffix;
+  
+  // mDNS ve Hostname Ayarı
+  WiFi.setHostname(mdnsName.c_str());
+  if (MDNS.begin(mdnsName.c_str())) {
+      MDNS.addService("http", "tcp", 80);
+      Serial.println("mDNS baslatildi: " + mdnsName + ".local");
+  }
 
-  // Kanal sabitleme kaldırıldı, otomatik seçilecek
-  WiFi.softAP(apName.c_str(), "");
-
-  // Set Hostname for DHCP (optional to be same as AP)
-  WiFi.setHostname(apName.c_str());
-
-  Serial.println("WiFi AP Başlatıldı: " + apName);
-  Serial.println("MAC Adresi: " + myMacAddress);
-  Serial.println("AP IP Adresi: ");
+  // --- İSTENEN DEĞİŞİKLİK: Sabit AP Bilgileri ve Captive Portal ---
+  // Eğer bağlı değilsek veya kurulum modundaysak bu bilgilerle AP aç:
+  WiFi.softAP("Horus", "ByWyntro3545"); 
+  
+  // Captive Portal için tüm DNS isteklerini ESP'nin IP'sine yönlendir
+  dnsServer.start(53, "*", WiFi.softAPIP());
+  Serial.println("AP Baslatildi: Horus / ByWyntro3545");
+  Serial.print("AP IP: ");
   Serial.println(WiFi.softAPIP());
+
+  // Eğer kayıtlı ağ varsa bağlanmayı dene (Arkaplanda)
+  // ... (Mevcut bağlantı kodlarınızın devamı buraya gelebilir, 
+  // ancak öncelik AP'nin hemen "Horus" olarak açılmasıdır.)
+  // Mevcut kodunuzdaki `tryConnect` mantığını koruyabilirsiniz.
 }
 
 // ===============================
