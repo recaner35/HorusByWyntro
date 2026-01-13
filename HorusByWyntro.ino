@@ -29,6 +29,11 @@
 Preferences prefs;
 
 bool setupMode = false;
+bool skipSetup = false;
+namespace: "setup"
+key: "skip"
+
+
 const char* SETUP_AP_SSID = "Horus";
 const char* SETUP_AP_PASS = "ByWyntro3545"; // min 8 char
 
@@ -353,13 +358,20 @@ void checkAndPerformUpdate() {
 void setup() {
   Serial.begin(115200);
   Serial.println("\n\nHORUS BY WYNTRO - Başlatılıyor...");
-  bool connected = connectToSavedWiFi();
-  bool skipSetup = false;
+  Preferences setupPrefs;
+  setupPrefs.begin("setup", true);
+  skipSetup = setupPrefs.getBool("skip", false);
+  setupPrefs.end();
 
-  if (!connected) {
+  bool connected = connectToSavedWiFi();
+
+  if (!connected && !skipSetup) {
     setupMode = true;
     startSetupMode();
+  } else {
+    setupMode = false;
   }
+
 
   if (!LittleFS.begin(true)) {
     Serial.println("HATA: LittleFS başlatılamadı!");
@@ -1232,10 +1244,26 @@ void initWebServer() {
     skipSetup = true;
     setupMode = false;
 
-    request->send(200, "application/json", "{\"status\":\"skipped\"}");
+    Preferences setupPrefs;
+    setupPrefs.begin("setup", false);
+    setupPrefs.putBool("skip", true);
+    setupPrefs.end();
 
-    delay(500);
+    request->send(200, "application/json", "{\"status\":\"skipped\"}");
   });
+
+  server.on("/api/reset-setup", HTTP_POST, [](AsyncWebServerRequest *request){
+    skipSetup = false;
+
+    Preferences setupPrefs;
+    setupPrefs.begin("setup", false);
+    setupPrefs.remove("skip");
+    setupPrefs.end();
+
+    request->send(200, "application/json", "{\"status\":\"reset\"}");
+  });
+
+
 
 
 
