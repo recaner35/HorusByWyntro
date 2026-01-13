@@ -1,3 +1,31 @@
+.setup-card {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111;
+  border: 1px solid #333;
+  padding: 20px;
+  z-index: 9999;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+.skip-btn {
+  margin-top: 10px;
+  background: transparent;
+  color: #aaa;
+  border: 1px dashed #444;
+  padding: 8px;
+  width: 100%;
+  border-radius: 8px;
+}
+
 :root {
     --bg-color: #0d0d12;
     --sidebar-bg: #141419;
@@ -1069,4 +1097,33 @@ input[type="range"]::-moz-range-thumb {
 .switch input:checked + .slider:before {
     transform: translateX(24px);
 }
+.setup-done {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.setup-done .check {
+  font-size: 64px;
+  color: #4CAF50;
+  animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
 
