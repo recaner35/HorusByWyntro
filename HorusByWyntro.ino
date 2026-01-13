@@ -9,13 +9,13 @@
  * TTP223 sensörü ile fiziksel kontrol sağlar.
  */
 
+#include <DNSServer.h>
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
-#include <DNSServer.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <NetworkClientSecure.h> // Core 3.x SSL fix
@@ -23,6 +23,14 @@
 #include <WiFi.h>
 #include <esp_now.h>
 #include <vector>
+#include <WiFi.h>
+#include <Preferences.h>
+
+Preferences prefs;
+
+bool setupMode = false;
+const char* SETUP_AP_SSID = "Horus";
+const char* SETUP_AP_PASS = "ByWyntro3545"; // min 8 char
 
 // ===============================
 // Motor Pin Tanımlamaları
@@ -47,7 +55,7 @@
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.154"
+#define FIRMWARE_VERSION "1.0.138"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -60,7 +68,6 @@ AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
 // Web Sunucusu (Port 80)
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-DNSServer dnsServer;
 
 // ===============================
 // Global Değişkenler (Durum)
@@ -71,13 +78,10 @@ struct Config {
   int direction = 2; // 0: CW, 1: CCW, 2: Bi-Directional (Varsayılan 2)
   String hostname = "";
   bool espNowEnabled = false; // ESP-NOW toggle (default false)
-// --- EKSİK OLAN KISIMLAR EKLENDİ ---
-  String ssid = "";      // Wifi SSID
-  String password = "";  // Wifi Şifresi
-  // -----------------------------------
 };
 Config config;
 
+DNSServer dnsServer;
 bool isRunning = false;      // Sistem genel olarak aktif mi?
 bool isMotorMoving = false;  // Motor şu an dönüyor mu?
 bool isEspNowActive = false; // ESP-NOW başarıyla başlatıldı mı?
@@ -87,7 +91,6 @@ int targetTurnsPerHour = 0; // Saat başı hedef tur
 unsigned long lastTouchTime = 0;
 bool touchState = false;
 String deviceSuffix = ""; // Unique suffix from ChipID
-bool shouldReboot = false;
 
 // Zamanlayıcılar
 unsigned long lastHourCheck = 0;
@@ -350,6 +353,13 @@ void checkAndPerformUpdate() {
 void setup() {
   Serial.begin(115200);
   Serial.println("\n\nHORUS BY WYNTRO - Başlatılıyor...");
+  bool connected = connectToSavedWiFi();
+  bool skipSetup = false;
+
+  if (!connected) {
+    setupMode = true;
+    startSetupMode();
+  }
 
   if (!LittleFS.begin(true)) {
     Serial.println("HATA: LittleFS başlatılamadı!");
@@ -401,7 +411,6 @@ void setup() {
 // Ana Döngü (Loop)
 // ===============================
 void loop() {
-  dnsServer.processNextRequest();
   if (shouldUpdate) {
     shouldUpdate = false;
     checkAndPerformUpdate();
@@ -437,10 +446,6 @@ void loop() {
     }
   }
 
-  if (shouldReboot) {
-    delay(2000); // Tarayıcının "OK" yanıtını alması için bekle
-    ESP.restart();
-}
   // OTA Update check - REMOVED unconditional call causing spam
   // checkAndPerformUpdate();
 
@@ -468,6 +473,9 @@ void loop() {
       esp_now_deinit();
       isEspNowActive = false;
     }
+  }
+  if (setupMode) {
+    dnsServer.processNextRequest();
   }
 
   // Peer Temizliği ve Periyodik Discovery
@@ -548,12 +556,6 @@ void loadConfig() {
     config.direction = doc["dir"] | 2;
     config.hostname = doc["name"] | "";
     config.espNowEnabled = doc["espnow"] | false;
-    
-    // --- EKLENEN ---
-    config.ssid = doc["ssid"] | "";
-    config.password = doc["pass"] | "";
-    // ---------------
-    
     file.close();
   }
 }
@@ -566,12 +568,6 @@ void saveConfig() {
   doc["dir"] = config.direction;
   doc["name"] = config.hostname;
   doc["espnow"] = config.espNowEnabled;
-  
-  // --- EKLENEN ---
-  doc["ssid"] = config.ssid;
-  doc["pass"] = config.password;
-  // ---------------
-  
   serializeJson(doc, file);
   file.close();
 }
@@ -1134,74 +1130,56 @@ void processCommand(String jsonStr) {
 // PROPER WiFi Initialization
 // ===============================
 void initWiFi() {
-  WiFi.mode(WIFI_AP_STA); // Hem AP hem Station
+  WiFi.mode(WIFI_AP_STA);
+  uint64_t chipid = ESP.getEfuseMac();
+  char macBuf[18];
 
-  // 1. Cihaz Suffix Oluştur
-  if (deviceSuffix == "") {
-      uint64_t chipid = ESP.getEfuseMac();
-      uint16_t chip = (uint16_t)(chipid >> 32);
-      char suffix[5];
-      snprintf(suffix, 5, "%04X", chip);
-      deviceSuffix = String(suffix);
+  myMacAddress = WiFi.macAddress();
+  if (myMacAddress == "00:00:00:00:00:00" || myMacAddress == "") {
+    sprintf(macBuf, "%02X:%02X:%02X:%02X:%02X:%02X", (uint8_t)(chipid >> 0),
+            (uint8_t)(chipid >> 8), (uint8_t)(chipid >> 16),
+            (uint8_t)(chipid >> 24), (uint8_t)(chipid >> 32),
+            (uint8_t)(chipid >> 40));
+    myMacAddress = String(macBuf);
   }
 
-  // 2. mDNS Ayarla
-  String mdnsName = "horus-" + deviceSuffix;
-  if (config.hostname == "") {
-     config.hostname = "Horus-" + deviceSuffix; 
+  // AP naming always uses Suffix
+  String apBase = "horus";
+  if (config.hostname != "") {
+    apBase = slugify(config.hostname);
   }
-  WiFi.setHostname(mdnsName.c_str());
-  if (MDNS.begin(mdnsName.c_str())) {
-      MDNS.addService("http", "tcp", 80);
-      Serial.println("mDNS: " + mdnsName + ".local");
-  }
+  String apName = apBase + "-" + deviceSuffix;
 
-  // 3. Wifi Bağlantısını Dene (Varsa)
-  bool connected = false;
-  if (config.ssid != "") {
-    Serial.print("Baglaniliyor: "); Serial.println(config.ssid);
-    WiFi.begin(config.ssid.c_str(), config.password.c_str());
-    int retry = 0;
-    while (WiFi.status() != WL_CONNECTED && retry < 15) {
-      delay(500); Serial.print("."); retry++;
-    }
-    if (WiFi.status() == WL_CONNECTED) {
-      connected = true;
-      Serial.println("\nBaglandi! IP: " + WiFi.localIP().toString());
-      // Bağlanınca AP'yi kapatıyoruz (Normal Mod)
-      WiFi.softAPdisconnect(true);
-      WiFi.mode(WIFI_STA); 
-    }
-  }
+  // Kanal sabitleme kaldırıldı, otomatik seçilecek
+  WiFi.softAP(apName.c_str(), "");
 
-  // 4. BAĞLANAMAZSA -> KURULUM MODU (AP + CAPTIVE PORTAL)
-  if (!connected) {
-    Serial.println("\nAP Modu Baslatiliyor...");
-    
-    // AP Başlat
-    WiFi.softAP("Horus", "ByWyntro3545");
-    delay(100); // AP'nin oturması için kısa bekleme
+  // Set Hostname for DHCP (optional to be same as AP)
+  WiFi.setHostname(apName.c_str());
 
-    // !!! KRİTİK NOKTA: DNS SERVER BAŞLATMA !!!
-    // Android'in "Bu ağda internet var mı?" sorusunu (dns sorgusunu)
-    // yakalayıp "İnternet benim (192.168.4.1)" dememiz lazım.
-    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    dnsServer.start(53, "*", WiFi.softAPIP());
-
-    Serial.println("AP IP: " + WiFi.softAPIP().toString());
-    Serial.println("Captive Portal Aktif.");
-  }
+  Serial.println("WiFi AP Başlatıldı: " + apName);
+  Serial.println("MAC Adresi: " + myMacAddress);
+  Serial.println("AP IP Adresi: ");
+  Serial.println(WiFi.softAPIP());
 }
+
 // ===============================
 // Web Server Initialization
 // ===============================
 void initWebServer() {
-  // 1. Statik Dosyalar
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
-  server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/index.html", "text/html");
+  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/manifest.json", "application/manifest+json");
+  });
+  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/192x192.png", "image/png");
+  });
+  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/512x512.png", "image/png");
+  });
+  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send(LittleFS, "/sw.js", "application/javascript");
   });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/style.css", "text/css");
@@ -1212,72 +1190,124 @@ void initWebServer() {
   server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/languages.js", "application/javascript");
   });
-  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/manifest.json", "application/manifest+json");
-  });
-  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/sw.js", "application/javascript");
-  });
-  // İkonlar (Dosya varsa gönderir yoksa 404)
-  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if(LittleFS.exists("/192x192.png")) request->send(LittleFS, "/192x192.png", "image/png");
-    else request->send(404);
-  });
-  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
-     if(LittleFS.exists("/512x512.png")) request->send(LittleFS, "/512x512.png", "image/png");
-     else request->send(404);
-  });
 
-  // 2. Wifi Tarama (JS ile uyumlu hale getirildi)
-  server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    int n = WiFi.scanNetworks();
-    String json = "[";
-    for (int i = 0; i < n; ++i) {
-      if (i) json += ",";
-      json += "{";
-      json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-      json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-      json += "\"secure\":" + String(WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "false" : "true");
-      json += "}";
-    }
-    json += "]";
-    request->send(200, "application/json", json);
-    WiFi.scanDelete();
-  });
-
-  // 3. Wifi Kaydetme
-  server.on("/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String ssid = request->hasArg("ssid") ? request->arg("ssid") : "";
-    String pass = request->hasArg("pass") ? request->arg("pass") : "";
-    String hname = request->hasArg("name") ? request->arg("name") : "";
-
-    if (ssid != "") {
-        config.ssid = ssid;
-        config.password = pass;
-        if (hname != "") config.hostname = hname;
-        saveConfig();
-        request->send(200, "text/plain", "OK");
-        shouldReboot = true; 
+  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!isScanning && !shouldStartScan) {
+      shouldStartScan = true;
+      request->send(202, "application/json", "{\"status\":\"scanning\"}");
     } else {
-        request->send(400, "text/plain", "Eksik Bilgi");
+      request->send(200, "application/json", "{\"status\":\"busy\"}");
     }
   });
 
-  // 4. WebSocket
+  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", getWifiListJson());
+  });
+
+  server.on("/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request){
+    String ssid = request->arg("ssid");
+    String pass = request->arg("pass");
+
+    prefs.begin("wifi", false);
+    prefs.putString("ssid", ssid);
+    prefs.putString("pass", pass);
+    prefs.end();
+
+    request->send(200, "application/json", "{\"status\":\"started\"}");
+
+    delay(1000);
+    ESP.restart();
+  });
+
+  server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request){
+    String json = "{";
+    json += "\"setup\":";
+    json += (setupMode && !skipSetup) ? "true" : "false";
+    json += "}";
+
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/skip-setup", HTTP_POST, [](AsyncWebServerRequest *request){
+    skipSetup = true;
+    setupMode = false;
+
+    request->send(200, "application/json", "{\"status\":\"skipped\"}");
+
+    delay(500);
+  });
+
+
+
+  // Auto OTA Endpoint
+  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request){
+    request->redirect("/");
+  });
+
+  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){
+    request->redirect("/");
+  });
+
+  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request){
+    request->redirect("/");
+  });
+
+  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){
+    request->redirect("/");
+  });
+
+  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (otaStatus == "started" || otaStatus == "updating") {
+      request->send(200, "application/json", "{\"status\":\"busy\"}");
+      return;
+    }
+
+    // Check if status request only (you might want a separate GET status
+    // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
+    shouldUpdate = true;
+    otaStatus = "started";
+    request->send(200, "application/json", "{\"status\":\"started\"}");
+  });
+
+  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"status\":\"" + otaStatus + "\"}";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
+    request->send(200, "application/json", json);
+  });
+
+  // Manual OTA Landing
+  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/update.html", "text/html");
+  });
+
+  // Manual OTA Handler
+  server.on(
+      "/update", HTTP_POST,
+      [](AsyncWebServerRequest *request) {
+        bool shouldReboot = !Update.hasError();
+        AsyncWebServerResponse *response = request->beginResponse(
+            200, "text/plain", shouldReboot ? "OK" : "FAIL");
+        response->addHeader("Connection", "close");
+        request->send(response);
+        if (shouldReboot)
+          ESP.restart();
+      },
+      [](AsyncWebServerRequest *request, String filename, size_t index,
+         uint8_t *data, size_t len, bool final) {
+        if (!index)
+          Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
+        if (!Update.hasError())
+          Update.write(data, len);
+        if (final)
+          Update.end(true);
+      });
+
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
-
-  // 5. ANDROID/iOS CAPTIVE PORTAL DÜZELTMESİ (BU ÇOK ÖNEMLİ)
-  server.onNotFound([](AsyncWebServerRequest *request) {
-    // Eğer gelen istek bizim IP adresimize değilse (örn: connectivitycheck.gstatic.com)
-    // Cihazı ana sayfaya yönlendir.
-    if (request->host().indexOf(WiFi.softAPIP().toString()) < 0) {
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
-    } else {
-        request->send(404, "text/plain", "Not found");
-    }
-  });
-
   server.begin();
 }
 
@@ -1302,4 +1332,51 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
       processCommand(cmd);
     }
   }
+}
+
+void startSetupMode() {
+  Serial.println("SETUP MODE AKTIF");
+
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
+
+  dnsServer.start(53, "*", WiFi.softAPIP());
+
+
+  IPAddress ip = WiFi.softAPIP();
+  Serial.print("Setup IP: ");
+  Serial.println(ip);
+}
+
+bool connectToSavedWiFi() {
+  prefs.begin("wifi", true);
+  String ssid = prefs.getString("ssid", "");
+  String pass = prefs.getString("pass", "");
+  prefs.end();
+
+  if (ssid == "") {
+    Serial.println("Kayitli WiFi yok");
+    return false;
+  }
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid.c_str(), pass.c_str());
+
+  Serial.print("WiFi baglaniyor: ");
+  Serial.println(ssid);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi baglandi!");
+    Serial.println(WiFi.localIP());
+    return true;
+  }
+
+  Serial.println("\nWiFi baglanamadi");
+  return false;
 }
