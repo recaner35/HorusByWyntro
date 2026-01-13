@@ -665,6 +665,72 @@ function skipSetup() {
     }, 1500);
 }
 
+// --- script.js dosyasının SONUNA ekleyin ---
+
+function openWifiSettings() {
+    // Kurulum ekranını gizle, Wifi ekranını aç
+    document.getElementById('setupModal').style.display = 'none';
+    document.getElementById('wifiModal').style.display = 'flex';
+    
+    // İsterseniz burada /scan endpoint'ini çağırıp ağları listeleyebilirsiniz.
+    // Şimdilik manuel giriş varsayıyoruz.
+}
+
+function saveAndConnect() {
+    var ssid = document.getElementById('wifiSSID').value;
+    var pass = document.getElementById('wifiPass').value;
+    var name = document.getElementById('setupDeviceName').value; // İlk ekrandan alınan isim
+
+    if(!ssid) {
+        showToast("Lütfen bir Wifi ağı adı girin!", "error");
+        return;
+    }
+
+    showToast("Ayarlar gönderiliyor...", "info");
+
+    // Backend'e veriyi gönder
+    var formData = new FormData();
+    formData.append("ssid", ssid);
+    formData.append("pass", pass);
+    formData.append("name", name);
+
+    fetch('/save-wifi', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            document.getElementById('wifiModal').style.display = 'none';
+            
+            // Kullanıcıya bilgi ver ve yönlendirme sürecini başlat
+            showToast("Kaydedildi! Cihaz yeniden başlıyor...", "success");
+            
+            // Arayüzü bilgilendirme moduna al
+            document.body.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center; color:#fff; padding:20px;">
+                    <h2>Cihaz Yeniden Başlatılıyor</h2>
+                    <p>Lütfen telefonunuzu ev ağınıza bağlayın.</p>
+                    <p>Birazdan yönlendirileceksiniz:</p>
+                    <h3 style="color:var(--accent-color);">http://horus-${deviceSuffix}.local</h3>
+                    <div class="loader"></div>
+                </div>
+            `;
+
+            // 15 saniye sonra yeni adrese gitmeye çalış
+            setTimeout(() => {
+                window.location.href = "http://horus-" + deviceSuffix + ".local";
+            }, 15000);
+            
+        } else {
+            showToast("Kayıt başarısız oldu!", "error");
+        }
+    })
+    .catch(error => {
+        // Wifi kopacağı için fetch hatası alabiliriz, bu aslında iyiye işarettir (cihaz resetleniyor)
+        console.log(error);
+        showToast("Komut gönderildi. Bağlantı kesiliyor...", "info");
+    });
+}
 
 
 
