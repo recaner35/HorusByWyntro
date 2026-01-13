@@ -389,7 +389,10 @@ void setup() {
   Serial.println("Device Suffix: " + deviceSuffix);
 
   initMotor();
-  initWiFi();
+  if (!setupMode) {
+    initWiFi();
+  }
+
   delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
 
   // ESP-NOW setup() içinde direkt başlatılmıyor.
@@ -608,7 +611,16 @@ void handleWifiScan() {
 
   // 6. AP'yi kararlı bir kanala geri çek (Eğer STA bağlı değilse)
   if (WiFi.status() != WL_CONNECTED) {
-    WiFi.softAP(slugify(config.hostname) + "-" + deviceSuffix, "", 1);
+    if (setupMode) {
+      WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1);
+      Serial.println("Setup AP yeniden aktif edildi.");
+    } else {
+      String apBase = "horus";
+      if (config.hostname != "") apBase = slugify(config.hostname);
+      String apName = apBase + "-" + deviceSuffix;
+      WiFi.softAP(apName.c_str(), "", 1);
+      Serial.println("Normal AP geri yüklendi.");
+    }
     Serial.println("AP Kanal 1'e geri çekildi.");
   }
 
@@ -1245,7 +1257,9 @@ void initWebServer() {
     setupPrefs.begin("setup", false);
     setupPrefs.putBool("skip", true);
     setupPrefs.end();
-
+    
+    initWiFi();
+    
     request->send(200, "application/json", "{\"status\":\"skipped\"}");
   });
 
