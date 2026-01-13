@@ -305,6 +305,29 @@
         </div>
     </div>
 </div>
+<div id="wifiModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content setup-card">
+        <div class="modal-header">
+            <h3>Wifi Bağlantısı</h3>
+            <button class="close-btn" onclick="document.getElementById('wifiModal').style.display='none'">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="control-group">
+                <label>Seçilen Ağ (SSID)</label>
+                <input type="text" id="wifiSSID" class="input-field" placeholder="Ağ Adı">
+            </div>
+            <div class="control-group">
+                <label>Şifre</label>
+                <input type="password" id="wifiPass" class="input-field" placeholder="Wifi Şifresi">
+            </div>
+            <br>
+            <button class="btn-large btn-primary" onclick="saveAndConnect()">
+                <span class="icon">💾</span> Kaydet ve Bağlan
+            </button>
+        </div>
+    </div>
+</div>
+
 
 <style>
 /* Basit Modal Stilleri - style.css içine de ekleyebilirsiniz */
@@ -340,6 +363,7 @@
 </body>
 
 </html>
+
 
 
 
