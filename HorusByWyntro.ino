@@ -432,6 +432,10 @@ void loop() {
     }
   }
 
+  if (shouldReboot) {
+    delay(2000); // Tarayıcının "OK" yanıtını alması için bekle
+    ESP.restart();
+}
   // OTA Update check - REMOVED unconditional call causing spam
   // checkAndPerformUpdate();
 
@@ -1289,6 +1293,29 @@ void initWebServer() {
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
+  server.on("/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String ssid = request->hasArg("ssid") ? request->arg("ssid") : "";
+    String pass = request->hasArg("pass") ? request->arg("pass") : "";
+    String hname = request->hasArg("name") ? request->arg("name") : "";
+
+    if (ssid != "") {
+        // Ayarları Config nesnesine veya Preferences'a kaydetme mantığı
+        // Mevcut yapınıza uygun olarak:
+        config.ssid = ssid;
+        config.password = pass;
+        if (hname != "") config.hostname = hname;
+        
+        saveConfig(); // Mevcut yapılandırma kaydetme fonksiyonunuzu çağırın
+        
+        request->send(200, "text/plain", "OK");
+        
+        // Yanıt gittikten sonra reset atması için bayrak kaldır
+        // loop() içinde shouldReboot kontrolü olduğu varsayılmıştır (önceki kod snippet'inde vardı)
+        shouldReboot = true; 
+    } else {
+        request->send(400, "text/plain", "Eksik Bilgi");
+    }
+});
   server.begin();
 }
 
