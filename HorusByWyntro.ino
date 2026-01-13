@@ -1113,9 +1113,9 @@ void processCommand(String jsonStr) {
 // PROPER WiFi Initialization
 // ===============================
 void initWiFi() {
-  WiFi.mode(WIFI_AP_STA); // Hem AP hem İstasyon modu
+  WiFi.mode(WIFI_AP_STA); // Hem AP hem Station modu açık kalsın (geçişler için)
 
-  // Cihaz Suffix'i (MAC son 4 hane)
+  // 1. Cihaz Suffix'i ve mDNS ismini ayarla
   if (deviceSuffix == "") {
       uint64_t chipid = ESP.getEfuseMac();
       uint16_t chip = (uint16_t)(chipid >> 32);
@@ -1124,33 +1124,65 @@ void initWiFi() {
       deviceSuffix = String(suffix);
   }
 
-  // Varsayılan Hostname Ayarı (horus-xxxx)
   String mdnsName = "horus-" + deviceSuffix;
   if (config.hostname == "") {
      config.hostname = "Horus-" + deviceSuffix; 
   }
   
-  // mDNS ve Hostname Ayarı
   WiFi.setHostname(mdnsName.c_str());
+  
+  // mDNS Başlat
   if (MDNS.begin(mdnsName.c_str())) {
       MDNS.addService("http", "tcp", 80);
       Serial.println("mDNS baslatildi: " + mdnsName + ".local");
   }
 
-  // --- İSTENEN DEĞİŞİKLİK: Sabit AP Bilgileri ve Captive Portal ---
-  // Eğer bağlı değilsek veya kurulum modundaysak bu bilgilerle AP aç:
-  WiFi.softAP("Horus", "ByWyntro3545"); 
-  
-  // Captive Portal için tüm DNS isteklerini ESP'nin IP'sine yönlendir
-  dnsServer.start(53, "*", WiFi.softAPIP());
-  Serial.println("AP Baslatildi: Horus / ByWyntro3545");
-  Serial.print("AP IP: ");
-  Serial.println(WiFi.softAPIP());
+  // 2. ÖNCE KAYITLI AĞA BAĞLANMAYI DENE
+  bool connected = false;
+  if (config.ssid != "") {
+    Serial.print("Kayitli aga baglaniliyor: ");
+    Serial.println(config.ssid);
+    
+    WiFi.begin(config.ssid.c_str(), config.password.c_str());
+    
+    // 10 saniye bağlanmayı bekle
+    int retry = 0;
+    while (WiFi.status() != WL_CONNECTED && retry < 20) {
+      delay(500);
+      Serial.print(".");
+      retry++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      connected = true;
+      Serial.println("\nBaglandi!");
+      Serial.print("IP Adresi: ");
+      Serial.println(WiFi.localIP());
+      
+      // Başarılı bağlanırsa AP'yi kapatabilirsin veya açık tutabilirsin.
+      // Karışıklık olmaması için AP'yi kapatıyoruz (Normal Mod):
+      WiFi.softAPdisconnect(true);
+      WiFi.mode(WIFI_STA); 
+    } else {
+      Serial.println("\nBaglanti basarisiz. AP modu aciliyor...");
+    }
+  }
 
-  // Eğer kayıtlı ağ varsa bağlanmayı dene (Arkaplanda)
-  // ... (Mevcut bağlantı kodlarınızın devamı buraya gelebilir, 
-  // ancak öncelik AP'nin hemen "Horus" olarak açılmasıdır.)
-  // Mevcut kodunuzdaki `tryConnect` mantığını koruyabilirsiniz.
+  // 3. EĞER BAĞLANAMADIYSA VEYA KAYITLI AĞ YOKSA -> KURULUM MODU (AP)
+  if (!connected) {
+    Serial.println("Kurulum Modu (AP) Baslatiliyor...");
+    
+    // Senin belirlediğin Sabit AP Bilgileri
+    WiFi.softAP("Horus", "ByWyntro3545"); 
+    
+    // Captive Portal DNS Yönlendirmesi (Sadece AP modunda çalışmalı)
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(53, "*", WiFi.softAPIP());
+    
+    Serial.println("AP Aktif: Horus / ByWyntro3545");
+    Serial.print("AP IP: ");
+    Serial.println(WiFi.softAPIP());
+  }
 }
 
 // ===============================
