@@ -30,9 +30,6 @@ Preferences prefs;
 
 bool setupMode = false;
 bool skipSetup = false;
-namespace: "setup"
-key: "skip"
-
 
 const char* SETUP_AP_SSID = "Horus";
 const char* SETUP_AP_PASS = "ByWyntro3545"; // min 8 char
