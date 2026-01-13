@@ -21,9 +21,10 @@ window.addEventListener("load", () => {
   fetch("/api/device-state")
     .then(r => r.json())
     .then(data => {
-      if (data.setup) {
+      isSetupMode = data.setup;
+      if (isSetupMode) {
         document.getElementById("setupCard").classList.remove("hidden");
-        scanWifi();
+        scanWifi(); // 🔥 BU ÇOK KRİTİK
       }
     });
 });
@@ -671,6 +672,7 @@ function skipSetup() {
       document.getElementById("setupCard").classList.add("hidden");
     });
 }
+
 
 
 
