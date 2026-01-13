@@ -15,6 +15,16 @@
     <link rel="stylesheet" href="style.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+    // Adres çubuğunu temizle: horus.local/index.html -> horus.local/
+    if (window.history.replaceState) {
+        if (window.location.pathname.endsWith("index.html")) {
+            // index.html'i silip temiz kök dizini yapıyoruz
+            var newPath = window.location.pathname.replace("index.html", "");
+            window.history.replaceState(null, null, newPath);
+        }
+    }
+  </script>
 </head>
 
 <body>
@@ -311,6 +321,7 @@
 </body>
 
 </html>
+
 
 
 
