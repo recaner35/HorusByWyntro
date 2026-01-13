@@ -83,6 +83,7 @@ int targetTurnsPerHour = 0; // Saat başı hedef tur
 unsigned long lastTouchTime = 0;
 bool touchState = false;
 String deviceSuffix = ""; // Unique suffix from ChipID
+bool shouldReboot = false;
 
 // Zamanlayıcılar
 unsigned long lastHourCheck = 0;
@@ -543,6 +544,12 @@ void loadConfig() {
     config.direction = doc["dir"] | 2;
     config.hostname = doc["name"] | "";
     config.espNowEnabled = doc["espnow"] | false;
+    
+    // --- EKLENEN ---
+    config.ssid = doc["ssid"] | "";
+    config.password = doc["pass"] | "";
+    // ---------------
+    
     file.close();
   }
 }
@@ -555,6 +562,12 @@ void saveConfig() {
   doc["dir"] = config.direction;
   doc["name"] = config.hostname;
   doc["espnow"] = config.espNowEnabled;
+  
+  // --- EKLENEN ---
+  doc["ssid"] = config.ssid;
+  doc["pass"] = config.password;
+  // ---------------
+  
   serializeJson(doc, file);
   file.close();
 }
@@ -1193,20 +1206,12 @@ void initWiFi() {
 // Web Server Initialization
 // ===============================
 void initWebServer() {
+  // 1. Statik Dosyalar
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
-  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/manifest.json", "application/manifest+json");
-  });
-  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/192x192.png", "image/png");
-  });
-  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/512x512.png", "image/png");
-  });
-  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-  request->send(LittleFS, "/sw.js", "application/javascript");
+  server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/index.html", "text/html");
   });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/style.css", "text/css");
@@ -1217,105 +1222,72 @@ void initWebServer() {
   server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/languages.js", "application/javascript");
   });
+  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/manifest.json", "application/manifest+json");
+  });
+  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/sw.js", "application/javascript");
+  });
+  // İkonlar (Dosya varsa gönderir yoksa 404)
+  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if(LittleFS.exists("/192x192.png")) request->send(LittleFS, "/192x192.png", "image/png");
+    else request->send(404);
+  });
+  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+     if(LittleFS.exists("/512x512.png")) request->send(LittleFS, "/512x512.png", "image/png");
+     else request->send(404);
+  });
 
-  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!isScanning && !shouldStartScan) {
-      shouldStartScan = true;
-      request->send(202, "application/json", "{\"status\":\"scanning\"}");
-    } else {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
+  // 2. Wifi Tarama (JS ile uyumlu hale getirildi)
+  server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int n = WiFi.scanNetworks();
+    String json = "[";
+    for (int i = 0; i < n; ++i) {
+      if (i) json += ",";
+      json += "{";
+      json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
+      json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+      json += "\"secure\":" + String(WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "false" : "true");
+      json += "}";
     }
-  });
-
-  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", getWifiListJson());
-  });
-
-  server.on("/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("ssid", true) && request->hasParam("pass", true)) {
-      WiFi.begin(request->getParam("ssid", true)->value().c_str(),
-                 request->getParam("pass", true)->value().c_str());
-      request->send(200, "application/json", "{\"status\":\"started\"}");
-    } else
-      request->send(400);
-  });
-
-  // Auto OTA Endpoint
-  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (otaStatus == "started" || otaStatus == "updating") {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
-      return;
-    }
-
-    // Check if status request only (you might want a separate GET status
-    // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
-    shouldUpdate = true;
-    otaStatus = "started";
-    request->send(200, "application/json", "{\"status\":\"started\"}");
-  });
-
-  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"status\":\"" + otaStatus + "\"}";
+    json += "]";
     request->send(200, "application/json", json);
+    WiFi.scanDelete();
   });
 
-  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
-    request->send(200, "application/json", json);
-  });
-
-  // Manual OTA Landing
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/update.html", "text/html");
-  });
-
-  // Manual OTA Handler
-  server.on(
-      "/update", HTTP_POST,
-      [](AsyncWebServerRequest *request) {
-        bool shouldReboot = !Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(
-            200, "text/plain", shouldReboot ? "OK" : "FAIL");
-        response->addHeader("Connection", "close");
-        request->send(response);
-        if (shouldReboot)
-          ESP.restart();
-      },
-      [](AsyncWebServerRequest *request, String filename, size_t index,
-         uint8_t *data, size_t len, bool final) {
-        if (!index)
-          Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
-        if (!Update.hasError())
-          Update.write(data, len);
-        if (final)
-          Update.end(true);
-      });
-
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
+  // 3. Wifi Kaydetme
   server.on("/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request) {
     String ssid = request->hasArg("ssid") ? request->arg("ssid") : "";
     String pass = request->hasArg("pass") ? request->arg("pass") : "";
     String hname = request->hasArg("name") ? request->arg("name") : "";
 
     if (ssid != "") {
-        // Ayarları Config nesnesine veya Preferences'a kaydetme mantığı
-        // Mevcut yapınıza uygun olarak:
         config.ssid = ssid;
         config.password = pass;
         if (hname != "") config.hostname = hname;
-        
-        saveConfig(); // Mevcut yapılandırma kaydetme fonksiyonunuzu çağırın
-        
+        saveConfig();
         request->send(200, "text/plain", "OK");
-        
-        // Yanıt gittikten sonra reset atması için bayrak kaldır
-        // loop() içinde shouldReboot kontrolü olduğu varsayılmıştır (önceki kod snippet'inde vardı)
         shouldReboot = true; 
     } else {
         request->send(400, "text/plain", "Eksik Bilgi");
     }
-});
+  });
+
+  // 4. WebSocket
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+
+  // 5. ANDROID/iOS CAPTIVE PORTAL DÜZELTMESİ (BU ÇOK ÖNEMLİ)
+  server.onNotFound([](AsyncWebServerRequest *request) {
+    // Eğer gelen istek bizim IP adresimize değilse (örn: connectivitycheck.gstatic.com)
+    // Cihazı ana sayfaya yönlendir.
+    if (request->host().indexOf(WiFi.softAPIP().toString()) < 0) {
+        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+    } else {
+        request->send(404, "text/plain", "Not found");
+    }
+  });
+
   server.begin();
 }
 
