@@ -71,6 +71,10 @@ struct Config {
   int direction = 2; // 0: CW, 1: CCW, 2: Bi-Directional (Varsayılan 2)
   String hostname = "";
   bool espNowEnabled = false; // ESP-NOW toggle (default false)
+// --- EKSİK OLAN KISIMLAR EKLENDİ ---
+  String ssid = "";      // Wifi SSID
+  String password = "";  // Wifi Şifresi
+  // -----------------------------------
 };
 Config config;
 
