@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+  categories:
+    - title: '✨ Yeni Özellikler & İyileştirmeler'
+      labels:
+        - feature
+        - enhancement
+        - improvement
+        - 'yeni özellik'
+    - title: '🐛 Hata Düzeltmeleri'
+      labels:
+        - fix
+        - bug
+        - 'hata düzeltme'
+    - title: '🧰 Bakım ve Altyapı'
+      labels:
+        - chore
+        - documentation
+        - internal
