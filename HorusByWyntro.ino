@@ -34,6 +34,9 @@ bool skipSetup = false;
 const char* SETUP_AP_SSID = "Horus";
 const char* SETUP_AP_PASS = "ByWyntro3545"; // min 8 char
 
+String cachedWifiList = "[]";
+unsigned long lastScanTime = 0;
+
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
@@ -587,52 +590,51 @@ void saveConfig() {
 void handleWifiScan() {
   Serial.println("WiFi Taraması Başlatılıyor (Senkron)...");
 
-  // 1. Durdur ve Kilitle
   isScanning = true;
+  cachedWifiList = "[]";
+
   if (isEspNowActive) {
     esp_now_deinit();
     isEspNowActive = false;
   }
 
-  // 2. Radyonun Sakinleşmesi için Bekle (DİKKAT: Bloklar)
   delay(200);
 
-  // 3. Modu doğrula (Bazı durumlarda AP'de kalabiliyor)
-  if (WiFi.getMode() != WIFI_AP_STA) {
-    WiFi.mode(WIFI_AP_STA);
-  }
+  WiFi.mode(WIFI_AP_STA);
 
-  // 4. Bloklayan Tarama
   int n = WiFi.scanNetworks(false, true);
   Serial.printf("WiFi tarama tamamlandı: %d ağ bulundu\n", n);
 
-  // 5. İşlem bitti, kilidi aç
+  String json = "[";
+  for (int i = 0; i < n; i++) {
+    if (i > 0) json += ",";
+    json += "{";
+    json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
+    json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+    json += "\"secure\":" +
+            String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
+    json += "}";
+  }
+  json += "]";
+
+  cachedWifiList = json;
+  lastScanTime = millis();
+
+  WiFi.scanDelete();
   isScanning = false;
 
-  // 6. AP'yi kararlı bir kanala geri çek (Eğer STA bağlı değilse)
-  if (WiFi.status() != WL_CONNECTED) {
-    if (setupMode) {
-      WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1);
-      Serial.println("Setup AP yeniden aktif edildi.");
-    } else {
-      String apBase = "horus";
-      if (config.hostname != "") apBase = slugify(config.hostname);
-      String apName = apBase + "-" + deviceSuffix;
-      WiFi.softAP(apName.c_str(), "", 1);
-      Serial.println("Normal AP geri yüklendi.");
-    }
-    Serial.println("AP Kanal 1'e geri çekildi.");
-  }
-
-  // 7. ESP-NOW'u geri yükle (Eğer aktif olması gerekiyorsa ve ŞARTLAR UYGUNSA)
-  if (config.espNowEnabled && WiFi.status() == WL_CONNECTED) {
-    initESPNow();
-    restorePeers();
+  if (setupMode) {
+    WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1);
+    Serial.println("Setup AP yeniden aktif edildi.");
   } else {
-    Serial.println("Tarama bitti ancak ESP-NOW şartları (Toggle veya WiFi) "
-                   "sağlanmadığı için başlatılmadı.");
+    String apBase = "horus";
+    if (config.hostname != "") apBase = slugify(config.hostname);
+    String apName = apBase + "-" + deviceSuffix;
+    WiFi.softAP(apName.c_str(), "", 1);
+    Serial.println("Normal AP geri yüklendi.");
   }
 }
+
 
 void handleWifiConnection() {
   if (WiFi.status() == WL_CONNECTED && wifiStatusStr != "connected")
@@ -645,28 +647,9 @@ String getWifiListJson() {
   if (isScanning) {
     return "{\"status\":\"scanning\"}";
   }
-  int n = WiFi.scanComplete();
-  if (n == -2)
-    return "{\"status\":\"scanning\"}";
-  if (n <= 0) {
-    if (n == 0)
-      WiFi.scanDelete(); // Clear result even if 0
-    return "[]";
-  }
-  String json = "[";
-  for (int i = 0; i < n; ++i) {
-    if (i > 0)
-      json += ",";
-    json +=
-        "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + String(WiFi.RSSI(i)) +
-        ",\"secure\":" +
-        String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") +
-        "}";
-  }
-  json += "]";
-  WiFi.scanDelete();
-  return json;
+  return cachedWifiList;
 }
+
 
 // ===============================
 // ESP-NOW Logic
