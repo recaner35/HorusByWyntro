@@ -29,16 +29,29 @@
 
 <body>
 
-<div id="setupCard" class="setup-card hidden">
-  <h2>Horus Kurulumu</h2>
-  <p>Cihazı Wi-Fi ağına bağlayın</p>
+<div id="setupCard" class="card setup-card hidden">
+  <div class="card-header">
+    <h2>Horus Kurulum</h2>
+    <span class="card-subtitle">
+      Wi-Fi bağlantısı kurarak Horus’u kullanmaya başlayın
+    </span>
+  </div>
 
-  <select id="wifiList"></select>
-  <input type="password" id="wifiPass" placeholder="Wi-Fi Şifresi">
+  <div class="card-body">
 
-  <button onclick="scanWifi()">Ağları Tara</button>
-  <button onclick="connectWifi()">Bağlan</button>
-  <button class="skip-btn" onclick="skipSetup()">Kurulumu Atla</button>
+    <button class="primary-btn full" onclick="scanWifi()">
+      Wi-Fi Ağlarını Tara
+    </button>
+
+    <div id="wifiList" class="wifi-list"></div>
+
+    <div class="divider"></div>
+
+    <button class="ghost-btn full" onclick="skipSetup()">
+      Kurulumu Atla
+    </button>
+
+  </div>
 </div>
 
     <!-- Header / Top Bar -->
@@ -322,6 +335,7 @@
 </body>
 
 </html>
+
 
 
 
