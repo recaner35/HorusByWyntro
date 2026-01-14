@@ -438,20 +438,42 @@ window.deletePeer = function (mac) {
 
 // ================= WIFI LOGIC =================
 function scanWifi() {
-    var list = document.getElementById('wifiList');
-    list.innerHTML = '<div class="list-item placeholder" data-i18n="scanning">' + getTrans('scanning') + '</div>';
+  fetch('/api/wifi-scan');
 
-    fetch('/api/wifi-scan')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status == "scanning") {
-                checkWifiScanResult();
-            } else {
-                // busy
-                setTimeout(checkWifiScanResult, 2000);
-            }
-        });
+  setTimeout(loadWifiList, 1200);
 }
+
+function loadWifiList() {
+  fetch('/api/wifi-list')
+    .then(r => r.json())
+    .then(list => {
+      const c = document.getElementById('wifiList');
+      c.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        c.innerHTML = '<div class="muted">Ağ bulunamadı</div>';
+        return;
+      }
+
+      list.forEach(w => {
+        const div = document.createElement('div');
+        div.className = 'wifi-item';
+        div.onclick = () => openWifiPassword(w.ssid);
+
+        div.innerHTML = `
+          <div>
+            <div class="wifi-name">${w.ssid}</div>
+            <div class="wifi-secure">
+              ${w.secure ? '🔒 Güvenli' : 'Açık Ağ'}
+            </div>
+          </div>
+          <div>›</div>
+        `;
+        c.appendChild(div);
+      });
+    });
+}
+
 
 function checkWifiScanResult() {
     fetch('/api/wifi-list')
@@ -672,6 +694,7 @@ function skipSetup() {
       document.getElementById("setupCard").classList.add("hidden");
     });
 }
+
 
 
 
