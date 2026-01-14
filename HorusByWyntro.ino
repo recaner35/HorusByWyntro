@@ -1362,12 +1362,24 @@ void startSetupMode() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
 
-  dnsServer.start(53, "*", WiFi.softAPIP());
+  DNSServer dnsServer;
+  const byte DNS_PORT = 53;
 
+  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP())
 
   IPAddress ip = WiFi.softAPIP();
   Serial.print("Setup IP: ");
   Serial.println(ip);
+  
+  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", "");
+  });
+  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>OK</BODY></HTML>");
+  });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/index.html", "text/html");
+  });
 }
 
 bool connectToSavedWiFi() {
