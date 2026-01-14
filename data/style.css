@@ -1126,4 +1126,83 @@ input[type="range"]::-moz-range-thumb {
   to   { opacity: 1 }
 }
 
+/* =========================
+   SETUP CARD
+========================= */
+
+.setup-card {
+  max-width: 420px;
+  margin: 40px auto;
+  animation: fadeInUp 0.4s ease;
+}
+
+.setup-card .card-header h2 {
+  margin-bottom: 6px;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.wifi-list {
+  margin-top: 16px;
+}
+
+.wifi-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.wifi-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.wifi-name {
+  font-size: 14px;
+}
+
+.wifi-secure {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 20px 0;
+}
+
+/* Ghost Button */
+.ghost-btn {
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.3);
+  color: #aaa;
+}
+
+.ghost-btn:hover {
+  border-color: rgba(255,255,255,0.6);
+  color: #fff;
+}
+
+/* Simple animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 
