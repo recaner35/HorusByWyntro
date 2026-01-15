@@ -1365,7 +1365,7 @@ void startSetupMode() {
   DNSServer dnsServer;
   const byte DNS_PORT = 53;
 
-  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP())
+  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
   IPAddress ip = WiFi.softAPIP();
   Serial.print("Setup IP: ");
