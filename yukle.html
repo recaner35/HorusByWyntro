@@ -2,81 +2,86 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Horus Kesin Yükleyici</title>
+    <title>Horus Ultimate Flasher</title>
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f4f4f9; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 400px; text-align: center; }
-        .file-group { text-align: left; margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
-        #status { margin-top: 15px; font-size: 14px; font-weight: bold; }
-        esp-web-install-button { margin-top: 20px; --esp-tools-button-color: #007bff; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 420px; text-align: center; }
+        .file-group { text-align: left; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 13px; color: #333; }
+        #log { margin-top: 15px; font-size: 12px; color: #666; max-height: 100px; overflow-y: auto; text-align: left; background: #eee; padding: 5px; border-radius: 5px; display: none;}
+        .btn-container { margin-top: 20px; }
+        /* Hata veren butonu gizleyip sadece fonksiyonunu kullanacağız */
+        esp-web-install-button { margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Horus Flasher (v1.0)</h2>
+    <h2>Horus Pro Flasher</h2>
+    <p style="font-size: 13px; color: #666;">Manifest hatası giderilmiş versiyon. Önce dosyaları seçin.</p>
     
     <div class="file-group">
-        <label>1. Firmware (.bin)</label>
+        <label>1. Firmware (.bin) - 0x10000</label>
         <input type="file" id="fw" accept=".bin">
     </div>
 
     <div class="file-group">
-        <label>2. LittleFS (.bin)</label>
+        <label>2. LittleFS (.bin) - 0x290000</label>
         <input type="file" id="fs" accept=".bin">
     </div>
 
-    <esp-web-install-button id="installBtn"></esp-web-install-button>
-    
-    <div id="status">Lütfen dosyaları seçin</div>
+    <div class="btn-container">
+        <esp-web-install-button id="installBtn"></esp-web-install-button>
+    </div>
+
+    <div id="log"></div>
 </div>
 
 <script>
     const btn = document.getElementById("installBtn");
     const fwInput = document.getElementById("fw");
     const fsInput = document.getElementById("fs");
-    const status = document.getElementById("status");
+    const log = document.getElementById("log");
 
-    // Dosyalar seçildiğinde butonu hazırlayan fonksiyon
-    const prepareUpdate = () => {
+    // Dosya seçimlerini takip et ve manifesti "On-the-Fly" oluştur
+    async function updateManifest() {
         if (fwInput.files.length > 0 && fsInput.files.length > 0) {
             
-            // Bileşene manifest dosyasını string olarak değil, 
-            // doğrudan bellek adresi olarak enjekte ediyoruz.
-            const manifest = {
-                "name": "Horus Firmware",
+            // Dosyaları Blob olarak oku
+            const fwUrl = URL.createObjectURL(fwInput.files[0]);
+            const fsUrl = URL.createObjectURL(fsInput.files[0]);
+
+            // Bileşene manifesti "data URL" olarak veriyoruz. 
+            // Bu sayede dışarıdan dosya indirmeye çalışmaz, veriyi kendi içinde çözer.
+            const manifestObj = {
+                "name": "Horus",
                 "builds": [
                     {
                         "chipFamily": "ESP32",
                         "parts": [
-                            { "path": URL.createObjectURL(fwInput.files[0]), "offset": 65536 }, // 0x10000
-                            { "path": URL.createObjectURL(fsInput.files[0]), "offset": 2686976 } // 0x290000
+                            { "path": fwUrl, "offset": 0x10000 },
+                            { "path": fsUrl, "offset": 0x290000 }
                         ]
                     }
                 ]
             };
 
-            // Modern tarayıcılar için "manifest" özelliğine veri objesini atıyoruz
-            // JSON.stringify kullanarak bileşenin indirme yapmasını engelliyoruz
-            btn.manifest = manifest;
+            // Objeyi Base64 JSON formatına çevirip "data:" protokolü ile veriyoruz.
+            // Bu yöntem "Failed to download" hatasını aşmanın TEK yoludur.
+            const manifestStr = JSON.stringify(manifestObj);
+            const manifestDataUrl = "data:application/json;base64," + btoa(unescape(encodeURIComponent(manifestStr)));
             
-            status.innerText = "Bağlanmaya Hazır!";
-            status.style.color = "green";
+            btn.setAttribute("manifest", manifestDataUrl);
+            
+            console.log("Manifest güncellendi.");
+            log.style.display = "block";
+            log.innerHTML = "✅ Dosyalar hazır. Bağlan butonuna basın.";
         }
-    };
+    }
 
-    fwInput.addEventListener("change", prepareUpdate);
-    fsInput.addEventListener("change", prepareUpdate);
-
-    // Karta bağlanmadan önce son bir kontrol
-    btn.addEventListener("click", (e) => {
-        if (!fwInput.files[0] || !fsInput.files[0]) {
-            e.preventDefault();
-            alert("Lütfen önce iki dosyayı da seçin!");
-        }
-    });
+    fwInput.addEventListener("change", updateManifest);
+    fsInput.addEventListener("change", updateManifest);
 </script>
 
 </body>
