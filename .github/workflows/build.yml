@@ -190,7 +190,6 @@ jobs:
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
             fh.write(f'LITTLEFS_OFFSET={found_offset}\n')
         "
-        
     - name: Generate Factory Bin
       run: |
         pip install esptool
@@ -221,8 +220,7 @@ jobs:
           $LITTLEFS_OFFSET "$LITTLEFS_BIN"
 
         echo "Fabrika dosyası oluşturuldu (Offset: $LITTLEFS_OFFSET): ./build/HorusByWyntro-factory.bin"
-
-      - name: Create Release
+    - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.NEW_VERSION }}
@@ -231,7 +229,6 @@ jobs:
         make_latest: true
         body: |
           ## 🚀 Horus v${{ env.NEW_VERSION }} Yayında!
-          
           Aşağıda bu sürümle gelen değişikliklerin listesini bulabilirsiniz.
         files: |
           ./build/HorusByWyntro.ino.bin
