@@ -49,7 +49,7 @@ unsigned long lastScanTime = 0;
 // ===============================
 // Sensör ve Buton Tanımlamaları
 // ===============================
-#define TOUCH_PIN 23 // TTP223 Dokunmatik Sensör
+#define TOUCH_PIN 23 // TTP223 Dokunmatik Sensörü
 #define LED_PIN 2    // Built-in LED
 
 // ===============================
