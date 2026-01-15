@@ -190,8 +190,7 @@ jobs:
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
             fh.write(f'LITTLEFS_OFFSET={found_offset}\n')
         "
-
-    # Adım 2: Factory Bin Oluştur
+        
     - name: Generate Factory Bin
       run: |
         pip install esptool
