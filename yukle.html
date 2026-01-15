@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>Horus Güvenli Yükleyici</title>
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        .input-group { text-align: left; margin-bottom: 20px; border: 1px solid #e0e0e0; padding: 15px; border-radius: 10px; }
+        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #333; }
+        input[type="file"] { width: 100%; }
+        #installBtn { margin-top: 20px; display: none; }
+        .error-note { color: #d32f2f; font-size: 12px; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Horus Flasher</h2>
+    <p style="font-size: 14px; color: #666;">Dosyaları seçtiğinizde "Yükle" butonu aktif olacaktır.</p>
+
+    <div class="input-group">
+        <label>1. Firmware (.bin)</label>
+        <input type="file" id="fwFile" accept=".bin">
+    </div>
+
+    <div class="input-group">
+        <label>2. LittleFS (.bin)</label>
+        <input type="file" id="fsFile" accept=".bin">
+    </div>
+
+    <esp-web-install-button id="installBtn"></esp-web-install-button>
+    
+    <div id="status">Lütfen dosyaları seçiniz.</div>
+</div>
+
+<script>
+    const fwInput = document.getElementById("fwFile");
+    const fsInput = document.getElementById("fsFile");
+    const btn = document.getElementById("installBtn");
+    const status = document.getElementById("status");
+
+    const updateConfig = () => {
+        if (fwInput.files.length > 0 && fsInput.files.length > 0) {
+            
+            // Dosyaları belleğe alıp butona doğrudan yüklüyoruz
+            btn.manifest = {
+                "name": "Horus Firmware",
+                "version": "1.0.0",
+                "builds": [
+                    {
+                        "chipFamily": "ESP32",
+                        "eraseFirst": true,
+                        "parts": [
+                            { "path": URL.createObjectURL(fwInput.files[0]), "offset": 0x10000 },
+                            { "path": URL.createObjectURL(fsInput.files[0]), "offset": 0x290000 }
+                        ]
+                    }
+                ]
+            };
+
+            btn.style.display = "inline-block";
+            status.innerHTML = "✅ Dosyalar hazır!<br><small>Bağlan'a tıklayın.</small>";
+            status.style.color = "green";
+        }
+    };
+
+    fwInput.addEventListener("change", updateConfig);
+    fsInput.addEventListener("change", updateConfig);
+
+    // Kritik: Manifest hatasını engellemek için bileşenin iç yükleme mekanizmasını manuel tetikliyoruz
+    btn.addEventListener("click", (e) => {
+        if (!btn.manifest) {
+            e.preventDefault();
+            alert("Lütfen önce dosyaları seçin!");
+        }
+    });
+</script>
+
+</body>
+</html>
