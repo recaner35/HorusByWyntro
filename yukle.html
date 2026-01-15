@@ -2,78 +2,79 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Horus Güvenli Yükleyici</title>
+    <title>Horus Kesin Yükleyici</title>
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 400px; text-align: center; }
-        .input-group { text-align: left; margin-bottom: 20px; border: 1px solid #e0e0e0; padding: 15px; border-radius: 10px; }
-        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #333; }
-        input[type="file"] { width: 100%; }
-        #installBtn { margin-top: 20px; display: none; }
-        .error-note { color: #d32f2f; font-size: 12px; margin-top: 10px; font-weight: bold; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f4f4f9; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        .file-group { text-align: left; margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 10px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
+        #status { margin-top: 15px; font-size: 14px; font-weight: bold; }
+        esp-web-install-button { margin-top: 20px; --esp-tools-button-color: #007bff; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Horus Flasher</h2>
-    <p style="font-size: 14px; color: #666;">Dosyaları seçtiğinizde "Yükle" butonu aktif olacaktır.</p>
-
-    <div class="input-group">
+<div class="card">
+    <h2>Horus Flasher (v1.0)</h2>
+    
+    <div class="file-group">
         <label>1. Firmware (.bin)</label>
-        <input type="file" id="fwFile" accept=".bin">
+        <input type="file" id="fw" accept=".bin">
     </div>
 
-    <div class="input-group">
+    <div class="file-group">
         <label>2. LittleFS (.bin)</label>
-        <input type="file" id="fsFile" accept=".bin">
+        <input type="file" id="fs" accept=".bin">
     </div>
 
     <esp-web-install-button id="installBtn"></esp-web-install-button>
     
-    <div id="status">Lütfen dosyaları seçiniz.</div>
+    <div id="status">Lütfen dosyaları seçin</div>
 </div>
 
 <script>
-    const fwInput = document.getElementById("fwFile");
-    const fsInput = document.getElementById("fsFile");
     const btn = document.getElementById("installBtn");
+    const fwInput = document.getElementById("fw");
+    const fsInput = document.getElementById("fs");
     const status = document.getElementById("status");
 
-    const updateConfig = () => {
+    // Dosyalar seçildiğinde butonu hazırlayan fonksiyon
+    const prepareUpdate = () => {
         if (fwInput.files.length > 0 && fsInput.files.length > 0) {
             
-            // Dosyaları belleğe alıp butona doğrudan yüklüyoruz
-            btn.manifest = {
+            // Bileşene manifest dosyasını string olarak değil, 
+            // doğrudan bellek adresi olarak enjekte ediyoruz.
+            const manifest = {
                 "name": "Horus Firmware",
-                "version": "1.0.0",
                 "builds": [
                     {
                         "chipFamily": "ESP32",
-                        "eraseFirst": true,
                         "parts": [
-                            { "path": URL.createObjectURL(fwInput.files[0]), "offset": 0x10000 },
-                            { "path": URL.createObjectURL(fsInput.files[0]), "offset": 0x290000 }
+                            { "path": URL.createObjectURL(fwInput.files[0]), "offset": 65536 }, // 0x10000
+                            { "path": URL.createObjectURL(fsInput.files[0]), "offset": 2686976 } // 0x290000
                         ]
                     }
                 ]
             };
 
-            btn.style.display = "inline-block";
-            status.innerHTML = "✅ Dosyalar hazır!<br><small>Bağlan'a tıklayın.</small>";
+            // Modern tarayıcılar için "manifest" özelliğine veri objesini atıyoruz
+            // JSON.stringify kullanarak bileşenin indirme yapmasını engelliyoruz
+            btn.manifest = manifest;
+            
+            status.innerText = "Bağlanmaya Hazır!";
             status.style.color = "green";
         }
     };
 
-    fwInput.addEventListener("change", updateConfig);
-    fsInput.addEventListener("change", updateConfig);
+    fwInput.addEventListener("change", prepareUpdate);
+    fsInput.addEventListener("change", prepareUpdate);
 
-    // Kritik: Manifest hatasını engellemek için bileşenin iç yükleme mekanizmasını manuel tetikliyoruz
+    // Karta bağlanmadan önce son bir kontrol
     btn.addEventListener("click", (e) => {
-        if (!btn.manifest) {
+        if (!fwInput.files[0] || !fsInput.files[0]) {
             e.preventDefault();
-            alert("Lütfen önce dosyaları seçin!");
+            alert("Lütfen önce iki dosyayı da seçin!");
         }
     });
 </script>
