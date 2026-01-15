@@ -26,6 +26,12 @@
 #include <WiFi.h>
 #include <Preferences.h>
 
+// ===== FORWARD DECLARATIONS (ŞART) =====
+bool connectToSavedWiFi();
+void startSetupMode();
+void initWebServer();
+void initWiFi();
+
 Preferences prefs;
 
 bool setupMode = false;
@@ -144,7 +150,6 @@ void loadConfig();
 void saveConfig();
 void initWiFi();
 void initMotor();
-void initWebServer();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len);
 void processCommand(String jsonStr);
@@ -357,11 +362,7 @@ void checkAndPerformUpdate() {
 // ===============================
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n\nHORUS BY WYNTRO - Başlatılıyor...");
-  Preferences setupPrefs;
-  setupPrefs.begin("setup", true);
-  skipSetup = setupPrefs.getBool("skip", false);
-  setupPrefs.end();
+  Serial.println("\nHORUS BY WYNTRO - Baslatiliyor");
 
   bool connected = connectToSavedWiFi();
   setupMode = (!connected && !skipSetup);
@@ -372,13 +373,18 @@ void setup() {
     initWiFi();
   }
 
-
-
   if (!LittleFS.begin(false)) {
     Serial.println("LittleFS mount FAILED");
   } else {
     Serial.println("LittleFS OK");
   }
+
+  initWebServer();
+  server.begin();
+
+  Serial.println("Web Server BASLADI");
+}
+
 
 
 
@@ -409,7 +415,7 @@ void setup() {
   // ESP-NOW setup() içinde direkt başlatılmıyor.
   // loop() içindeki yönetim döngüsü WiFi bağlandığında otomatik başlatacaktır.
 
-void initWebServer() {
+) {
 
   server.serveStatic("/", LittleFS, "/")
     .setDefaultFile("index.html");
