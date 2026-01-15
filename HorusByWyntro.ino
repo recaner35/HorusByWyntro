@@ -66,7 +66,7 @@ unsigned long lastScanTime = 0;
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.177"
+#define FIRMWARE_VERSION "1.0.178"
 #define PEER_FILE "/peers.json"
 
 // ===============================
