@@ -18,19 +18,19 @@
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
-#include <NetworkClientSecure.h> // Core 3.x SSL fix
+#include <NetworkClientSecure.h>
 #include <Update.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <vector>
-#include <WiFi.h>
 #include <Preferences.h>
 
-// ===== FORWARD DECLARATIONS (ŞART) =====
+// ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
 void startSetupMode();
 void initWebServer();
 void initWiFi();
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 
 Preferences prefs;
 
@@ -38,7 +38,7 @@ bool setupMode = false;
 bool skipSetup = false;
 
 const char* SETUP_AP_SSID = "Horus";
-const char* SETUP_AP_PASS = "ByWyntro3545"; // min 8 char
+const char* SETUP_AP_PASS = "ByWyntro3545"; 
 
 String cachedWifiList = "[]";
 unsigned long lastScanTime = 0;
@@ -46,7 +46,6 @@ unsigned long lastScanTime = 0;
 // ===============================
 // Motor Pin Tanımlamaları
 // ===============================
-// 28BYJ-48 için pin sırası: IN1-IN3-IN2-IN4 şeklinde olmalı
 #define MOTOR_PIN_1 19
 #define MOTOR_PIN_2 18
 #define MOTOR_PIN_3 5
@@ -55,28 +54,23 @@ unsigned long lastScanTime = 0;
 // ===============================
 // Sensör ve Buton Tanımlamaları
 // ===============================
-#define TOUCH_PIN 23 // TTP223 Dokunmatik Sensörü
-#define LED_PIN 2    // Built-in LED
+#define TOUCH_PIN 23 
+#define LED_PIN 2    
 
 // ===============================
 // Sabitler ve Ayarlar
 // ===============================
-#define STEPS_PER_REVOLUTION 2048 // 28BYJ-48 adım sayısı (Yaklaşık)
+#define STEPS_PER_REVOLUTION 2048 
 #define JSON_CONFIG_FILE "/config.json"
-#define GITHUB_VERSION_URL                                                     \
-  "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
-  "version.json"
+#define GITHUB_VERSION_URL "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/version.json"
 #define FIRMWARE_VERSION "1.0.178"
 #define PEER_FILE "/peers.json"
 
 // ===============================
 // Nesneler
 // ===============================
-// Motor nesnesi (FULL4WIRE modu) - Pin sırası 1-3-2-4 ÖNEMLİ
-AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
-                     MOTOR_PIN_2, MOTOR_PIN_4);
+AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3, MOTOR_PIN_2, MOTOR_PIN_4);
 
-// Web Sunucusu (Port 80)
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
@@ -84,30 +78,28 @@ AsyncWebSocket ws("/ws");
 // Global Değişkenler (Durum)
 // ===============================
 struct Config {
-  int tpd = 900;     // Günlük Tur Sayısı (Varsayılan 900)
-  int duration = 10; // Bir tur süresi (sn) (5-15)
-  int direction = 2; // 0: CW, 1: CCW, 2: Bi-Directional (Varsayılan 2)
+  int tpd = 900;     
+  int duration = 10; 
+  int direction = 2; 
   String hostname = "";
-  bool espNowEnabled = false; // ESP-NOW toggle (default false)
+  bool espNowEnabled = false; 
 };
 Config config;
 
 DNSServer dnsServer;
-bool isRunning = false;      // Sistem genel olarak aktif mi?
-bool isMotorMoving = false;  // Motor şu an dönüyor mu?
-bool isEspNowActive = false; // ESP-NOW başarıyla başlatıldı mı?
+bool isRunning = false;     
+bool isMotorMoving = false;  
+bool isEspNowActive = false; 
 unsigned long sessionStartTime = 0;
-int turnsThisHour = 0;      // Bu saatlik dilimde atılan tur
-int targetTurnsPerHour = 0; // Saat başı hedef tur
+int turnsThisHour = 0;      
+int targetTurnsPerHour = 0; 
 unsigned long lastTouchTime = 0;
 bool touchState = false;
-String deviceSuffix = ""; // Unique suffix from ChipID
+String deviceSuffix = ""; 
 
-// Zamanlayıcılar
 unsigned long lastHourCheck = 0;
-unsigned long hourDuration = 3600000; // 1 Saat (ms)
+unsigned long hourDuration = 3600000; 
 
-// ESP-NOW Peer Listesi
 struct PeerDevice {
   String mac;
   String name;
@@ -118,40 +110,35 @@ struct PeerDevice {
   bool isRunning = false;
 };
 std::vector<PeerDevice> peers;
-#define PEER_TIMEOUT 60000 // 60s görmezsek sileriz
+#define PEER_TIMEOUT 60000 
 
-// ESP-NOW Paket Yapısı
 typedef struct struct_message {
-  char type[10]; // "DISCOVER", "STATUS", "CMD"
+  char type[10]; 
   char sender_mac[20];
   char sender_name[32];
-  char payload[64]; // JSON komut veya durum
+  char payload[64]; 
 } struct_message;
 
 struct_message myData;
 struct_message incomingData;
 
-// WiFi & Connection State
 bool isScanning = false;
-bool shouldStartScan = false; // Flag to trigger scan from loop
+bool shouldStartScan = false; 
 long lastWifiCheck = 0;
 String wifiStatusStr = "disconnected";
 bool tryConnect = false;
 unsigned long connectStartTime = 0;
 String myMacAddress;
-bool shouldUpdate = false;       // Flag for Auto OTA in loop
-String otaStatus = "idle";       // idle, started, up_to_date, error
-unsigned long scanStartTime = 0; // For WiFi scan timeout
+bool shouldUpdate = false;       
+String otaStatus = "idle";       
+unsigned long scanStartTime = 0; 
 
 // ===============================
 // FONKSİYON PROTOTİPLERİ
 // ===============================
 void loadConfig();
 void saveConfig();
-void initWiFi();
 void initMotor();
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-               AwsEventType type, void *arg, uint8_t *data, size_t len);
 void processCommand(String jsonStr);
 void updateSchedule();
 void handlePhysicalControl();
@@ -180,13 +167,9 @@ String slugify(String text) {
 
   for (int i = 0; i < text.length(); i++) {
     char c = text[i];
-    // Basit Mapping
     switch ((unsigned char)c) {
-    case 0xC3:  // UTF8 start
-      continue; // Skip prefix byte
-    // Note: Handling multi-byte chars correctly requires peeking next usually,
-    // but for basic tr chars, we can approximate map if input is consistent.
-    // Better approach for Arduino string simple map:
+    case 0xC3:  
+      continue; 
     default:
       if (c >= 'a' && c <= 'z')
         out += c;
@@ -194,16 +177,10 @@ String slugify(String text) {
         out += c;
       else if (c == ' ' || c == '-')
         out += '-';
-      // Handle explicit Turkish Char replacements if ASCII codes match,
-      // else they might be filtered by alnum check.
-      // Given complexity of UTF8 on Arduino without libs, we trust input is
-      // "mostly" alnum or cleaned in JS. But let's handle spaces firmly.
       break;
     }
   }
 
-  // Re-run for specific TR replacements manually if standard text logic fails
-  // Since String object is UTF8, replacing commonly used codes:
   text.replace("ş", "s");
   text.replace("Ş", "s");
   text.replace("ı", "i");
@@ -217,7 +194,6 @@ String slugify(String text) {
   text.replace("ç", "c");
   text.replace("Ç", "c");
 
-  // Clean pass
   out = "";
   for (int i = 0; i < text.length(); i++) {
     char c = text[i];
@@ -228,18 +204,17 @@ String slugify(String text) {
     }
   }
 
-  // Remove duplicate dashes
   while (out.indexOf("--") >= 0) {
     out.replace("--", "-");
   }
-  // Remove leading/trailing dashes
+  
   if (out.startsWith("-"))
     out = out.substring(1);
   if (out.endsWith("-"))
     out = out.substring(0, out.length() - 1);
 
   if (out.length() == 0)
-    return "horus"; // Default base if empty
+    return "horus"; 
   return out;
 }
 
@@ -264,11 +239,9 @@ bool execOTA(String url, int command) {
       size_t written = Update.writeStream(http.getStream());
 
       if (written == contentLength) {
-        Serial.println("Yazma basarili: " + String(written) + "/" +
-                       String(contentLength));
+        Serial.println("Yazma basarili: " + String(written) + "/" + String(contentLength));
       } else {
-        Serial.println("Yazma hatasi: " + String(written) + "/" +
-                       String(contentLength));
+        Serial.println("Yazma hatasi: " + String(written) + "/" + String(contentLength));
         return false;
       }
 
@@ -298,7 +271,7 @@ bool execOTA(String url, int command) {
 
 void checkAndPerformUpdate() {
   Serial.println("Guncelleme kontrol ediliyor...");
-  otaStatus = "started"; // Temporary status
+  otaStatus = "started"; 
 
   NetworkClientSecure client;
   client.setInsecure();
@@ -323,9 +296,7 @@ void checkAndPerformUpdate() {
       Serial.println("Yeni surum bulundu! Guncelleniyor...");
       otaStatus = "updating";
 
-      String baseUrl =
-          "https://github.com/recaner35/HorusByWyntro/releases/download/" +
-          newVersion + "/";
+      String baseUrl = "https://github.com/recaner35/HorusByWyntro/releases/download/" + newVersion + "/";
       String fsUrl = baseUrl + "HorusByWyntro.littlefs.bin";
       String fwUrl = baseUrl + "HorusByWyntro.ino.bin";
 
@@ -364,71 +335,46 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\nHORUS BY WYNTRO - Baslatiliyor");
 
-  bool connected = connectToSavedWiFi();
-  setupMode = (!connected && !skipSetup);
+  Preferences setupPrefs;
+  setupPrefs.begin("setup", true);
+  skipSetup = setupPrefs.getBool("skip", false);
+  setupPrefs.end();
 
-  if (setupMode) {
+  bool connected = connectToSavedWiFi();
+
+  if (!connected && !skipSetup) {
+    setupMode = true;
     startSetupMode();
   } else {
+    setupMode = false;
     initWiFi();
   }
 
   if (!LittleFS.begin(false)) {
-    Serial.println("LittleFS mount FAILED");
+    Serial.println("LittleFS baslatilamadi!");
   } else {
     Serial.println("LittleFS OK");
   }
 
-  initWebServer();
-  server.begin();
-
-  Serial.println("Web Server BASLADI");
-}
-
-
-
-
   loadConfig();
+
   pinMode(TOUCH_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
 
-  // Generate Device Suffix from Efuse ID
   uint64_t chipid = ESP.getEfuseMac();
   uint32_t low = chipid & 0xFFFFFFFF;
   uint16_t idHigh = (low >> 0) & 0xFFFF;
   char idStr[5];
   sprintf(idStr, "%04X", idHigh);
   deviceSuffix = String(idStr);
+
   Serial.println("Device Suffix: " + deviceSuffix);
 
   initMotor();
-  if (!setupMode) {
-    initWiFi();
-  }
-
-  delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
   initWebServer();
   server.begin();
+
   Serial.println("Web Server BASLADI");
-}
-
-  // ESP-NOW setup() içinde direkt başlatılmıyor.
-  // loop() içindeki yönetim döngüsü WiFi bağlandığında otomatik başlatacaktır.
-
-) {
-
-  server.serveStatic("/", LittleFS, "/")
-    .setDefaultFile("index.html");
-
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
-
-  server.on("/api/device-state", HTTP_GET,
-    [](AsyncWebServerRequest *request) {
-      request->send(200, "application/json",
-        String("{\"setup\":") + (setupMode ? "true" : "false") + "}");
-    }
-  );
 }
 
 // ===============================
@@ -470,54 +416,34 @@ void loop() {
     }
   }
 
-  // OTA Update check - REMOVED unconditional call causing spam
-  // checkAndPerformUpdate();
-
-  // ESP-NOW Yönetimi: Sadece WiFi'a bağlıyken ve tarama yokken çalıştır
   static unsigned long lastEspNowCheck = 0;
   if (millis() - lastEspNowCheck > 5000) {
     lastEspNowCheck = millis();
-    bool shouldBeActive =
-        !isScanning && config.espNowEnabled && (WiFi.status() == WL_CONNECTED);
+    bool shouldBeActive = !isScanning && config.espNowEnabled && (WiFi.status() == WL_CONNECTED);
 
     if (shouldBeActive && !isEspNowActive) {
       Serial.println("WiFi bağlı ve ESP-NOW toggle açık, başlatılıyor...");
       initESPNow();
       restorePeers();
     } else if (!shouldBeActive && isEspNowActive) {
-      Serial.print("ESP-NOW durduruluyor (Sebep: ");
-      if (isScanning)
-        Serial.print("Tarama aktif");
-      else if (!config.espNowEnabled)
-        Serial.print("Toggle kapalı");
-      else if (WiFi.status() != WL_CONNECTED)
-        Serial.print("WiFi bağlantısı yok");
-      Serial.println(")");
-
+      Serial.print("ESP-NOW durduruluyor");
       esp_now_deinit();
       isEspNowActive = false;
     }
   }
+  
   if (setupMode) {
     dnsServer.processNextRequest();
   }
 
-  // Peer Temizliği ve Periyodik Discovery
-  static unsigned long lastPrune = 0;
   static unsigned long lastDiscovery = 0;
 
-  // Her 10 saniyede bir discovery broadcast gönder
-  if (!isScanning && config.espNowEnabled &&
-      (millis() - lastDiscovery > 10000)) {
+  if (!isScanning && config.espNowEnabled && (millis() - lastDiscovery > 10000)) {
     lastDiscovery = millis();
     broadcastDiscovery();
   }
 
-  // Her 10 saniyede bir eski peer'ları temizle
-  // Her 10 saniyede bir eski peer'ları temizle -- DEVRE DIŞI BIRAKILDI
-  // (Persistence için)
-
-  delay(2); // CPU ve WiFi stack için kısa bekleme
+  delay(2); 
 }
 
 // ===============================
@@ -620,8 +546,7 @@ void handleWifiScan() {
     json += "{";
     json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
     json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-    json += "\"secure\":" +
-            String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
+    json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
     json += "}";
   }
   json += "]";
@@ -664,15 +589,13 @@ String getWifiListJson() {
 // ESP-NOW Logic
 // ===============================
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
-void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingDataPtr,
-                int len) {
+void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingDataPtr, int len) {
   const uint8_t *mac = info->src_addr;
 #else
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 #endif
   memcpy(&incomingData, incomingDataPtr, sizeof(incomingData));
 
-  // Kendi paketimizi duyarsak yoksay (MAC byte karşılaştırması)
   uint8_t myRawMac[6];
   WiFi.macAddress(myRawMac);
   if (memcmp(mac, myRawMac, 6) == 0)
@@ -682,15 +605,12 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
   String senderMac = String(incomingData.sender_mac);
   String senderName = String(incomingData.sender_name);
 
-  Serial.println("ESP-NOW Paket Alındı!");
-  Serial.println("  Tip: " + type);
-  Serial.println("  Gönderen MAC: " + senderMac);
-  Serial.println("  Gönderen İsim: " + senderName);
+  Serial.println("ESP-NOW Paket Alındı: " + type);
 
   bool found = false;
   bool needsUpdate = false;
 
-  StaticJsonDocument<128> doc_payload; // Parse payload once for all checks
+  StaticJsonDocument<128> doc_payload; 
   deserializeJson(doc_payload, incomingData.payload);
 
   for (auto &p : peers) {
@@ -699,9 +619,9 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
       if (p.name != senderName) {
         p.name = senderName;
         needsUpdate = true;
-        savePeers(); // İsim değişirse kaydet
+        savePeers(); 
       }
-      // Update motor settings if present in payload
+      
       if (doc_payload.containsKey("r"))
         p.isRunning = doc_payload["r"];
       if (doc_payload.containsKey("t"))
@@ -712,7 +632,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
         p.direction = doc_payload["dr"];
 
       found = true;
-      Serial.println("  Mevcut peer güncellendi");
       break;
     }
   }
@@ -723,7 +642,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     newPeer.name = senderName;
     newPeer.lastSeen = millis();
 
-    // Populate new peer's motor settings from payload
     if (doc_payload.containsKey("r"))
       newPeer.isRunning = doc_payload["r"];
     if (doc_payload.containsKey("t"))
@@ -734,30 +652,19 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
       newPeer.direction = doc_payload["dr"];
 
     peers.push_back(newPeer);
-
-    Serial.println("  Yeni peer eklendi! Toplam peer sayısı: " +
-                   String(peers.size()));
     needsUpdate = true;
-    savePeers(); // Yeni peer eklendiğinde kaydet
+    savePeers(); 
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0; // 0 = Home channel (Auto)
+    peerInfo.channel = 0; 
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
-      if (esp_now_add_peer(&peerInfo) == ESP_OK) {
-        Serial.println("  Peer ESP-NOW listesine eklendi");
-      } else {
-        Serial.println("  Peer ESP-NOW listesine eklenemedi!");
-      }
+      esp_now_add_peer(&peerInfo);
     }
   }
 
-  // Eğer bu bir CMD ise ve bize geldiyse uygula
   if (type == "CMD") {
-    // doc_payload already contains the deserialized data
-
-    // Ayar değiştirme komutu
     if (doc_payload.containsKey("set")) {
       if (doc_payload.containsKey("t"))
         config.tpd = doc_payload["t"];
@@ -770,31 +677,26 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 
       saveConfig();
       updateSchedule();
-      broadcastStatus(); // Yeni durumu herkese bildir
+      broadcastStatus(); 
 
-      // WS'ye de bildir
       String json = "{\"running\":" + String(isRunning ? "true" : "false") +
                     ",\"tpd\":" + String(config.tpd) +
                     ",\"dur\":" + String(config.duration) +
                     ",\"dir\":" + String(config.direction) + "}";
       ws.textAll(json);
-    } else { // Original CMD actions (start/stop)
+    } else { 
       String action = doc_payload["action"];
-      Serial.println("  Komut alındı: " + action);
-
       if (action == "start")
         isRunning = true;
       if (action == "stop")
         isRunning = false;
 
       broadcastStatus();
-      String resp =
-          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
       ws.textAll(resp);
     }
   }
 
-  // Peer listesi değiştiyse web socket'e bildir
   if (needsUpdate) {
     String json = "{ \"peers\": [";
     for (int i = 0; i < peers.size(); i++) {
@@ -810,30 +712,14 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
     }
     json += "] }";
     ws.textAll(json);
-    Serial.println("Mevcut peer sayısı: " + String(peers.size()));
-  } /* else if (type == "peer_settings") {
-    // Send settings command to peer
-    String target = doc["target"];
-    StaticJsonDocument<128> pDoc;
-    pDoc["set"] = true;
-    pDoc["t"] = doc["tpd"];
-    pDoc["d"] = doc["dur"];
-    pDoc["dr"] = doc["dir"];
-    pDoc["r"] = doc["running"];
-
-    String payload;
-    serializeJson(pDoc, payload);
-    sendToPeer(target, payload);
-  } */
+  } 
 }
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  // Debug if needed
+  // Debug info
 }
 
 void initESPNow() {
-  // WiFi.disconnect() kaldırıldı - Bağlantıyı koparıp döngüye girmemesi için
-
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     isEspNowActive = false;
@@ -842,34 +728,26 @@ void initESPNow() {
 
   isEspNowActive = true;
   Serial.println("ESP-NOW Başlatıldı");
-  int currentChannel = WiFi.channel();
-  Serial.println("WiFi Kanal: " + String(currentChannel));
-
+  
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb((esp_now_send_cb_t)OnDataSent);
 
-  // Broadcast peer ekleme
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 0; // 0 = Home channel (Auto)
+  peerInfo.channel = 0; 
   peerInfo.encrypt = false;
 
-  if (esp_now_add_peer(&peerInfo) == ESP_OK) {
-    Serial.println("Broadcast peer eklendi");
-  } else {
-    Serial.println("Broadcast peer eklenemedi!");
-  }
+  esp_now_add_peer(&peerInfo);
 }
 
 void restorePeers() {
   for (auto &p : peers) {
     uint8_t mac[6];
-    sscanf(p.mac.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2],
-           &mac[3], &mac[4], &mac[5]);
+    sscanf(p.mac.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0; // Auto follow home channel
+    peerInfo.channel = 0; 
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       esp_now_add_peer(&peerInfo);
@@ -894,11 +772,10 @@ void loadPeers() {
           p.tpd = obj["tpd"];
           p.duration = obj["dur"];
           p.direction = obj["dir"];
-          p.isRunning = false; // Başlangıçta false varsayalım
-          p.lastSeen = 0;      // Offline
+          p.isRunning = false; 
+          p.lastSeen = 0;      
           peers.push_back(p);
         }
-        Serial.println("Peerlar yüklendi: " + String(peers.size()));
       }
       file.close();
     }
@@ -920,11 +797,9 @@ void savePeers() {
     }
     serializeJson(doc, file);
     file.close();
-    Serial.println("Peerlar kaydedildi.");
   }
 }
 
-// Helper to get status JSON
 String getShortStatusJson() {
   StaticJsonDocument<128> doc;
   doc["r"] = isRunning;
@@ -942,18 +817,14 @@ void broadcastDiscovery() {
 
   strcpy(myData.type, "DISCOVER");
   strcpy(myData.sender_mac, myMacAddress.c_str());
-  String displayName =
-      (config.hostname != "") ? config.hostname : "Horus-Device";
+  String displayName = (config.hostname != "") ? config.hostname : "Horus-Device";
   strcpy(myData.sender_name, displayName.c_str());
 
   String payload = getShortStatusJson();
   payload.toCharArray(myData.payload, 64);
 
   uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-  esp_err_t result =
-      esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-  //...
+  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
 }
 
 void broadcastStatus() {
@@ -962,8 +833,7 @@ void broadcastStatus() {
 
   strcpy(myData.type, "STATUS");
   strcpy(myData.sender_mac, myMacAddress.c_str());
-  String displayName =
-      (config.hostname != "") ? config.hostname : "Horus-Device";
+  String displayName = (config.hostname != "") ? config.hostname : "Horus-Device";
   strcpy(myData.sender_name, displayName.c_str());
 
   String payload = getShortStatusJson();
@@ -978,8 +848,7 @@ void sendToPeer(String targetMac, String payloadJson) {
     return;
 
   uint8_t peerAddr[6];
-  sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1],
-         &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
+  sscanf(targetMac.c_str(), "%x:%x:%x:%x:%x:%x", &peerAddr[0], &peerAddr[1], &peerAddr[2], &peerAddr[3], &peerAddr[4], &peerAddr[5]);
 
   strcpy(myData.type, "CMD");
   strcpy(myData.sender_mac, myMacAddress.c_str());
@@ -1004,7 +873,7 @@ void processCommand(String jsonStr) {
     if (action == "stop")
       isRunning = false;
     updateSchedule();
-    broadcastStatus(); // Added broadcastStatus here
+    broadcastStatus(); 
     String resp = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
     ws.textAll(resp);
   } else if (type == "settings") {
@@ -1018,12 +887,10 @@ void processCommand(String jsonStr) {
       bool targetState = doc["espnow"];
       if (targetState && WiFi.status() != WL_CONNECTED) {
         config.espNowEnabled = false;
-        // WS üzerinden toggle'ı tekrar kapalıya çekmesi için durum gönder
         String resp = "{\"espnow\":false}";
         ws.textAll(resp);
 
-        String errorMsg =
-            "{\"type\":\"error\",\"message\":\"WiFi baglantisi gerekli!\"}";
+        String errorMsg = "{\"type\":\"error\",\"message\":\"WiFi baglantisi gerekli!\"}";
         ws.textAll(errorMsg);
       } else {
         config.espNowEnabled = targetState;
@@ -1045,15 +912,13 @@ void processCommand(String jsonStr) {
       if (newName != config.hostname) {
         config.hostname = newName;
         saveConfig();
-        // İsim değişikliği için restart gerekli
-        // WS yanıtını gönderip restart atalım
         String resp = "{\"tpd\":" + String(config.tpd) +
                       ",\"dur\":" + String(config.duration) +
                       ",\"dir\":" + String(config.direction) + ",\"espnow\":" +
                       String(config.espNowEnabled ? "true" : "false") +
                       ",\"name\":\"" + config.hostname + "\"}";
         ws.textAll(resp);
-        delay(500); // Mesajın gitmesi için kısa bekleme
+        delay(500); 
         ESP.restart();
         return;
       }
@@ -1070,18 +935,13 @@ void processCommand(String jsonStr) {
     ws.textAll(resp);
   } else if (type == "check_peers") {
     if (isScanning) {
-      Serial.println("Tarama devam ediyor, peer sorgusu yoksayılıyor.");
       return;
     }
     if (!isEspNowActive) {
-      Serial.println("ESP-NOW aktif değil, peer sorgusu yapılamaz.");
       return;
     }
-    Serial.println(
-        "Peer kontrolü istendi, discovery broadcast gönderiliyor...");
     broadcastDiscovery();
 
-    // Mevcut peer listesini hemen gönder
     String json = "{ \"peers\": [";
     for (int i = 0; i < peers.size(); i++) {
       if (i > 0)
@@ -1096,9 +956,7 @@ void processCommand(String jsonStr) {
     }
     json += "] }";
     ws.textAll(json);
-    Serial.println("Mevcut peer sayısı: " + String(peers.size()));
   } else if (type == "peer_settings") {
-    // Send settings command to peer
     String target = doc["target"];
     StaticJsonDocument<128> pDoc;
     pDoc["set"] = true;
@@ -1114,22 +972,18 @@ void processCommand(String jsonStr) {
     String target = doc["target"];
     for (int i = 0; i < peers.size(); i++) {
       if (peers[i].mac == target) {
-        // ESP-NOW'dan da sil
         uint8_t mac[6];
-        sscanf(target.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2],
-               &mac[3], &mac[4], &mac[5]);
+        sscanf(target.c_str(), "%x:%x:%x:%x:%x:%x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
         esp_now_del_peer(mac);
 
         peers.erase(peers.begin() + i);
         savePeers();
 
-        // Tüm istemcilere güncel listeyi gönder
         String json = "{ \"peers\": [";
         for (int k = 0; k < peers.size(); k++) {
           if (k > 0)
             json += ",";
-          json += "{\"mac\":\"" + peers[k].mac + "\",\"name\":\"" +
-                  peers[k].name + "\"}";
+          json += "{\"mac\":\"" + peers[k].mac + "\",\"name\":\"" + peers[k].name + "\"}";
         }
         json += "] }";
         ws.textAll(json);
@@ -1156,17 +1010,13 @@ void initWiFi() {
     myMacAddress = String(macBuf);
   }
 
-  // AP naming always uses Suffix
   String apBase = "horus";
   if (config.hostname != "") {
     apBase = slugify(config.hostname);
   }
   String apName = apBase + "-" + deviceSuffix;
 
-  // Kanal sabitleme kaldırıldı, otomatik seçilecek
   WiFi.softAP(apName.c_str(), "");
-
-  // Set Hostname for DHCP (optional to be same as AP)
   WiFi.setHostname(apName.c_str());
 
   Serial.println("WiFi AP Başlatıldı: " + apName);
@@ -1179,6 +1029,11 @@ void initWiFi() {
 // Web Server Initialization
 // ===============================
 void initWebServer() {
+  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
@@ -1192,7 +1047,7 @@ void initWebServer() {
     request->send(LittleFS, "/512x512.png", "image/png");
   });
   server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-  request->send(LittleFS, "/sw.js", "application/javascript");
+    request->send(LittleFS, "/sw.js", "application/javascript");
   });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/style.css", "text/css");
@@ -1266,11 +1121,6 @@ void initWebServer() {
     request->send(200, "application/json", "{\"status\":\"reset\"}");
   });
 
-
-
-
-
-  // Auto OTA Endpoint
   server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request){
     request->redirect("/");
   });
@@ -1292,9 +1142,6 @@ void initWebServer() {
       request->send(200, "application/json", "{\"status\":\"busy\"}");
       return;
     }
-
-    // Check if status request only (you might want a separate GET status
-    // endpoint, but simple POST trigger is ok) If not triggered, trigger it:
     shouldUpdate = true;
     otaStatus = "started";
     request->send(200, "application/json", "{\"status\":\"started\"}");
@@ -1310,13 +1157,12 @@ void initWebServer() {
     request->send(200, "application/json", json);
   });
 
-  // Manual OTA Landing
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/update.html", "text/html");
   });
+}
 
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-               AwsEventType type, void *arg, uint8_t *data, size_t len) {
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     String json =
         "{\"running\":" + String(isRunning ? "true" : "false") +
@@ -1329,9 +1175,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     client->text(json);
   } else if (type == WS_EVT_DATA) {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
-    if (info->final && info->index == 0 && info->len == len &&
-        info->opcode == WS_TEXT) {
-      // Create null-terminated string safely
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
       String cmd = String((char *)data, len);
       processCommand(cmd);
     }
