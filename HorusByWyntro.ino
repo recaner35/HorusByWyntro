@@ -364,19 +364,23 @@ void setup() {
   setupPrefs.end();
 
   bool connected = connectToSavedWiFi();
+  setupMode = (!connected && !skipSetup);
 
-  if (!connected && !skipSetup) {
-    setupMode = true;
+  if (setupMode) {
     startSetupMode();
   } else {
-    setupMode = false;
+    initWiFi();
   }
 
 
-  if (!LittleFS.begin(true)) {
-    Serial.println("HATA: LittleFS başlatılamadı!");
-    return;
+
+  if (!LittleFS.begin(false)) {
+    Serial.println("LittleFS mount FAILED");
+  } else {
+    Serial.println("LittleFS OK");
   }
+
+
 
   loadConfig();
   pinMode(TOUCH_PIN, INPUT);
@@ -397,29 +401,27 @@ void setup() {
   }
 
   delay(100); // WiFi'nin tamamen başlaması için kısa bekleme
+  initWebServer();
+  server.begin();
+  Serial.println("Web Server BASLADI");
 
   // ESP-NOW setup() içinde direkt başlatılmıyor.
   // loop() içindeki yönetim döngüsü WiFi bağlandığında otomatik başlatacaktır.
 
-  initWebServer();
+void initWebServer() {
 
-  // MDNS Name logic: slugify(hostname) + "-" + suffix
-  String mdnsBase = "horus";
-  if (config.hostname != "") {
-    mdnsBase = slugify(config.hostname);
-  }
-  String mdnsName = mdnsBase + "-" + deviceSuffix;
+  server.serveStatic("/", LittleFS, "/")
+    .setDefaultFile("index.html");
 
-  if (MDNS.begin(mdnsName.c_str())) {
-    Serial.println("mDNS Başlatıldı: " + mdnsName + ".local");
-  }
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
 
-  loadPeers();
-  // restorePeers() ve broadcastDiscovery() loop içindeki yönetim tarafından
-  // handle edilecek
-
-  updateSchedule();
-  delay(100);
+  server.on("/api/device-state", HTTP_GET,
+    [](AsyncWebServerRequest *request) {
+      request->send(200, "application/json",
+        String("{\"setup\":") + (setupMode ? "true" : "false") + "}");
+    }
+  );
 }
 
 // ===============================
@@ -1306,33 +1308,6 @@ void initWebServer() {
     request->send(LittleFS, "/update.html", "text/html");
   });
 
-  // Manual OTA Handler
-  server.on(
-      "/update", HTTP_POST,
-      [](AsyncWebServerRequest *request) {
-        bool shouldReboot = !Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(
-            200, "text/plain", shouldReboot ? "OK" : "FAIL");
-        response->addHeader("Connection", "close");
-        request->send(response);
-        if (shouldReboot)
-          ESP.restart();
-      },
-      [](AsyncWebServerRequest *request, String filename, size_t index,
-         uint8_t *data, size_t len, bool final) {
-        if (!index)
-          Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
-        if (!Update.hasError())
-          Update.write(data, len);
-        if (final)
-          Update.end(true);
-      });
-
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
-  server.begin();
-}
-
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
@@ -1362,25 +1337,12 @@ void startSetupMode() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
 
-  DNSServer dnsServer;
-  const byte DNS_PORT = 53;
+  dnsServer.start(53, "*", WiFi.softAPIP());
 
-  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-
-  IPAddress ip = WiFi.softAPIP();
   Serial.print("Setup IP: ");
-  Serial.println(ip);
-  
-  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", "");
-  });
-  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>OK</BODY></HTML>");
-  });
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/index.html", "text/html");
-  });
+  Serial.println(WiFi.softAPIP());
 }
+
 
 bool connectToSavedWiFi() {
   prefs.begin("wifi", true);
