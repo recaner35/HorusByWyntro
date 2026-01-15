@@ -2,86 +2,96 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Horus Ultimate Flasher</title>
+    <title>Horus Fixer Flasher</title>
     <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 420px; text-align: center; }
-        .file-group { text-align: left; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
-        label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 13px; color: #333; }
-        #log { margin-top: 15px; font-size: 12px; color: #666; max-height: 100px; overflow-y: auto; text-align: left; background: #eee; padding: 5px; border-radius: 5px; display: none;}
-        .btn-container { margin-top: 20px; }
-        /* Hata veren butonu gizleyip sadece fonksiyonunu kullanacağız */
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 450px; text-align: center; }
+        .file-group { text-align: left; margin-bottom: 15px; background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffe0b2; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
+        #status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #e65100; }
         esp-web-install-button { margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Horus Pro Flasher</h2>
-    <p style="font-size: 13px; color: #666;">Manifest hatası giderilmiş versiyon. Önce dosyaları seçin.</p>
+    <h2>Horus Pro Flasher (v2.0)</h2>
+    <p style="font-size: 12px; color: #666;">"Invalid Header" hatası alıyorsanız lütfen <b>Factory.bin</b> dosyasını kullanın.</p>
     
+    <div class="file-group" style="background: #e3f2fd; border-color: #bbdefb;">
+        <label>Seçenek A: Sadece Factory.bin (Önerilen - 0x0)</label>
+        <input type="file" id="factory" accept=".bin">
+    </div>
+
+    <div style="margin: 10px 0; font-weight: bold; color: #999;">- VEYA -</div>
+
     <div class="file-group">
-        <label>1. Firmware (.bin) - 0x10000</label>
+        <label>Seçenek B1: Firmware (.bin) - 0x10000</label>
         <input type="file" id="fw" accept=".bin">
     </div>
 
     <div class="file-group">
-        <label>2. LittleFS (.bin) - 0x290000</label>
+        <label>Seçenek B2: LittleFS (.bin) - 0x290000</label>
         <input type="file" id="fs" accept=".bin">
     </div>
 
-    <div class="btn-container">
-        <esp-web-install-button id="installBtn"></esp-web-install-button>
-    </div>
-
-    <div id="log"></div>
+    <esp-web-install-button id="installBtn" style="display:none"></esp-web-install-button>
+    
+    <div id="status">Lütfen dosya seçin...</div>
 </div>
 
 <script>
     const btn = document.getElementById("installBtn");
-    const fwInput = document.getElementById("fw");
-    const fsInput = document.getElementById("fs");
-    const log = document.getElementById("log");
+    const factoryInp = document.getElementById("factory");
+    const fwInp = document.getElementById("fw");
+    const fsInp = document.getElementById("fs");
+    const status = document.getElementById("status");
 
-    // Dosya seçimlerini takip et ve manifesti "On-the-Fly" oluştur
     async function updateManifest() {
-        if (fwInput.files.length > 0 && fsInput.files.length > 0) {
-            
-            // Dosyaları Blob olarak oku
-            const fwUrl = URL.createObjectURL(fwInput.files[0]);
-            const fsUrl = URL.createObjectURL(fsInput.files[0]);
+        let parts = [];
+        
+        // Önce Factory dosyasını kontrol et (En garanti yol)
+        if (factoryInp.files.length > 0) {
+            parts = [{ "path": URL.createObjectURL(factoryInp.files[0]), "offset": 0 }];
+            status.innerText = "Factory modu aktif (Tüm sistem yüklenecek)";
+        } 
+        // Ayrı dosyalar seçildiyse
+        else if (fwInp.files.length > 0 && fsInp.files.length > 0) {
+            parts = [
+                { "path": URL.createObjectURL(fwInp.files[0]), "offset": 0x10000 },
+                { "path": URL.createObjectURL(fsInp.files[0]), "offset": 0x290000 }
+            ];
+            status.innerText = "İkili mod aktif (Firmware + LittleFS)";
+        }
 
-            // Bileşene manifesti "data URL" olarak veriyoruz. 
-            // Bu sayede dışarıdan dosya indirmeye çalışmaz, veriyi kendi içinde çözer.
+        if (parts.length > 0) {
             const manifestObj = {
                 "name": "Horus",
-                "builds": [
-                    {
-                        "chipFamily": "ESP32",
-                        "parts": [
-                            { "path": fwUrl, "offset": 0x10000 },
-                            { "path": fsUrl, "offset": 0x290000 }
-                        ]
-                    }
-                ]
+                "builds": [{ "chipFamily": "ESP32", "eraseFirst": true, "parts": parts }]
             };
-
-            // Objeyi Base64 JSON formatına çevirip "data:" protokolü ile veriyoruz.
-            // Bu yöntem "Failed to download" hatasını aşmanın TEK yoludur.
-            const manifestStr = JSON.stringify(manifestObj);
-            const manifestDataUrl = "data:application/json;base64," + btoa(unescape(encodeURIComponent(manifestStr)));
             
+            const manifestDataUrl = "data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(manifestObj))));
             btn.setAttribute("manifest", manifestDataUrl);
-            
-            console.log("Manifest güncellendi.");
-            log.style.display = "block";
-            log.innerHTML = "✅ Dosyalar hazır. Bağlan butonuna basın.";
+            btn.style.display = "inline-block";
         }
     }
 
-    fwInput.addEventListener("change", updateManifest);
-    fsInput.addEventListener("change", updateManifest);
+    factoryInp.addEventListener("change", () => { fwInp.value = ""; fsInp.value = ""; updateManifest(); });
+    fwInp.addEventListener("change", () => { factoryInp.value = ""; updateManifest(); });
+    fsInp.addEventListener("change", () => { factoryInp.value = ""; updateManifest(); });
+const manifestObj = {
+        "name": "Horus",
+        "builds": [{
+            "chipFamily": "ESP32",
+            "parts": [
+                // Factory dosyasını 0x0 adresine yazıyoruz
+                { "path": URL.createObjectURL(factoryInp.files[0]), "offset": 0 }
+            ],
+            "flash_mode": "dio", // Burayı 'qio' yaparak da deneyebilirsiniz
+            "flash_freq": "40m"
+        }]
+    };
 </script>
 
 </body>
