@@ -222,6 +222,23 @@ jobs:
           $LITTLEFS_OFFSET "$LITTLEFS_BIN"
 
         echo "Fabrika dosyası oluşturuldu (Offset: $LITTLEFS_OFFSET): ./build/HorusByWyntro-factory.bin"
+
+      - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.NEW_VERSION }}
+        name: Release ${{ env.NEW_VERSION }}
+        generate_release_notes: true
+        make_latest: true
+        body: |
+          ## 🚀 Horus v${{ env.NEW_VERSION }} Yayında!
+          
+          Aşağıda bu sürümle gelen değişikliklerin listesini bulabilirsiniz.
+        files: |
+          ./build/HorusByWyntro.ino.bin
+          ./build/HorusByWyntro.littlefs.bin
+          ./build/HorusByWyntro-factory.bin
+        
     - name: Prepare Pages
       run: |
         mkdir -p public
