@@ -404,6 +404,7 @@ void setup() {
   initWebServer();
   server.begin();
   Serial.println("Web Server BASLADI");
+}
 
   // ESP-NOW setup() içinde direkt başlatılmıyor.
   // loop() içindeki yönetim döngüsü WiFi bağlandığında otomatik başlatacaktır.
