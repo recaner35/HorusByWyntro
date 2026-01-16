@@ -1034,6 +1034,30 @@ void initWebServer() {
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
 
+  server.on("/api/scan-wifi", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int n = WiFi.scanNetworks();
+    
+    // Dinamik JSON dökümanı oluştur (Boyutu ağ sayısına göre ayarla)
+    // Her ağ yaklaşık 100 byte yer tutsa, 50 ağ için 5120 yeterli olur.
+    JsonDocument doc; 
+    JsonArray array = doc.to<JsonArray>();
+
+    for (int i = 0; i < n; ++i) {
+      JsonObject net = array.add<JsonObject>();
+      net["ssid"] = WiFi.SSID(i);
+      net["rssi"] = WiFi.RSSI(i);
+        
+      // Şifreleme türü kontrolü (Basitleştirilmiş)
+      wifi_auth_mode_t encryption = WiFi.encryptionType(i);
+      net["secure"] = (encryption != WIFI_AUTH_OPEN);
+      }
+
+    String json;
+    serializeJson(doc, json);
+    
+    request->send(200, "application/json", json);
+  });
+  
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
