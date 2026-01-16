@@ -1,178 +1,185 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="utf-8">
-<title>Horus Factory Flasher</title>
+  <meta charset="utf-8">
+  <title>Horus ESP Flasher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
-<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/serial-console.js?module"></script>
+  <!-- ESP Web Flasher (LOW LEVEL – Spacehuhn tarzı) -->
+  <script type="module">
+    window.esptoolPackage = import(
+      "https://unpkg.com/esp-web-flasher@5.1.4/dist/web/index.js?module"
+    );
+  </script>
 
-<style>
-body {
-    font-family: system-ui;
-    background:#f4f6fb;
-    display:flex;
-    justify-content:center;
-    padding:30px;
-}
-.card {
-    width:520px;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 10px 25px rgba(0,0,0,.1);
-    padding:25px;
-}
-h2 { margin-top:0 }
-.group {
-    padding:15px;
-    border-radius:10px;
-    border:1px solid #ddd;
-    margin-bottom:15px;
-}
-.primary { background:#e8f5e9;border-color:#c8e6c9 }
-.secondary { background:#e3f2fd;border-color:#bbdefb }
-button {
-    padding:10px 16px;
-    border-radius:8px;
-    border:none;
-    background:#1976d2;
-    color:white;
-    cursor:pointer;
-}
-button.secondary-btn { background:#455a64 }
-#status { font-size:13px;margin-top:10px;font-weight:600 }
-#log {
-    margin-top:15px;
-    height:120px;
-    background:#111;
-    color:#0f0;
-    font-family:monospace;
-    font-size:12px;
-    overflow:auto;
-    padding:10px;
-    border-radius:8px;
-}
-esp-web-serial-console {
-    height:180px;
-    display:block;
-    margin-top:15px;
-    border-radius:10px;
-}
-small { color:#666 }
-</style>
+  <!-- ESP Web Serial Console -->
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/serial-console.js?module"></script>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1);
+    }
+    h2 { margin-top: 0 }
+    button {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary { background: #1976d2; color: #fff }
+    button.secondary { background: #eee }
+    button:disabled { opacity: .5; cursor: not-allowed }
+    .row { display: flex; gap: 10px; flex-wrap: wrap }
+    .log {
+      background: #111;
+      color: #0f0;
+      font-family: monospace;
+      padding: 10px;
+      height: 140px;
+      overflow: auto;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    esp-web-serial-console {
+      margin-top: 15px;
+      height: 220px;
+      display: block;
+    }
+  </style>
 </head>
-
 <body>
+
 <div class="card">
+  <h2>Horus ESP Flasher</h2>
 
-<h2>Horus Factory Flasher</h2>
-<small id="releaseInfo">Sürüm bilgisi alınıyor…</small>
+  <div class="row">
+    <button id="connectBtn" class="primary">Cihaza Bağlan</button>
+    <button id="flashBtn" class="primary" disabled>Flash</button>
+  </div>
 
-<div class="group primary">
-<b>Önerilen:</b><br>
-<button id="githubBtn">GitHub Latest Yükle</button>
-</div>
+  <hr>
 
-<div class="group secondary">
-<b>Yerel factory.bin</b><br>
-<input type="file" id="localFile" accept=".bin">
-</div>
+  <h4>Seçenek 1 – Manuel Factory.bin</h4>
+  <input type="file" id="fileInput" accept=".bin">
 
-<esp-web-install-button id="installBtn" style="display:none"></esp-web-install-button>
+  <h4>Seçenek 2 – GitHub Release (latest)</h4>
+  <button id="githubBtn" class="secondary">GitHub’dan Çek</button>
+  <div id="versionInfo"></div>
 
-<div id="status">Bağlantı bekleniyor…</div>
-<div id="log"></div>
+  <h4>Log</h4>
+  <div class="log" id="log"></div>
 
-<b>Canlı Seri Monitör</b>
-<esp-web-serial-console baudrate="115200"></esp-web-serial-console>
-
+  <h4>Canlı Seri Monitör</h4>
+  <esp-web-serial-console baudrate="115200" show-controls></esp-web-serial-console>
 </div>
 
 <script type="module">
-const REPO = "recaner35/HorusByWyntro";
-const FACTORY_URL =
-`https://github.com/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+  const logEl = document.getElementById("log");
+  const connectBtn = document.getElementById("connectBtn");
+  const flashBtn = document.getElementById("flashBtn");
+  const fileInput = document.getElementById("fileInput");
+  const githubBtn = document.getElementById("githubBtn");
+  const versionInfo = document.getElementById("versionInfo");
 
-const status = document.getElementById("status");
-const logBox = document.getElementById("log");
-const installBtn = document.getElementById("installBtn");
-const githubBtn = document.getElementById("githubBtn");
-const localFile = document.getElementById("localFile");
-const releaseInfo = document.getElementById("releaseInfo");
+  const GITHUB_OWNER = "recaner35";
+  const GITHUB_REPO  = "HorusByWyntro";
 
-function log(msg) {
-    logBox.innerText += msg + "\n";
-    logBox.scrollTop = logBox.scrollHeight;
-}
+  let esptool;
+  let transport;
+  let chip;
+  let selectedBin = null;
 
-/* --- GitHub Release Info --- */
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-.then(r => r.json())
-.then(d => {
-    releaseInfo.innerText =
-      `Latest: v${d.tag_name} – ${new Date(d.published_at).toLocaleDateString()}`;
-})
-.catch(()=>releaseInfo.innerText="Release bilgisi alınamadı");
+  function log(msg) {
+    logEl.innerText += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
 
-/* --- Manifest Oluşturucu --- */
-function setManifest(path) {
-    const manifest = {
-        name:"Horus",
-        builds:[{
-            chipFamily:"ESP32",
-            eraseFirst:true,
-            parts:[{ path, offset:0 }]
-        }]
-    };
+  function updateFlashButton() {
+    flashBtn.disabled = !selectedBin;
+  }
 
-    const url =
-      "data:application/json;base64," +
-      btoa(unescape(encodeURIComponent(JSON.stringify(manifest))));
+  // CONNECT
+  connectBtn.onclick = async () => {
+    try {
+      const { Transport, ESPLoader } = await window.esptoolPackage;
+      transport = await Transport.create();
+      esptool = new ESPLoader(transport, 115200);
+      chip = await esptool.detectChip();
 
-    installBtn.setAttribute("manifest", url);
-    installBtn.style.display="inline-block";
-}
+      log("Chip: " + chip);
 
-/* --- GitHub Latest --- */
-githubBtn.onclick = () => {
-    log("GitHub latest factory.bin seçildi");
-    setManifest(FACTORY_URL);
-    status.innerText="Hazır – Cihazı bağlayın";
-};
+      if (chip !== "ESP32") {
+        alert("Bu cihaz desteklenmiyor: " + chip);
+        await transport.disconnect();
+        return;
+      }
 
-/* --- Local File --- */
-localFile.onchange = () => {
-    if(!localFile.files.length) return;
-    log("Yerel factory.bin seçildi");
-    setManifest(URL.createObjectURL(localFile.files[0]));
-    status.innerText="Hazır – Cihazı bağlayın";
-};
-
-/* --- ESP Chip Doğrulama (Bağlantı sonrası) --- */
-installBtn.addEventListener("connected", e => {
-    const chip = e.detail?.chip?.chipFamily || "unknown";
-    log("Cihaz bağlandı: " + chip);
-
-    if (chip !== "ESP32") {
-        alert("Bu flasher yalnızca ESP32 içindir!");
-        location.reload();
+      log("Cihaz bağlandı.");
+    } catch (e) {
+      log("Bağlantı hatası: " + e.message);
     }
-});
+  };
 
-installBtn.addEventListener("install-start", ()=> {
-    log("Yükleme başladı");
-    status.innerText="Yazılıyor…";
-});
+  // MANUEL BIN
+  fileInput.onchange = async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
 
-installBtn.addEventListener("install-success", ()=> {
-    log("Yükleme tamamlandı");
-    status.innerText="✔ Başarılı";
-});
+    selectedBin = new Uint8Array(await file.arrayBuffer());
+    log("Manuel bin yüklendi: " + file.name);
+    updateFlashButton();
+  };
 
-installBtn.addEventListener("install-error", e=> {
-    log("HATA: " + e.detail?.message);
-    status.innerText="❌ Hata oluştu";
-});
+  // GITHUB BIN
+  githubBtn.onclick = async () => {
+    try {
+      log("GitHub latest alınıyor...");
+      const res = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
+      );
+      const data = await res.json();
+
+      const asset = data.assets.find(a => a.name.endsWith(".bin"));
+      if (!asset) throw new Error("Bin bulunamadı");
+
+      versionInfo.innerText = "Release: " + data.tag_name;
+
+      const binRes = await fetch(asset.browser_download_url);
+      selectedBin = new Uint8Array(await binRes.arrayBuffer());
+
+      log("GitHub bin yüklendi: " + asset.name);
+      updateFlashButton();
+    } catch (e) {
+      log("GitHub hatası: " + e.message);
+    }
+  };
+
+  // FLASH
+  flashBtn.onclick = async () => {
+    try {
+      log("Flash başlıyor...");
+      await esptool.writeFlash([
+        { offset: 0x0, data: selectedBin }
+      ]);
+      log("Flash tamamlandı.");
+      await esptool.hardReset();
+    } catch (e) {
+      log("Flash hatası: " + e.message);
+    }
+  };
 </script>
+
 </body>
 </html>
