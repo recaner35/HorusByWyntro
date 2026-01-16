@@ -619,6 +619,24 @@ input[type="range"]::-moz-range-thumb {
     backdrop-filter: blur(5px);
 }
 
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Z-index 9999'dan büyük olmalı ki Setup kartının (9999) üstüne çıksın */
+    z-index: 10000 !important; 
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
 .modal-content {
     background-color: var(--card-bg);
     margin: 10% auto;
@@ -1203,6 +1221,7 @@ input[type="range"]::-moz-range-thumb {
     transform: translateY(0);
   }
 }
+
 
 
 
