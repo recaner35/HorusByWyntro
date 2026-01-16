@@ -1,98 +1,178 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="utf-8" />
-    <title>Horus Fixer Flasher</title>
-    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
-    <style>
-        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 450px; text-align: center; }
-        .file-group { text-align: left; margin-bottom: 15px; background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffe0b2; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
-        #status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #e65100; }
-        esp-web-install-button { margin-top: 20px; }
-    </style>
+<meta charset="utf-8">
+<title>Horus Factory Flasher</title>
+
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/serial-console.js?module"></script>
+
+<style>
+body {
+    font-family: system-ui;
+    background:#f4f6fb;
+    display:flex;
+    justify-content:center;
+    padding:30px;
+}
+.card {
+    width:520px;
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 10px 25px rgba(0,0,0,.1);
+    padding:25px;
+}
+h2 { margin-top:0 }
+.group {
+    padding:15px;
+    border-radius:10px;
+    border:1px solid #ddd;
+    margin-bottom:15px;
+}
+.primary { background:#e8f5e9;border-color:#c8e6c9 }
+.secondary { background:#e3f2fd;border-color:#bbdefb }
+button {
+    padding:10px 16px;
+    border-radius:8px;
+    border:none;
+    background:#1976d2;
+    color:white;
+    cursor:pointer;
+}
+button.secondary-btn { background:#455a64 }
+#status { font-size:13px;margin-top:10px;font-weight:600 }
+#log {
+    margin-top:15px;
+    height:120px;
+    background:#111;
+    color:#0f0;
+    font-family:monospace;
+    font-size:12px;
+    overflow:auto;
+    padding:10px;
+    border-radius:8px;
+}
+esp-web-serial-console {
+    height:180px;
+    display:block;
+    margin-top:15px;
+    border-radius:10px;
+}
+small { color:#666 }
+</style>
 </head>
+
 <body>
-
 <div class="card">
-    <h2>Horus Pro Flasher (v2.0)</h2>
-    <p style="font-size: 12px; color: #666;">"Invalid Header" hatası alıyorsanız lütfen <b>Factory.bin</b> dosyasını kullanın.</p>
-    
-    <div class="file-group" style="background: #e3f2fd; border-color: #bbdefb;">
-        <label>Seçenek A: Sadece Factory.bin (Önerilen - 0x0)</label>
-        <input type="file" id="factory" accept=".bin">
-    </div>
 
-    <div style="margin: 10px 0; font-weight: bold; color: #999;">- VEYA -</div>
+<h2>Horus Factory Flasher</h2>
+<small id="releaseInfo">Sürüm bilgisi alınıyor…</small>
 
-    <div class="file-group">
-        <label>Seçenek B1: Firmware (.bin) - 0x10000</label>
-        <input type="file" id="fw" accept=".bin">
-    </div>
-
-    <div class="file-group">
-        <label>Seçenek B2: LittleFS (.bin) - 0x290000</label>
-        <input type="file" id="fs" accept=".bin">
-    </div>
-
-    <esp-web-install-button id="installBtn" style="display:none"></esp-web-install-button>
-    
-    <div id="status">Lütfen dosya seçin...</div>
+<div class="group primary">
+<b>Önerilen:</b><br>
+<button id="githubBtn">GitHub Latest Yükle</button>
 </div>
 
-<script>
-    const btn = document.getElementById("installBtn");
-    const factoryInp = document.getElementById("factory");
-    const fwInp = document.getElementById("fw");
-    const fsInp = document.getElementById("fs");
-    const status = document.getElementById("status");
+<div class="group secondary">
+<b>Yerel factory.bin</b><br>
+<input type="file" id="localFile" accept=".bin">
+</div>
 
-    async function updateManifest() {
-        let parts = [];
-        
-        // Önce Factory dosyasını kontrol et (En garanti yol)
-        if (factoryInp.files.length > 0) {
-            parts = [{ "path": URL.createObjectURL(factoryInp.files[0]), "offset": 0 }];
-            status.innerText = "Factory modu aktif (Tüm sistem yüklenecek)";
-        } 
-        // Ayrı dosyalar seçildiyse
-        else if (fwInp.files.length > 0 && fsInp.files.length > 0) {
-            parts = [
-                { "path": URL.createObjectURL(fwInp.files[0]), "offset": 0x10000 },
-                { "path": URL.createObjectURL(fsInp.files[0]), "offset": 0x290000 }
-            ];
-            status.innerText = "İkili mod aktif (Firmware + LittleFS)";
-        }
+<esp-web-install-button id="installBtn" style="display:none"></esp-web-install-button>
 
-        if (parts.length > 0) {
-            const manifestObj = {
-                "name": "Horus",
-                "builds": [{ "chipFamily": "ESP32", "eraseFirst": true, "parts": parts }]
-            };
-            
-            const manifestDataUrl = "data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(manifestObj))));
-            btn.setAttribute("manifest", manifestDataUrl);
-            btn.style.display = "inline-block";
-        }
-    }
+<div id="status">Bağlantı bekleniyor…</div>
+<div id="log"></div>
 
-    factoryInp.addEventListener("change", () => { fwInp.value = ""; fsInp.value = ""; updateManifest(); });
-    fwInp.addEventListener("change", () => { factoryInp.value = ""; updateManifest(); });
-    fsInp.addEventListener("change", () => { factoryInp.value = ""; updateManifest(); });
-const manifestObj = {
-        "name": "Horus",
-        "builds": [{
-            "chipFamily": "ESP32",
-            "parts": [
-                // Factory dosyasını 0x0 adresine yazıyoruz
-                { "path": URL.createObjectURL(factoryInp.files[0]), "offset": 0 }
-            ],
-            "flash_mode": "dio", // Burayı 'qio' yaparak da deneyebilirsiniz
-            "flash_freq": "40m"
+<b>Canlı Seri Monitör</b>
+<esp-web-serial-console baudrate="115200"></esp-web-serial-console>
+
+</div>
+
+<script type="module">
+const REPO = "recaner35/HorusByWyntro";
+const FACTORY_URL =
+`https://github.com/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+
+const status = document.getElementById("status");
+const logBox = document.getElementById("log");
+const installBtn = document.getElementById("installBtn");
+const githubBtn = document.getElementById("githubBtn");
+const localFile = document.getElementById("localFile");
+const releaseInfo = document.getElementById("releaseInfo");
+
+function log(msg) {
+    logBox.innerText += msg + "\n";
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+/* --- GitHub Release Info --- */
+fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+.then(r => r.json())
+.then(d => {
+    releaseInfo.innerText =
+      `Latest: v${d.tag_name} – ${new Date(d.published_at).toLocaleDateString()}`;
+})
+.catch(()=>releaseInfo.innerText="Release bilgisi alınamadı");
+
+/* --- Manifest Oluşturucu --- */
+function setManifest(path) {
+    const manifest = {
+        name:"Horus",
+        builds:[{
+            chipFamily:"ESP32",
+            eraseFirst:true,
+            parts:[{ path, offset:0 }]
         }]
     };
-</script>
 
+    const url =
+      "data:application/json;base64," +
+      btoa(unescape(encodeURIComponent(JSON.stringify(manifest))));
+
+    installBtn.setAttribute("manifest", url);
+    installBtn.style.display="inline-block";
+}
+
+/* --- GitHub Latest --- */
+githubBtn.onclick = () => {
+    log("GitHub latest factory.bin seçildi");
+    setManifest(FACTORY_URL);
+    status.innerText="Hazır – Cihazı bağlayın";
+};
+
+/* --- Local File --- */
+localFile.onchange = () => {
+    if(!localFile.files.length) return;
+    log("Yerel factory.bin seçildi");
+    setManifest(URL.createObjectURL(localFile.files[0]));
+    status.innerText="Hazır – Cihazı bağlayın";
+};
+
+/* --- ESP Chip Doğrulama (Bağlantı sonrası) --- */
+installBtn.addEventListener("connected", e => {
+    const chip = e.detail?.chip?.chipFamily || "unknown";
+    log("Cihaz bağlandı: " + chip);
+
+    if (chip !== "ESP32") {
+        alert("Bu flasher yalnızca ESP32 içindir!");
+        location.reload();
+    }
+});
+
+installBtn.addEventListener("install-start", ()=> {
+    log("Yükleme başladı");
+    status.innerText="Yazılıyor…";
+});
+
+installBtn.addEventListener("install-success", ()=> {
+    log("Yükleme tamamlandı");
+    status.innerText="✔ Başarılı";
+});
+
+installBtn.addEventListener("install-error", e=> {
+    log("HATA: " + e.detail?.message);
+    status.innerText="❌ Hata oluştu";
+});
+</script>
 </body>
 </html>
