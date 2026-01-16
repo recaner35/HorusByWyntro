@@ -109,7 +109,12 @@ jobs:
       run: |
         mkdir -p build
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
-        arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir ./build "$SKETCH_PATH"
+        # DEĞİŞİKLİK BURADA:
+        # FQBN sonuna parametreler eklendi:
+        # PSRAM=disabled   -> PSRAM kapatıldı (WROOM için şart)
+        # FlashMode=dio    -> Flash modu DIO'ya zorlandı
+        # DebugLevel=verbose -> Hata ayıklama açıldı (Logları görmek için)
+        arduino-cli compile --fqbn esp32:esp32:esp32:PSRAM=disabled,FlashMode=dio,DebugLevel=verbose --output-dir ./build "$SKETCH_PATH"
 
     - name: Build LittleFS Image
       run: |
