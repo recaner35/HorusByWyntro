@@ -437,41 +437,82 @@ window.deletePeer = function (mac) {
 };
 
 // ================= WIFI LOGIC =================
+
 function scanWifi() {
-  fetch('/api/wifi-scan');
-
-  setTimeout(loadWifiList, 1200);
-}
-
-function loadWifiList() {
-  fetch('/api/wifi-list')
-    .then(r => r.json())
-    .then(list => {
-      const c = document.getElementById('wifiList');
-      c.innerHTML = '';
-
-      if (!list || list.length === 0) {
-        c.innerHTML = '<div class="muted">Ağ bulunamadı</div>';
+    // Hangi moda olduğumuza göre hedef listeyi seçelim
+    // isSetupMode true ise setupWifiList, değilse wifiList (Ayarlar sekmesi)
+    const targetListId = isSetupMode ? "setupWifiList" : "wifiList";
+    const list = document.getElementById(targetListId);
+    
+    if (!list) {
+        console.error("Hedef WiFi listesi bulunamadı: " + targetListId);
         return;
-      }
+    }
 
-      list.forEach(w => {
-        const div = document.createElement('div');
-        div.className = 'wifi-item';
-        div.onclick = () => openWifiPassword(w.ssid);
+    list.innerHTML = `<div class="loading-spinner"></div><div style="text-align:center; opacity:0.7">${getTrans('taranıyor')}...</div>`;
 
-        div.innerHTML = `
-          <div>
-            <div class="wifi-name">${w.ssid}</div>
-            <div class="wifi-secure">
-              ${w.secure ? '🔒 Güvenli' : 'Açık Ağ'}
-            </div>
-          </div>
-          <div>›</div>
-        `;
-        c.appendChild(div);
-      });
-    });
+    fetch("/api/scan-wifi")
+        .then(r => {
+            if (!r.ok) throw new Error("Tarama hatası");
+            return r.json();
+        })
+        .then(networks => {
+            list.innerHTML = "";
+            
+            // Eğer ağ bulunamazsa
+            if (networks.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:20px;">${getTrans('noNetwork')}</div>`;
+                return;
+            }
+
+            // Tekrarlanan SSID'leri engellemek için Set kullanalım
+            const seenSSIDs = new Set();
+
+            networks.forEach(net => {
+                if (!net.ssid || seenSSIDs.has(net.ssid)) return;
+                seenSSIDs.add(net.ssid);
+
+                const div = document.createElement("div");
+                div.className = "wifi-item";
+                
+                // Güç göstergesi (icon seçimi)
+                let signalIcon = "wifi-0.svg"; // Varsayılan
+                if(net.rssi > -50) signalIcon = "wifi-3.svg"; // Güçlü
+                else if(net.rssi > -70) signalIcon = "wifi-2.svg"; // Orta
+                else signalIcon = "wifi-1.svg"; // Zayıf
+
+                // Kilit ikonu
+                const lockIcon = net.secure ? 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>' 
+                    : '';
+
+                div.innerHTML = `
+                    <div class="wifi-info">
+                        <span class="wifi-ssid">${net.ssid}</span>
+                        <span class="wifi-signal" style="font-size:12px; opacity:0.6">${net.rssi} dBm</span>
+                    </div>
+                    <div class="wifi-icons" style="display:flex; align-items:center; gap:8px;">
+                        ${lockIcon}
+                    </div>
+                `;
+                
+                // Tıklama olayı - Şifre modalını aç
+                div.onclick = () => showPasswordModal(net.ssid);
+                list.appendChild(div);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            list.innerHTML = `<div style="text-align:center; color:#ff4444">${getTrans('error')}</div>`;
+            
+            // Hata durumunda tekrar dene butonu
+            const retryBtn = document.createElement("button");
+            retryBtn.innerText = "Tekrar Dene";
+            retryBtn.className = "btn-secondary";
+            retryBtn.style.marginTop = "10px";
+            retryBtn.onclick = scanWifi;
+            list.appendChild(retryBtn);
+        });
 }
 
 
@@ -694,6 +735,7 @@ function skipSetup() {
       document.getElementById("setupCard").classList.add("hidden");
     });
 }
+
 
 
 
