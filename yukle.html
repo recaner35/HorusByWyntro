@@ -7,7 +7,9 @@
 
 <script type="module">
   import { ESPLoader } from "https://unpkg.com/esp-web-flasher@5.1.4/dist/web/index.js";
+  import { Transport } from "https://unpkg.com/esp-web-flasher@5.1.4/dist/web/serial.js";
   window.ESPLoader = ESPLoader;
+  window.Transport = Transport;
 </script>
 
 <style>
@@ -25,27 +27,18 @@ body {
   width: 520px;
   padding: 24px;
   border-radius: 14px;
-  box-shadow: 0 0 30px rgba(0,0,0,.6);
 }
 button {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  border: none;
   border-radius: 8px;
+  border: none;
   background: #2563eb;
   color: white;
   font-weight: bold;
-  cursor: pointer;
 }
-button:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
-input[type=file] {
-  width: 100%;
-  margin-top: 6px;
-}
+button:disabled { opacity: .4 }
 #log, #serial {
   background: black;
   font-family: monospace;
@@ -54,7 +47,6 @@ input[type=file] {
   margin-top: 10px;
   height: 120px;
   overflow-y: auto;
-  border-radius: 6px;
 }
 .small { font-size: 12px; color: #9ca3af }
 </style>
@@ -63,10 +55,9 @@ input[type=file] {
 <body>
 <div class="card">
   <h2>Horus Web Flasher</h2>
-  <div class="small" id="version">Release: -</div>
+  <div class="small" id="version">Release: latest</div>
 
   <button id="connectBtn">🔌 Cihaza Bağlan</button>
-
   <button id="githubBtn">⬇ GitHub Latest (Factory)</button>
 
   <div class="small">veya</div>
@@ -79,16 +70,17 @@ input[type=file] {
 </div>
 
 <script>
-const GITHUB_OWNER = "recaner35";
-const GITHUB_REPO  = "HorusByWyntro";
+const OWNER = "recaner35";
+const REPO  = "HorusByWyntro";
+const FACTORY_URL =
+  `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
 
-let port, transport, chip, esploader;
+let port, transport, esploader, chip;
 let selectedBin = null;
 
 const logBox = document.getElementById("log");
 const serialBox = document.getElementById("serial");
 const flashBtn = document.getElementById("flashBtn");
-const versionBox = document.getElementById("version");
 
 function log(msg) {
   logBox.innerHTML += msg + "<br>";
@@ -104,28 +96,24 @@ function updateFlashButton() {
   flashBtn.disabled = !selectedBin;
 }
 
-async function connect() {
-  port = await navigator.serial.requestPort();
-  transport = new window.ESPLoader.Transport(port);
-  esploader = new window.ESPLoader({
-    transport,
-    baudrate: 115200,
-    terminal: { write: serial }
-  });
-
-  chip = await esploader.main();
-  log("Bağlandı: " + chip);
-
-  if (chip !== "ESP32") {
-    throw new Error("Sadece ESP32 destekleniyor (S3/C3 yasak)");
-  }
-
-  await esploader.runStub();
-}
-
 document.getElementById("connectBtn").onclick = async () => {
   try {
-    await connect();
+    port = await navigator.serial.requestPort();
+    transport = new window.Transport(port);
+    esploader = new window.ESPLoader({
+      transport,
+      baudrate: 115200,
+      terminal: { write: serial }
+    });
+
+    chip = await esploader.main();
+    log("Bağlandı: " + chip);
+
+    if (chip !== "ESP32") {
+      throw new Error("Sadece ESP32 destekleniyor");
+    }
+
+    await esploader.runStub();
   } catch (e) {
     log("Bağlantı hatası: " + e.message);
   }
@@ -133,24 +121,12 @@ document.getElementById("connectBtn").onclick = async () => {
 
 document.getElementById("githubBtn").onclick = async () => {
   try {
-    log("GitHub Release alınıyor...");
-    const res = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
-    );
-    const data = await res.json();
+    log("Factory.bin indiriliyor...");
+    const res = await fetch(FACTORY_URL);
+    if (!res.ok) throw new Error("Download başarısız");
 
-    const asset = data.assets.find(a =>
-      a.name === "HorusByWyntro-factory.bin"
-    );
-
-    if (!asset) throw new Error("Factory bin bulunamadı");
-
-    versionBox.innerText = "Release: " + data.tag_name;
-
-    const binRes = await fetch(asset.browser_download_url);
-    selectedBin = new Uint8Array(await binRes.arrayBuffer());
-
-    log("Factory bin hazır: " + asset.name);
+    selectedBin = new Uint8Array(await res.arrayBuffer());
+    log("Factory.bin hazır");
     updateFlashButton();
   } catch (e) {
     log("GitHub hatası: " + e.message);
