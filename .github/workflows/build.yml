@@ -112,8 +112,10 @@ jobs:
         arduino-cli compile \
           --fqbn esp32:esp32:esp32:PartitionScheme=custom \
           --build-property build.partitions=partitions_horus_ota \
+          --build-property build.partitions.path=$GITHUB_WORKSPACE/partitions \
           --output-dir ./build \
           "$SKETCH_PATH"
+
 
 
     # --- YENİ EKLENEN ADIM: GZIP SIKIŞTIRMA ---
