@@ -59,38 +59,46 @@ pre {
 </div>
 
 <script type="module">
-const logEl = document.getElementById("log");
-const log = (m) => {
-  logEl.textContent += m + "\n";
-  logEl.scrollTop = logEl.scrollHeight;
-};
+async function loadFirmware() {
+  const res = await fetch("version.json");
+  if (!res.ok) throw new Error("version.json okunamadı");
 
-/* ---------------- LATEST RELEASE ---------------- */
-async function loadLatestFirmware() {
-  log("Latest release aranıyor...");
-
-  const res = await fetch(
-    "https://api.github.com/repos/recaner35/HorusByWyntro/releases/latest"
-  );
-
-  if (!res.ok) {
-    throw new Error("GitHub release bulunamadı");
-  }
-
-  const release = await res.json();
-  const asset = release.assets.find(a =>
-    a.name.endsWith("-factory.bin")
-  );
-
-  if (!asset) {
-    throw new Error("factory.bin release içinde yok");
-  }
-
-  log("Bulunan sürüm: " + release.tag_name);
-  log("Firmware: " + asset.browser_download_url);
-
-  return asset.browser_download_url;
+  const data = await res.json();
+  return data.factory;
 }
+
+(async () => {
+  try {
+    const firmwareUrl = await loadFirmware();
+
+    const manifest = {
+      name: "Horus by Wyntro",
+      version: "latest",
+      new_install_prompt_erase: true,
+      builds: [{
+        chipFamily: "ESP32",
+        parts: [{
+          path: firmwareUrl,
+          offset: 0
+        }]
+      }]
+    };
+
+    const blob = new Blob(
+      [JSON.stringify(manifest)],
+      { type: "application/json" }
+    );
+
+    document
+      .getElementById("install")
+      .setAttribute("manifest", URL.createObjectURL(blob));
+
+  } catch (e) {
+    document.getElementById("log").textContent = e.message;
+  }
+})();
+</script>
+
 
 /* ---------------- MANIFEST OLUŞTUR ---------------- */
 (async () => {
