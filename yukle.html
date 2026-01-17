@@ -42,6 +42,7 @@ async function prepareManifest() {
   const data = await res.json();
 
   const factoryUrl = data.url.replace(
+    "HorusByWyntro.ino.bin",
     "HorusByWyntro-factory.bin"
   );
 
