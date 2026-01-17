@@ -109,7 +109,12 @@ jobs:
       run: |
         mkdir -p build
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
-        arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs,PSRAM=disabled,FlashMode=dio,DebugLevel=verbose --output-dir ./build "$SKETCH_PATH"
+        arduino-cli compile \
+          --fqbn esp32:esp32:esp32:PartitionScheme=custom \
+          --build-property build.partitions=partitions_horus_ota \
+          --output-dir ./build \
+          "$SKETCH_PATH"
+
 
     # --- YENİ EKLENEN ADIM: GZIP SIKIŞTIRMA ---
     - name: Compress Web Assets (Gzip)
@@ -147,50 +152,6 @@ jobs:
         # Sıkıştırılmış dosyalarla imaj oluşturuluyor (190KB limit)
         "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 192512 ./build/HorusByWyntro.littlefs.bin
 
-    - name: Get Partition Offset
-      id: get_offset
-      run: |
-        python -c "
-        import csv
-        import os
-        import glob
-        
-        found_offset = ''
-        
-        csv_files = glob.glob('./build/*.partitions.csv')
-        csv_file = csv_files[0] if csv_files else 'partitions.csv'
-        
-        if os.path.exists(csv_file):
-            print(f'{csv_file} bulundu, analiz ediliyor...')
-            try:
-                with open(csv_file, 'r') as f:
-                    lines = [line for line in f if line.strip() and not line.strip().startswith('#')]
-                    reader = csv.reader(lines)
-                    
-                    for row in reader:
-                        row = [x.strip() for x in row]
-                        if len(row) < 5: continue
-                        
-                        name = row[0]
-                        ptype = row[1]
-                        subtype = row[2]
-                        offset = row[3]
-                        
-                        if (ptype == 'data' or ptype == '0x01' or ptype == '1') and (subtype in ['spiffs', 'littlefs', '0x82', '0x83'] or name in ['spiffs', 'littlefs']):
-                            if offset and offset != '':
-                                found_offset = offset
-                                print(f'OFFSET BULUNDU: {found_offset} ({name})')
-                                break
-            except Exception as e:
-                print(f'CSV okuma hatası: {e}')
-        
-        if not found_offset:
-            print('UYARI: Offset dosyadan okunamadı, Minimal SPIFFS varsayılanı kullanılıyor.')
-            found_offset = '0x3D0000'
-        
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-            fh.write(f'LITTLEFS_OFFSET={found_offset}\n')
-        "
 
     - name: Generate Factory Bin
       run: |
@@ -201,13 +162,10 @@ jobs:
         BOOTLOADER_BIN=$(find ./build -name "*.bootloader.bin" | head -n 1)
         LITTLEFS_BIN="./build/HorusByWyntro.littlefs.bin"
         BOOT_APP0_BIN=$(find ~/.arduino15 -name "boot_app0.bin" | head -n 1)
-        
-        LITTLEFS_OFFSET=${{ steps.get_offset.outputs.LITTLEFS_OFFSET }}
 
         echo "Firmware: $FIRMWARE_BIN"
         echo "Partitions: $PARTITIONS_BIN"
         echo "Bootloader: $BOOTLOADER_BIN"
-        echo "LittleFS Offset: $LITTLEFS_OFFSET"
 
         esptool.py --chip esp32 merge_bin \
           -o ./build/HorusByWyntro-factory.bin \
@@ -218,9 +176,10 @@ jobs:
           0x8000 "$PARTITIONS_BIN" \
           0xe000 "$BOOT_APP0_BIN" \
           0x10000 "$FIRMWARE_BIN" \
-          $LITTLEFS_OFFSET "$LITTLEFS_BIN"
+          0x3D0000 "$LITTLEFS_BIN"
 
-        echo "Fabrika dosyası oluşturuldu: ./build/HorusByWyntro-factory.bin"
+        echo "Factory bin hazır"
+
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
