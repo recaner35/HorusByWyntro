@@ -59,26 +59,51 @@ pre {
 </div>
 
 <script type="module">
-async function loadFirmware() {
+const logEl = document.getElementById("log");
+const log = (m) => {
+  logEl.textContent += m + "\n";
+  logEl.scrollTop = logEl.scrollHeight;
+};
+
+async function loadFactoryFirmware() {
+  log("version.json okunuyor...");
+
   const res = await fetch("version.json");
-  if (!res.ok) throw new Error("version.json okunamadı");
+  if (!res.ok) throw new Error("version.json bulunamadı");
 
   const data = await res.json();
-  return data.factory;
+
+  if (!data.url || !data.version) {
+    throw new Error("version.json formatı geçersiz");
+  }
+
+  // OTA URL → FACTORY URL türet
+  const factoryUrl = data.url.replace(
+    "HorusByWyntro.ino.bin",
+    "HorusByWyntro-factory.bin"
+  );
+
+  log("Bulunan sürüm: " + data.version);
+  log("Factory firmware: " + factoryUrl);
+
+  return {
+    version: data.version,
+    factoryUrl
+  };
 }
 
 (async () => {
   try {
-    const firmwareUrl = await loadFirmware();
+    const fw = await loadFactoryFirmware();
 
     const manifest = {
       name: "Horus by Wyntro",
-      version: "latest",
+      version: fw.version,
       new_install_prompt_erase: true,
       builds: [{
         chipFamily: "ESP32",
         parts: [{
-          path: firmwareUrl,
+          path: fw.factoryUrl,
           offset: 0
         }]
       }]
@@ -93,8 +118,9 @@ async function loadFirmware() {
       .getElementById("install")
       .setAttribute("manifest", URL.createObjectURL(blob));
 
+    log("Installer hazır.");
   } catch (e) {
-    document.getElementById("log").textContent = e.message;
+    log("HATA: " + e.message);
   }
 })();
 </script>
