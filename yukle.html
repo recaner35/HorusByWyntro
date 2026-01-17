@@ -2,215 +2,77 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Horus by Wyntro Yükleyici</title>
+<title>Horus by Wyntro – Installer</title>
 
 <script type="module"
   src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js">
 </script>
 
 <style>
-body {
-  background:#0f1115;
-  color:#eaeaea;
-  font-family:system-ui,sans-serif;
-}
-.container {
-  max-width:420px;
-  margin:80px auto;
-  text-align:center;
-}
-button {
-  width:100%;
-  padding:12px;
-  margin:8px 0;
-  border:none;
-  border-radius:6px;
-  font-size:15px;
-  cursor:pointer;
-}
-.primary { background:#4caf50; color:#000; }
-.danger  { background:#f44336; color:#fff; }
-.console { background:#2196f3; color:#000; }
-pre {
-  background:#000;
-  color:#0f0;
-  padding:10px;
-  height:200px;
-  overflow:auto;
-  font-size:12px;
-  border-radius:6px;
-}
+body { background:#0f1115; color:#eaeaea; font-family:sans-serif; }
+.container { max-width:420px; margin:80px auto; text-align:center; }
+button { width:100%; padding:12px; margin:8px 0; border-radius:6px; border:none; }
+.primary { background:#4caf50; }
+.danger { background:#f44336; color:#fff; }
+pre { background:#000; color:#0f0; padding:10px; height:180px; overflow:auto; }
 </style>
 </head>
 
 <body>
 <div class="container">
   <h2>Horus by Wyntro</h2>
-  <p>ESP32 Tek Tık Kurulum</p>
 
   <esp-web-install-button id="install">
-    <button class="primary">Firmware Yükle (Latest)</button>
+    <button class="primary">Firmware Yükle</button>
   </esp-web-install-button>
 
-  <button id="erase" class="danger">Flash Erase</button>
-  <button id="console" class="console">Serial Console</button>
+  <button id="erase" class="danger">Manuel Flash Erase</button>
 
   <pre id="log"></pre>
 </div>
 
 <script type="module">
 const logEl = document.getElementById("log");
-const log = (m) => {
-  logEl.textContent += m + "\n";
-  logEl.scrollTop = logEl.scrollHeight;
-};
+const log = m => { logEl.textContent += m + "\n"; };
 
-async function loadFactoryFirmware() {
+async function prepareManifest() {
   log("version.json okunuyor...");
 
   const res = await fetch("version.json");
-  if (!res.ok) throw new Error("version.json bulunamadı");
-
   const data = await res.json();
 
-  if (!data.url || !data.version) {
-    throw new Error("version.json formatı geçersiz");
-  }
-
-  // OTA URL → FACTORY URL türet
   const factoryUrl = data.url.replace(
-    "HorusByWyntro.ino.bin",
     "HorusByWyntro-factory.bin"
   );
 
-  log("Bulunan sürüm: " + data.version);
-  log("Factory firmware: " + factoryUrl);
+  log("Sürüm: " + data.version);
+  log("Factory: " + factoryUrl);
 
-  return {
+  const manifest = {
+    name: "Horus by Wyntro",
     version: data.version,
-    factoryUrl
+    new_install_prompt_erase: true,
+    builds: [{
+      chipFamily: "ESP32",
+      parts: [{ path: factoryUrl, offset: 0 }]
+    }]
   };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+  document.getElementById("install")
+    .setAttribute("manifest", URL.createObjectURL(blob));
+
+  log("Installer hazır.");
 }
 
-(async () => {
-  try {
-    const fw = await loadFactoryFirmware();
+prepareManifest();
 
-    const manifest = {
-      name: "Horus by Wyntro",
-      version: fw.version,
-      new_install_prompt_erase: true,
-      builds: [{
-        chipFamily: "ESP32",
-        parts: [{
-          path: fw.factoryUrl,
-          offset: 0
-        }]
-      }]
-    };
-
-    const blob = new Blob(
-      [JSON.stringify(manifest)],
-      { type: "application/json" }
-    );
-
-    document
-      .getElementById("install")
-      .setAttribute("manifest", URL.createObjectURL(blob));
-
-    log("Installer hazır.");
-  } catch (e) {
-    log("HATA: " + e.message);
-  }
-})();
-</script>
-
-
-/* ---------------- MANIFEST OLUŞTUR ---------------- */
-(async () => {
-  try {
-    const firmwareUrl = await loadLatestFirmware();
-
-    const manifest = {
-      name: "Horus by Wyntro",
-      version: "latest",
-      new_install_prompt_erase: true,
-      builds: [{
-        chipFamily: "ESP32",
-        parts: [{
-          path: firmwareUrl,
-          offset: 0
-        }]
-      }]
-    };
-
-    const blob = new Blob(
-      [JSON.stringify(manifest)],
-      { type: "application/json" }
-    );
-
-    document
-      .getElementById("install")
-      .setAttribute("manifest", URL.createObjectURL(blob));
-
-    log("Installer hazır.");
-  } catch (e) {
-    log("HATA: " + e.message);
-  }
-})();
-
-/* ---------------- ERASE FLASH ---------------- */
+/* MANUEL ERASE – ESP WEB TOOLS DIŞI */
 document.getElementById("erase").onclick = async () => {
-  try {
-    log("Port seçiliyor...");
-    const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
-
-    const esptool = await import(
-      "https://unpkg.com/esptool-js@0.4.6/bundle.js"
-    );
-
-    const transport = new esptool.Transport(port);
-    const loader = new esptool.ESPLoader({
-      transport,
-      baudrate: 115200,
-      terminal: {
-        clean() {},
-        writeLine: log,
-        write: log
-      }
-    });
-
-    await loader.main();
-    await loader.eraseFlash();
-
-    log("Flash tamamen silindi.");
-    await port.close();
-  } catch (e) {
-    log("Erase hatası: " + e.message);
-  }
-};
-
-/* ---------------- SERIAL CONSOLE ---------------- */
-document.getElementById("console").onclick = async () => {
-  try {
-    const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
-    log("Serial console açıldı.");
-
-    const decoder = new TextDecoderStream();
-    port.readable.pipeTo(decoder.writable);
-    const reader = decoder.readable.getReader();
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      log(value);
-    }
-  } catch (e) {
-    log("Console hatası: " + e.message);
-  }
+  log("Manuel erase için ESP Web Tools içindeki erase'i kullanma!");
+  log("Bu buton sadece servis içindir.");
 };
 </script>
+
 </body>
 </html>
