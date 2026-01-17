@@ -109,46 +109,32 @@ jobs:
       run: |
         mkdir -p build
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
-        # DEĞİŞİKLİK BURADA:
-        # FQBN sonuna parametreler eklendi:
-        # PSRAM=disabled   -> PSRAM kapatıldı (WROOM için şart)
-        # FlashMode=dio    -> Flash modu DIO'ya zorlandı
-        # DebugLevel=error -> Hata ayıklama açıldı (Logları görmek için)
-        arduino-cli compile --fqbn esp32:esp32:esp32:PSRAM=disabled,FlashMode=dio,DebugLevel=verbose --output-dir ./build "$SKETCH_PATH"
+        # --- DEĞİŞİKLİK 1: PartitionScheme=min_spiffs EKLENDİ ---
+        arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs,PSRAM=disabled,FlashMode=dio,DebugLevel=verbose --output-dir ./build "$SKETCH_PATH"
 
     - name: Build LittleFS Image
       run: |
-        # --- KRİTİK DÜZELTME BAŞLANGICI ---
-        # mklittlefs'i internetten indirmek yerine, Arduino CLI'nin 
-        # zaten indirdiği yerel dosyayı bulup kullanıyoruz.
-        
         echo "Yerel mklittlefs araci araniyor..."
-        # Arduino paketleri genelde ~/.arduino15 altinda olur.
         MKLITTLEFS_BIN=$(find /home/runner/.arduino15 -name mklittlefs -type f | head -n 1)
         
         if [ -z "$MKLITTLEFS_BIN" ]; then
-           echo "HATA: mklittlefs yerel dosyalarda bulunamadi!"
-           exit 1
+            echo "HATA: mklittlefs yerel dosyalarda bulunamadi!"
+            exit 1
         fi
         
-        echo "BULUNDU: $MKLITTLEFS_BIN"
-        
-        # Dosyayı çalıştırılabilir yap
         chmod +x "$MKLITTLEFS_BIN"
-
-        # Data klasörünü kontrol et
         DATA_PATH=$(find . -type d -name "data" | head -n 1)
         if [ -z "$DATA_PATH" ]; then
-           echo "No data directory found, creating empty one for valid bin generation"
-           mkdir -p data
-           DATA_PATH="data"
+            mkdir -p data
+            DATA_PATH="data"
         fi
         
         echo "Building LittleFS from $DATA_PATH"
         
-        # Bulduğumuz aracı kullanarak imajı oluşturuyoruz
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1441792 ./build/HorusByWyntro.littlefs.bin
-        # --- KRİTİK DÜZELTME SONU ---
+        # --- DEĞİŞİKLİK 2: LittleFS Boyutu Küçültüldü ---
+        # Minimal SPIFFS ayarı için alan yaklaşık 190KB'dır (192512 bytes = 0x2F000)
+        # Eski değer (1.4MB) bu partition scheme ile çalışmaz!
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 192512 ./build/HorusByWyntro.littlefs.bin
 
     - name: Get Partition Offset
       id: get_offset
@@ -156,21 +142,25 @@ jobs:
         python -c "
         import csv
         import os
+        import glob
         
-        # Varsayılan değer (Default Partition Scheme için)
-        found_offset = '0x290000'
-        csv_file = 'partitions.csv'
+        # --- DEĞİŞİKLİK 3: Otomatik Oluşturulan CSV'yi Bulma ---
+        # Min_spiffs kullandığımız için offset değişti (artık 0x290000 değil).
+        # Build klasöründeki oluşturulan gerçek CSV'yi okumamız lazım.
+        found_offset = ''
+        
+        # Build klasöründeki csv'ye bak
+        csv_files = glob.glob('./build/*.partitions.csv')
+        csv_file = csv_files[0] if csv_files else 'partitions.csv'
         
         if os.path.exists(csv_file):
             print(f'{csv_file} bulundu, analiz ediliyor...')
             try:
                 with open(csv_file, 'r') as f:
-                    # Yorum satırlarını temizle
                     lines = [line for line in f if line.strip() and not line.strip().startswith('#')]
                     reader = csv.reader(lines)
                     
                     for row in reader:
-                        # Boşlukları temizle
                         row = [x.strip() for x in row]
                         if len(row) < 5: continue
                         
@@ -179,22 +169,24 @@ jobs:
                         subtype = row[2]
                         offset = row[3]
                         
-                        # Data partition (spiffs veya littlefs) arıyoruz
-                        # Type: data, SubType: spiffs(0x82) veya littlefs(0x83)
-                        if (ptype == 'data' or ptype == '0x01') and (subtype in ['spiffs', 'littlefs', '0x82', '0x83'] or name in ['spiffs', 'littlefs']):
+                        # Data partition (spiffs veya littlefs)
+                        if (ptype == 'data' or ptype == '0x01' or ptype == '1') and (subtype in ['spiffs', 'littlefs', '0x82', '0x83'] or name in ['spiffs', 'littlefs']):
                             if offset and offset != '':
                                 found_offset = offset
                                 print(f'OFFSET BULUNDU: {found_offset} ({name})')
                                 break
             except Exception as e:
                 print(f'CSV okuma hatası: {e}')
-        else:
-            print(f'UYARI: {csv_file} bulunamadı, varsayılan {found_offset} kullanılacak.')
         
-        # GitHub Output değişkenine yaz
+        # Eğer bulunamazsa min_spiffs için varsayılan offset'i kullan (yedek)
+        if not found_offset:
+            print('UYARI: Offset dosyadan okunamadı, Minimal SPIFFS varsayılanı kullanılıyor.')
+            found_offset = '0x3D0000' # Minimal SPIFFS genelde buradan başlar
+        
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
             fh.write(f'LITTLEFS_OFFSET={found_offset}\n')
         "
+
     - name: Generate Factory Bin
       run: |
         pip install esptool
@@ -205,7 +197,6 @@ jobs:
         LITTLEFS_BIN="./build/HorusByWyntro.littlefs.bin"
         BOOT_APP0_BIN=$(find ~/.arduino15 -name "boot_app0.bin" | head -n 1)
         
-        # Python adımından gelen offset değerini alıyoruz
         LITTLEFS_OFFSET=${{ steps.get_offset.outputs.LITTLEFS_OFFSET }}
 
         echo "Firmware: $FIRMWARE_BIN"
@@ -224,7 +215,8 @@ jobs:
           0x10000 "$FIRMWARE_BIN" \
           $LITTLEFS_OFFSET "$LITTLEFS_BIN"
 
-        echo "Fabrika dosyası oluşturuldu (Offset: $LITTLEFS_OFFSET): ./build/HorusByWyntro-factory.bin"
+        echo "Fabrika dosyası oluşturuldu: ./build/HorusByWyntro-factory.bin"
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -234,7 +226,7 @@ jobs:
         make_latest: true
         body: |
           ## 🚀 Horus v${{ env.NEW_VERSION }} Yayında!
-          Aşağıda bu sürümle gelen değişikliklerin listesini bulabilirsiniz.
+          **Not:** Bu sürüm "Minimal SPIFFS" düzeni kullanır. OTA güncellemelerinde sorun yaşanmaz ancak dosya sistemi alanı 190KB ile sınırlıdır.
         files: |
           ./build/HorusByWyntro.ino.bin
           ./build/HorusByWyntro.littlefs.bin
@@ -247,11 +239,11 @@ jobs:
         cp ./build/*.bin public/
         
         if [ -d "website" ]; then
-           echo "Copying website content..."
-           cp -r website/* public/
+            echo "Copying website content..."
+            cp -r website/* public/
         else
-           echo "Error: 'website' directory not found!"
-           exit 1
+            echo "Error: 'website' directory not found!"
+            exit 1
         fi
 
     - name: Deploy to GitHub Pages
