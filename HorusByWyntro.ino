@@ -1057,7 +1057,42 @@ void initWebServer() {
     
     request->send(200, "application/json", json);
   });
-  
+  // Android (çoğu sürüm)
+  server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(204, "text/plain", ""); // Boş 204 → No captive
+    // Alternatif: 200 + "No content" da olur ama 204 daha iyi
+  });
+
+
+  server.on("/gen_204", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(204, "text/plain", "");
+  });
+
+
+  // Eski Android / bazı Samsung
+  server.on("/connectivitycheck.gstatic.com/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(204, "text/plain", "");
+  });
+
+
+  // iOS / Apple
+  server.on("/hotspot-detect.html", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>");
+  });
+
+
+  // Windows 10/11 ekstra
+  server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Microsoft Connect Test");
+  });
+
+  server.onNotFound([](AsyncWebServerRequest *request){
+    request->redirect("/";
+  });
+
+  server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Microsoft NCSI");
+  });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(LittleFS, "/index.html", "text/html");
   });
@@ -1210,9 +1245,14 @@ void startSetupMode() {
   Serial.println("SETUP MODE AKTIF");
 
   WiFi.mode(WIFI_AP);
+  IPAddress apIP(8, 8, 8, 8);
+  IPAddress gateway(8, 8, 8, 8);
+  IPAddress subnet(255, 255, 255, 0);
+
+  WiFi.softAPConfig(apIP, gateway, subnet);
   WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
 
-  dnsServer.start(53, "*", WiFi.softAPIP());
+  dnsServer.start(53, "*", apIP;
 
   Serial.print("Setup IP: ");
   Serial.println(WiFi.softAPIP());
