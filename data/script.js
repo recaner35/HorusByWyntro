@@ -736,6 +736,61 @@ function skipSetup() {
     });
 }
 
+// --- YENİ EKLENEN KODLAR: PWA Kurulum Mantığı ---
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+const iosModal = document.getElementById('iosInstallModal');
+
+// Android: Chrome kurulum olayını yakala
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Tarayıcının otomatik mini-infobar göstermesini engelle
+    e.preventDefault();
+    // Olayı daha sonra tetiklemek üzere sakla
+    deferredPrompt = e;
+    // Butonu görünür yap
+    if(installBtn) installBtn.classList.remove('hidden');
+});
+
+// iOS Tespiti
+const isIos = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(userAgent);
+}
+
+// Sayfa yüklendiğinde iOS kontrolü
+window.addEventListener('load', () => {
+    // Eğer iOS ise ve uygulama zaten "standalone" (tam ekran/yüklü) modda değilse butonu göster
+    const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
+    if (isIos() && !isStandalone) {
+        if(installBtn) installBtn.classList.remove('hidden');
+    }
+});
+
+// Butona tıklandığında çalışacak fonksiyon
+function handleInstallClick() {
+    if (isIos()) {
+        // iOS ise talimat pencresini aç
+        if(iosModal) iosModal.classList.remove('hidden');
+    } else {
+        // Android/Chrome ise native kurulumu tetikle
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('Kullanıcı kurulumu kabul etti');
+                } else {
+                    console.log('Kullanıcı kurulumu reddetti');
+                }
+                deferredPrompt = null;
+            });
+        }
+    }
+}
+
+// iOS modalını kapatma
+function closeIosModal() {
+    if(iosModal) iosModal.classList.add('hidden');
+}
 
 
 
