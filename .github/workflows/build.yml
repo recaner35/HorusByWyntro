@@ -109,8 +109,25 @@ jobs:
       run: |
         mkdir -p build
         SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
-        # --- DEĞİŞİKLİK 1: PartitionScheme=min_spiffs EKLENDİ ---
         arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs,PSRAM=disabled,FlashMode=dio,DebugLevel=verbose --output-dir ./build "$SKETCH_PATH"
+
+    # --- YENİ EKLENEN ADIM: GZIP SIKIŞTIRMA ---
+    - name: Compress Web Assets (Gzip)
+      run: |
+        echo "Web dosyalari 190KB limitine sigmasi icin sikistiriliyor..."
+        DATA_PATH=$(find . -type d -name "data" | head -n 1)
+        
+        if [ -d "$DATA_PATH" ]; then
+          # HTML, JS, CSS ve JSON dosyalarini en yuksek seviyede (-9) sikistir
+          # -f: Zorla üzerine yaz (dosya.html -> dosya.html.gz olur ve orijinal silinir)
+          find "$DATA_PATH" -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.json" \) -exec gzip -9 -v -f -n {} \;
+          
+          echo "Sıkıştırma tamamlandı. Yeni dosya listesi ve boyutları:"
+          ls -lhR "$DATA_PATH"
+        else
+          echo "HATA: Data klasörü bulunamadı!"
+          exit 1
+        fi
 
     - name: Build LittleFS Image
       run: |
@@ -124,16 +141,10 @@ jobs:
         
         chmod +x "$MKLITTLEFS_BIN"
         DATA_PATH=$(find . -type d -name "data" | head -n 1)
-        if [ -z "$DATA_PATH" ]; then
-            mkdir -p data
-            DATA_PATH="data"
-        fi
         
         echo "Building LittleFS from $DATA_PATH"
         
-        # --- DEĞİŞİKLİK 2: LittleFS Boyutu Küçültüldü ---
-        # Minimal SPIFFS ayarı için alan yaklaşık 190KB'dır (192512 bytes = 0x2F000)
-        # Eski değer (1.4MB) bu partition scheme ile çalışmaz!
+        # Sıkıştırılmış dosyalarla imaj oluşturuluyor (190KB limit)
         "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 192512 ./build/HorusByWyntro.littlefs.bin
 
     - name: Get Partition Offset
@@ -144,12 +155,8 @@ jobs:
         import os
         import glob
         
-        # --- DEĞİŞİKLİK 3: Otomatik Oluşturulan CSV'yi Bulma ---
-        # Min_spiffs kullandığımız için offset değişti (artık 0x290000 değil).
-        # Build klasöründeki oluşturulan gerçek CSV'yi okumamız lazım.
         found_offset = ''
         
-        # Build klasöründeki csv'ye bak
         csv_files = glob.glob('./build/*.partitions.csv')
         csv_file = csv_files[0] if csv_files else 'partitions.csv'
         
@@ -169,7 +176,6 @@ jobs:
                         subtype = row[2]
                         offset = row[3]
                         
-                        # Data partition (spiffs veya littlefs)
                         if (ptype == 'data' or ptype == '0x01' or ptype == '1') and (subtype in ['spiffs', 'littlefs', '0x82', '0x83'] or name in ['spiffs', 'littlefs']):
                             if offset and offset != '':
                                 found_offset = offset
@@ -178,10 +184,9 @@ jobs:
             except Exception as e:
                 print(f'CSV okuma hatası: {e}')
         
-        # Eğer bulunamazsa min_spiffs için varsayılan offset'i kullan (yedek)
         if not found_offset:
             print('UYARI: Offset dosyadan okunamadı, Minimal SPIFFS varsayılanı kullanılıyor.')
-            found_offset = '0x3D0000' # Minimal SPIFFS genelde buradan başlar
+            found_offset = '0x3D0000'
         
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
             fh.write(f'LITTLEFS_OFFSET={found_offset}\n')
@@ -226,7 +231,7 @@ jobs:
         make_latest: true
         body: |
           ## 🚀 Horus v${{ env.NEW_VERSION }} Yayında!
-          **Not:** Bu sürüm "Minimal SPIFFS" düzeni kullanır. OTA güncellemelerinde sorun yaşanmaz ancak dosya sistemi alanı 190KB ile sınırlıdır.
+          **Not:** Bu sürüm sıkıştırılmış dosya sistemi (GZIP) ve Minimal SPIFFS kullanır.
         files: |
           ./build/HorusByWyntro.ino.bin
           ./build/HorusByWyntro.littlefs.bin
