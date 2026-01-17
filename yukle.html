@@ -2,214 +2,347 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Horus Web Flasher v1.04</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horus Firmware Yükleyici v1.0.1</title>
 
-<script type="module">
- import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.4/bundle.js";
- window.ESPLoader = ESPLoader;
- window.Transport = Transport;
-</script>
+<script src="https://unpkg.com/esptool-js@0.5.4/bundle.js"></script>
 
 <style>
-body {
- font-family: Arial, sans-serif;
- background: #0f172a;
- color: #e5e7eb;
- display: flex;
- justify-content: center;
- align-items: center;
- height: 100vh;
- margin: 0;
-}
-.card {
- background: #020617;
- width: 520px;
- padding: 24px;
- border-radius: 14px;
- box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-h2 { margin-top: 0; }
-button {
- width: 100%;
- padding: 12px;
- margin-top: 10px;
- border-radius: 8px;
- border: none;
- background: #2563eb;
- color: white;
- font-weight: bold;
- cursor: pointer;
- transition: background 0.2s;
-}
-button:hover:not(:disabled) { background: #1d4ed8; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-#log, #serial {
- background: #000;
- font-family: 'Courier New', monospace;
- font-size: 12px;
- padding: 10px;
- margin-top: 10px;
- height: 120px;
- overflow-y: auto;
- border-radius: 6px;
- white-space: pre-wrap;
- border: 1px solid #334155;
-}
-.small { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
-.divider { text-align: center; margin: 10px 0; font-size: 12px; color: #64748b; }
+  :root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --success: #10b981;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  .container {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  h1 { margin: 0; font-size: 1.5rem; text-align: center; color: var(--primary); }
+  .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+  .status-bar {
+    background: #000;
+    padding: 10px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: var(--success);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  button {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: white;
+  }
+
+  button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+  .btn-connect { background-color: var(--primary); grid-column: span 2; }
+  .btn-connect:hover:not(:disabled) { background-color: var(--primary-hover); }
+
+  .btn-flash { background-color: var(--success); }
+  .btn-flash:hover:not(:disabled) { background-color: #059669; }
+
+  .btn-erase { background-color: var(--danger); }
+  .btn-erase:hover:not(:disabled) { background-color: var(--danger-hover); }
+
+  #terminal {
+    background-color: #000;
+    color: #33ff33;
+    font-family: 'Courier New', monospace;
+    padding: 1rem;
+    height: 250px;
+    overflow-y: auto;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    border: 1px solid #334155;
+  }
+
+  /* Scrollbar */
+  #terminal::-webkit-scrollbar { width: 8px; }
+  #terminal::-webkit-scrollbar-track { background: #000; }
+  #terminal::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+  .progress-container {
+    height: 6px;
+    background: #334155;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--success);
+    width: 0%;
+    transition: width 0.3s;
+  }
 </style>
 </head>
-
 <body>
-<div class="card">
- <h2>Horus Web Flasher</h2>
- <div class="small" id="version">Release: latest</div>
 
- <button id="connectBtn">🔌 Cihaza Bağlan</button>
- <button id="githubBtn">⬇ GitHub Latest (Factory)</button>
+<div class="container">
+  <h1>Horus Yükleyici</h1>
+  <div class="subtitle">Horus by Wyntro - ESP32 Firmware Manager</div>
 
- <div class="divider">veya manuel dosya seç</div>
- <input type="file" id="fileInput" accept=".bin" style="width: 100%; color: #9ca3af;">
+  <div class="status-bar">
+    <span id="statusText">🔴 Bağlı Değil</span>
+    <span id="deviceInfo"></span>
+  </div>
 
- <button id="flashBtn" disabled>⚡ Flash Et</button>
+  <div class="controls">
+    <button id="btnConnect" class="btn-connect" onclick="connectToDevice()">🔌 CİHAZA BAĞLAN</button>
+    <button id="btnFlash" class="btn-flash" onclick="startProcess('flash')" disabled>⚡ YÜKLE (Latest)</button>
+    <button id="btnErase" class="btn-erase" onclick="startProcess('erase')" disabled>🗑 SİL (Erase)</button>
+  </div>
+  
+  <div class="progress-container" id="progressContainer">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
 
- <div id="log">Logs...</div>
- <div id="serial">Serial output...</div>
+  <div id="terminal">Terminal hazır. 'Bağlan' butonuna basın...</div>
 </div>
 
 <script>
-const OWNER = "recaner35";
-const REPO  = "HorusByWyntro";
+  // --- AYARLAR ---
+  const GITHUB_OWNER = "recaner35";
+  const GITHUB_REPO = "HorusByWyntro";
+  const PROXY_URL = "https://corsproxy.io/?"; 
 
-// GitHub Releases linki
-const GITHUB_URL = `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+  // --- DEĞİŞKENLER ---
+  let port;
+  let esploader;
+  let transport;
+  let term;
 
-// CORS Proxy eklenmiş hali (araya bir aracı koyuyoruz)
-const FACTORY_URL = "https://corsproxy.io/?" + encodeURIComponent(GITHUB_URL);
+  const terminal = document.getElementById("terminal");
+  const btnConnect = document.getElementById("btnConnect");
+  const btnFlash = document.getElementById("btnFlash");
+  const btnErase = document.getElementById("btnErase");
+  const statusText = document.getElementById("statusText");
+  const progressBar = document.getElementById("progressBar");
+  const progressContainer = document.getElementById("progressContainer");
 
-let port, transport, esploader;
-let selectedBin = null;
-let selectedBinName = "";
-
-const logBox = document.getElementById("log");
-const serialBox = document.getElementById("serial");
-const flashBtn = document.getElementById("flashBtn");
-
-function log(msg) {
- logBox.innerHTML += `<div>> ${msg}</div>`;
- logBox.scrollTop = logBox.scrollHeight;
-}
-
-function serial(msg) {
- // Serial verisini ekrana basar
- serialBox.textContent += msg;
- serialBox.scrollTop = serialBox.scrollHeight;
-}
-
-function updateFlashButton() {
- flashBtn.disabled = !selectedBin || !esploader;
- if(!flashBtn.disabled) {
-  flashBtn.innerText = `⚡ Flash Et (${selectedBinName})`;
- }
-}
-
-// esptool-js için terminal adaptörü
-const terminalAdapter = {
- clean: () => { serialBox.textContent = ""; },
- writeLine: (data) => { serial(data + "\n"); },
- write: (data) => { serial(data); }
-};
-
-document.getElementById("connectBtn").onclick = async () => {
- try {
-  if (!navigator.serial) {
-   throw new Error("Tarayıcınız Web Serial API desteklemiyor (Chrome/Edge kullanın).");
+  // --- YARDIMCI FONKSİYONLAR ---
+  function log(msg) {
+    terminal.textContent += msg + "\n";
+    terminal.scrollTop = terminal.scrollHeight;
   }
 
-  port = await navigator.serial.requestPort();
-  
-  // esptool-js Transport başlatma
-  transport = new window.Transport(port);
-  
-  // esptool-js ESPLoader başlatma (Transport, Baudrate, Terminal)
-  esploader = new window.ESPLoader(transport, 115200, terminalAdapter);
+  // Esptool-js terminal adaptörü
+  const espLoaderTerminal = {
+    clean: () => { terminal.textContent = ""; },
+    writeLine: (data) => { log(data); },
+    write: (data) => { log(data); }
+  };
 
-  log("Bağlantı kuruluyor...");
-  
-  // Chip algılama ve stub yükleme (main_fn resmi yöntemdir)
-  const chip = await esploader.main_fn();
-  log("Bağlandı: " + chip);
+  // --- BAĞLANTI ---
+  async function connectToDevice() {
+    if (!navigator.serial) {
+      alert("Tarayıcınız Web Serial desteklemiyor. Lütfen Chrome veya Edge kullanın.");
+      return;
+    }
 
-  updateFlashButton();
-  
- } catch (e) {
-  console.error(e);
-  log("Bağlantı hatası: " + e.message);
- }
-};
+    try {
+      port = await navigator.serial.requestPort();
+      transport = new Transport(port); // Resmi kütüphaneden gelen Transport
+      
+      // Butonları güncelle
+      btnConnect.textContent = "✅ Bağlandı (Port Değiştir)";
+      statusText.textContent = "🟢 Hazır";
+      statusText.style.color = "#10b981";
+      btnFlash.disabled = false;
+      btnErase.disabled = false;
+      
+      log("Port seçildi. İşlem bekleniyor...");
+      
+      // Küçük bir bağlantı testi ve monitör başlatma
+      await transport.connect();
+      readLoop(); // Seri monitörü arka planda dinlemeye başla
 
-document.getElementById("githubBtn").onclick = async () => {
- try {
-  log("Factory.bin GitHub'dan indiriliyor...");
-  const res = await fetch(FACTORY_URL);
-  if (!res.ok) throw new Error(`Download başarısız: ${res.status}`);
+    } catch (e) {
+      log("Bağlantı Hatası: " + e.message);
+    }
+  }
 
-  const blob = await res.blob();
-  selectedBin = await blob.arrayBuffer(); // ArrayBuffer olarak sakla
-  selectedBinName = "GitHub Factory";
-  
-  log("Factory.bin indirildi ve hazır.");
-  updateFlashButton();
- } catch (e) {
-  log("GitHub hatası: " + e.message);
- }
-};
+  // --- GITHUB'DAN DOSYA BULMA VE İNDİRME ---
+  async function fetchLatestFirmware() {
+    log("GitHub'dan son sürüm aranıyor...");
+    
+    try {
+      // 1. Release bilgisini çek
+      const apiRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+      if (!apiRes.ok) throw new Error("GitHub Release bilgisi alınamadı.");
+      const releaseData = await apiRes.json();
+      
+      log(`Son Sürüm Bulundu: ${releaseData.tag_name}`);
 
-document.getElementById("fileInput").onchange = async e => {
- const file = e.target.files[0];
- if (!file) return;
- 
- selectedBin = await file.arrayBuffer();
- selectedBinName = file.name;
- 
- log("Dosya seçildi: " + file.name);
- updateFlashButton();
-};
+      // 2. Factory.bin dosyasını bul
+      const asset = releaseData.assets.find(a => a.name.endsWith("factory.bin"));
+      if (!asset) throw new Error("Release içinde 'factory.bin' dosyası bulunamadı.");
 
-flashBtn.onclick = async () => {
- if (!esploader || !selectedBin) return;
+      log(`İndiriliyor: ${asset.name}`);
+      
+      // 3. Dosyayı indir (CORS Proxy ile)
+      // fetch içindeki URL'yi proxy'ye veriyoruz
+      const downloadUrl = PROXY_URL + encodeURIComponent(asset.browser_download_url);
+      const binRes = await fetch(downloadUrl);
+      
+      if (!binRes.ok) throw new Error("Dosya indirilemedi.");
+      
+      const blob = await binRes.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      
+      log(`İndirme tamamlandı! Boyut: ${(arrayBuffer.byteLength / 1024).toFixed(2)} KB`);
+      return arrayBuffer;
 
- try {
-  log("Flash işlemi başlıyor...");
-  log("Lütfen bekleyin, bu işlem biraz sürebilir.");
-  
-  // Dosya içeriğini hazırla
-  const fileArray = [{ data: new Uint8Array(selectedBin), address: 0x0 }];
+    } catch (e) {
+      throw new Error("Firmware indirme hatası: " + e.message);
+    }
+  }
 
-  // Resmi write_flash fonksiyonu:
-  // write_flash(fileArray, flash_size, flash_mode, flash_freq, compress, erase_all)
-  await esploader.write_flash(
-   fileArray,
-   'keep', // flash_size
-   'keep', // flash_mode
-   'keep', // flash_freq
-   false, // compress (bazen sorun çıkarabilir, kapalı tuttum)
-   true // erase_all (Tam temizlik istiyordun)
-  );
+  // --- ANA İŞLEM (FLASH veya ERASE) ---
+  async function startProcess(mode) {
+    if (!port) return;
 
-  log("✅ Flash BAŞARIYLA tamamlandı! Cihaz resetleniyor...");
-  
-  // İsteğe bağlı: Reset atma
-  // await transport.setDTR(false);
-  // await new Promise(r => setTimeout(r, 100));
-  // await transport.setDTR(true);
+    // Önceki okuma döngüsünü durdurmak için sinyal gerekebilir ama
+    // esptool loader başladığında portu devralır.
+    
+    try {
+      btnFlash.disabled = true;
+      btnErase.disabled = true;
+      btnConnect.disabled = true;
+      progressContainer.style.display = "block";
+      progressBar.style.width = "0%";
 
- } catch (e) {
-  console.error(e);
-  log("❌ Flash hatası: " + e.message);
- }
-};
+      // Loader'ı başlat
+      // DİKKAT: ESPLoader versiyonuna göre parametre sırası: (transport, baudrate, terminal)
+      esploader = new ESPLoader(transport, 921600, espLoaderTerminal); // Hızlı flash için 921600
+
+      log("Bootloader'a bağlanılıyor (Boot tuşuna basılı tutmanız gerekebilir)...");
+      
+      const chip = await esploader.main_fn(); 
+      log(`Chip Algılandı: ${chip}`);
+
+      if (mode === 'erase') {
+        log("Silme işlemi başlıyor...");
+        await esploader.erase_flash();
+        log("✅ Silme TAMAMLANDI!");
+      } 
+      else if (mode === 'flash') {
+        // Dosyayı indir
+        const fileData = await fetchLatestFirmware();
+        
+        log("Yazma işlemi başlıyor...");
+        
+        const fileArray = [{ data: new Uint8Array(fileData), address: 0x0000 }];
+        
+        // write_flash(fileArray, flash_size, flash_mode, flash_freq, compress, erase_all)
+        await esploader.write_flash(
+          fileArray,
+          'keep', 
+          'keep', 
+          'keep', 
+          false, 
+          true, // Erase all yapıp temiz kurulum yapmak en sağlıklısıdır
+          (fileIndex, written, total) => {
+            const percent = Math.round((written / total) * 100);
+            progressBar.style.width = percent + "%";
+            // Çok fazla log basmamak için yüzdeyi terminale yazmıyoruz, barı kullanıyoruz
+          }
+        );
+        log("✅ Yükleme TAMAMLANDI!");
+      }
+
+      // İşlem bitince reset at
+      log("Cihaz yeniden başlatılıyor...");
+      await transport.setDTR(false);
+      await new Promise(r => setTimeout(r, 100));
+      await transport.setDTR(true);
+
+    } catch (e) {
+      log("❌ HATA: " + e.message);
+      console.error(e);
+    } finally {
+      // Temizlik ve Butonları açma
+      btnFlash.disabled = false;
+      btnErase.disabled = false;
+      btnConnect.disabled = false;
+      esploader = null; 
+      // Seri monitöre geri dön
+      readLoop();
+    }
+  }
+
+  // --- SERİ MONİTÖR DÖNGÜSÜ ---
+  async function readLoop() {
+    // Eğer flash işlemi yapılıyorsa okumayı durdurmak gerekebilir
+    // Ancak basit yapıda transport okumaya devam etmeye çalışırsa hata verebilir.
+    // Şimdilik basit bir try-catch ile yönetiyoruz.
+    try {
+      if (port && port.readable && !esploader) {
+        const reader = port.readable.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+              const text = new TextDecoder().decode(value);
+              terminal.textContent += text;
+              terminal.scrollTop = terminal.scrollHeight;
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+    } catch (e) {
+      // Flash sırasında port meşgul olacağı için burası hata verebilir, yoksayıyoruz.
+    }
+    // Döngüyü yavaşlatmak için
+    setTimeout(readLoop, 100);
+  }
+
 </script>
 </body>
 </html>
