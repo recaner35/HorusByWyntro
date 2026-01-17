@@ -1216,9 +1216,6 @@ void initWebServer() {
     request->send(200, "application/json", json);
   });
 
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/update.html", "text/html");
-  });
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
