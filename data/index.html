@@ -108,6 +108,9 @@
                 <option value="ja">JA</option>
                 <option value="az">AZ</option>
             </select>
+            <button id="installBtn" class="icon-btn hidden" onclick="handleInstallClick()" aria-label="Ana Ekrana Ekle">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </button>
         </div>
     </header>
 
@@ -331,10 +334,22 @@
   <h2>Kurulum Tamamlandı</h2>
   <p>Horus kullanıma hazır</p>
 </div>
-
+<div id="iosInstallModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>Ana Ekrana Ekle</h3>
+        <p>Bu uygulamayı iPhone/iPad ana ekranınıza eklemek için:</p>
+        <ol>
+            <li>Tarayıcı altındaki <strong style="color:var(--accent-color)">Paylaş</strong> simgesine dokunun.</li>
+            <li>Açılan menüde aşağı inin ve <strong>"Ana Ekrana Ekle"</strong> seçeneğini seçin.</li>
+            <li>Sağ üst köşedeki <strong>"Ekle"</strong> butonuna basın.</li>
+        </ol>
+        <button class="primary-btn full" onclick="closeIosModal()">Anlaşıldı</button>
+    </div>
+</div>
 </body>
 
 </html>
+
 
 
 
