@@ -1087,7 +1087,7 @@ void initWebServer() {
   });
 
   server.onNotFound([](AsyncWebServerRequest *request){
-    request->redirect("/";
+    request->redirect("/");
   });
 
   server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1252,7 +1252,7 @@ void startSetupMode() {
   WiFi.softAPConfig(apIP, gateway, subnet);
   WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
 
-  dnsServer.start(53, "*", apIP;
+  dnsServer.start(53, "*", apIP);
 
   Serial.print("Setup IP: ");
   Serial.println(WiFi.softAPIP());
