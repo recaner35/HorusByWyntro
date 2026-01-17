@@ -105,18 +105,19 @@ jobs:
         git clone https://github.com/me-no-dev/AsyncTCP.git ~/Arduino/libraries/AsyncTCP
         git clone https://github.com/me-no-dev/ESPAsyncWebServer.git ~/Arduino/libraries/ESPAsyncWebServer
 
-    - name: Compile Sketch
+    - name: Prepare custom partitions
       run: |
         mkdir -p build
-        SKETCH_PATH=$(find . -name "*.ino" | head -n 1)
+        cp partitions/partitions_horus_ota.csv build/partitions.csv
+
+    - name: Compile Sketch
+      run: |
         arduino-cli compile \
-          --fqbn esp32:esp32:esp32:PartitionScheme=custom \
-          --build-property build.partitions=partitions_horus_ota \
-          --build-property build.partitions.path=$GITHUB_WORKSPACE/partitions \
-          --output-dir ./build \
-          "$SKETCH_PATH"
-
-
+          --fqbn esp32:esp32:esp32 \
+          --build-path build \
+          --build-property build.partitions=partitions \
+          --build-property build.custom_partitions=build/partitions.csv \
+          HorusByWyntro.ino
 
     # --- YENİ EKLENEN ADIM: GZIP SIKIŞTIRMA ---
     - name: Compress Web Assets (Gzip)
