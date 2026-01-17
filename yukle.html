@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Horus Web Flasher v1.03</title>
+<title>Horus Web Flasher v1.04</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script type="module">
@@ -80,9 +80,13 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
 <script>
 const OWNER = "recaner35";
-const REPO = "HorusByWyntro";
-const FACTORY_URL =
- `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+const REPO  = "HorusByWyntro";
+
+// GitHub Releases linki
+const GITHUB_URL = `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+
+// CORS Proxy eklenmiş hali (araya bir aracı koyuyoruz)
+const FACTORY_URL = "https://corsproxy.io/?" + encodeURIComponent(GITHUB_URL);
 
 let port, transport, esploader;
 let selectedBin = null;
