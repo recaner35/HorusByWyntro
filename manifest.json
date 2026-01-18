@@ -1,0 +1,15 @@
+{
+  "name": "Horus by Wyntro",
+  "version": "1.0.0",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "HorusByWyntro-factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
