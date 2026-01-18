@@ -5,7 +5,7 @@
   <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- esptool-js (UYUMLU SÜRÜM) -->
+  <!-- esptool-js BUNDLE -->
   <script src="https://unpkg.com/esptool-js@0.4.7/bundle.js"></script>
 
   <style>
@@ -19,7 +19,6 @@
       color: #eaeaea;
       font-family: system-ui, -apple-system, BlinkMacSystemFont;
     }
-
     .card {
       width: 420px;
       background: #171a21;
@@ -27,18 +26,8 @@
       border-radius: 14px;
       box-shadow: 0 0 40px rgba(0,0,0,.6);
     }
-
-    h1 {
-      margin: 0 0 6px;
-      font-size: 20px;
-    }
-
-    p {
-      margin: 0 0 18px;
-      font-size: 14px;
-      opacity: .85;
-    }
-
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    p { margin: 0 0 18px; font-size: 14px; opacity: .85; }
     button {
       width: 100%;
       padding: 14px;
@@ -51,12 +40,7 @@
       background: #3b82f6;
       color: #fff;
     }
-
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-
+    button:disabled { background: #555; cursor: not-allowed; }
     pre {
       margin-top: 16px;
       padding: 12px;
@@ -102,14 +86,14 @@
   /* ===================== ESPTOOL ===================== */
 
   let transport;
-  let esploader;
+  let loader;
 
   async function createTransport() {
     const port = await navigator.serial.requestPort();
     await port.open({ baudRate: BAUDRATE });
 
-    // 🔴 KRİTİK NOKTA – HATA BURADAYDI
-    return new ESPLoader.Transport(port);
+    // 🔑 DOĞRU NAMESPACE
+    return new esptool.Transport(port);
   }
 
   connectBtn.onclick = async () => {
@@ -118,7 +102,7 @@
 
       transport = await createTransport();
 
-      esploader = new ESPLoader({
+      loader = new esptool.ESPLoader({
         transport,
         baudrate: BAUDRATE,
         terminal: {
@@ -127,7 +111,7 @@
       });
 
       log("ESP32 bağlanıyor...");
-      await esploader.main();
+      await loader.main();
 
       log("Bağlantı başarılı.");
       flashBtn.disabled = false;
@@ -146,10 +130,10 @@
       const bin = await response.arrayBuffer();
 
       log("Flash tamamen siliniyor (chip erase)...");
-      await esploader.eraseFlash();
+      await loader.eraseFlash();
 
       log("Firmware yazılıyor...");
-      await esploader.writeFlash({
+      await loader.writeFlash({
         fileArray: [
           {
             data: bin,
@@ -160,7 +144,7 @@
       });
 
       log("✔ Yükleme tamamlandı.");
-      log("Cihaz otomatik yeniden başlayacaktır.");
+      log("Cihaz yeniden başlatılıyor.");
 
     } catch (err) {
       log("HATA: " + err);
