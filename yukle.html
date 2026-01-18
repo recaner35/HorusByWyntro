@@ -1,190 +1,160 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horus Installer - Legacy Fix</title>
-    <style>
-        body { background-color: #000; color: #0f0; font-family: monospace; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .box { border: 2px solid #0f0; padding: 20px; max-width: 600px; width: 100%; border-radius: 8px; box-shadow: 0 0 10px #0f0; }
-        h2 { text-align: center; margin-top: 0; border-bottom: 1px dashed #0f0; padding-bottom: 10px; }
-        
-        button { width: 100%; padding: 15px; margin: 10px 0; background: #000; color: #0f0; border: 1px solid #0f0; font-family: monospace; font-size: 16px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0f0; color: #000; }
-        button:disabled { border-color: #555; color: #555; cursor: not-allowed; background: #000; }
-        
-        #log { height: 250px; overflow-y: scroll; border: 1px solid #333; padding: 10px; margin-top: 15px; white-space: pre-wrap; font-size: 12px; }
-        
-        .status-loading { color: yellow; text-align: center; font-size: 1.2em; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-        .hidden { display: none; }
-    </style>
-    
-    <script src="https://cdn.jsdelivr.net/npm/esptool-js@0.2.0/bundle.js"></script>
+  <meta charset="UTF-8" />
+  <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- esptool-js -->
+  <script src="https://unpkg.com/esptool-js@0.4.7/bundle.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      background: #0f1115;
+      color: #eaeaea;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background: #171a21;
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 0 40px rgba(0,0,0,.6);
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 16px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      background: #3b82f6;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    pre {
+      background: #0b0d11;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 16px;
+      height: 160px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+  </style>
 </head>
 <body>
 
-<div class="box">
-    <h2>HORUS FACTORY YÜKLEYİCİ</h2>
-    
-    <div id="loader" class="status-loading">SİSTEM YÜKLENİYOR...</div>
+<div class="card">
+  <h1>Horus by Wyntro</h1>
+  <p>ESP32 Firmware Yükleyici</p>
 
-    <div id="app" class="hidden">
-        <button id="btnConnect">1. CİHAZA BAĞLAN</button>
-        
-        <div id="controls" class="hidden">
-            <p>Factory.bin Dosyası:</p>
-            <input type="file" id="fileInput" accept=".bin" style="border:1px solid #0f0; width:95%; padding:5px; margin-bottom:10px;">
-            
-            <button id="btnErase" style="border-color: red; color: red;">2. ÇİPİ SİL (ERASE)</button>
-            <button id="btnFlash" disabled>3. YÜKLE (FLASH)</button>
-        </div>
-    </div>
+  <button id="connectBtn">Cihaza Bağlan</button>
+  <button id="flashBtn" disabled>Sil ve Firmware Yükle</button>
 
-    <div id="log">Sistem başlatılıyor...</div>
+  <pre id="log"></pre>
 </div>
 
 <script>
-    const logEl = document.getElementById("log");
-    const loader = document.getElementById("loader");
-    const app = document.getElementById("app");
-    const controls = document.getElementById("controls");
-    const btnConnect = document.getElementById("btnConnect");
-    const btnErase = document.getElementById("btnErase");
-    const btnFlash = document.getElementById("btnFlash");
-    const fileInput = document.getElementById("fileInput");
+  const FACTORY_BIN_URL =
+    "https://github.com/recaner35/HorusByWyntro/releases/download/1.0.212/HorusByWyntro-factory.bin";
 
-    function log(msg) {
-        logEl.innerHTML += "> " + msg + "\n";
-        logEl.scrollTop = logEl.scrollHeight;
+  const logEl = document.getElementById("log");
+  const connectBtn = document.getElementById("connectBtn");
+  const flashBtn = document.getElementById("flashBtn");
+
+  let transport;
+  let esptool;
+
+  function log(msg) {
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  connectBtn.onclick = async () => {
+    try {
+      log("Seri port seçiliyor...");
+      transport = await espToolTransport();
+
+      esptool = new ESPLoader({
+        transport,
+        baudrate: 921600,
+        terminal: { writeLine: log }
+      });
+
+      log("ESP32 bağlanıyor...");
+      await esptool.main();
+
+      log("Bağlantı başarılı.");
+      flashBtn.disabled = false;
+
+    } catch (e) {
+      log("Bağlantı hatası: " + e);
     }
+  };
 
-    // SAYFA YÜKLENDİĞİNDE KONTROL
-    window.onload = function() {
-        if (typeof esptooljs === 'undefined') {
-            log("HATA: Kütüphane yüklenemedi! Adblock veya ağ ayarlarını kontrol edin.");
-            loader.innerText = "YÜKLEME BAŞARISIZ";
-            loader.style.color = "red";
-        } else {
-            log("Sistem Hazır. v0.2.0 yüklendi.");
-            loader.classList.add("hidden");
-            app.classList.remove("hidden");
-        }
-    };
+  flashBtn.onclick = async () => {
+    try {
+      flashBtn.disabled = true;
 
-    let esploader;
-    let transport;
+      log("Firmware indiriliyor...");
+      const res = await fetch(FACTORY_BIN_URL);
+      const bin = await res.arrayBuffer();
 
-    // 1. BAĞLAN
-    btnConnect.onclick = async () => {
-        if (!navigator.serial) return alert("Chrome kullanın.");
+      log("Flash tamamen siliniyor (chip erase)...");
+      await esptool.eraseFlash();
 
-        try {
-            const device = await navigator.serial.requestPort();
-            
-            // v0.2.0 - getInfo çağırmaz, direkt bağlanır
-            transport = new esptooljs.Transport(device);
-            
-            // Terminal Wrapper
-            const term = {
-                clean: () => {},
-                writeLine: (s) => log(s),
-                write: (s) => log(s)
-            };
+      log("Firmware yazılıyor...");
+      await esptool.writeFlash({
+        fileArray: [
+          {
+            data: bin,
+            address: 0x0000
+          }
+        ],
+        flashSize: "detect"
+      });
 
-            esploader = new esptooljs.ESPLoader(transport, 115200, term);
+      log("✔ Yükleme tamamlandı.");
+      log("Cihaz yeniden başlatılabilir.");
 
-            log("Bağlanılıyor... (Log durursa BOOT tuşuna basılı tutun)");
-            
-            await esploader.main_fn();
-            await esploader.flash_id();
+    } catch (e) {
+      log("HATA: " + e);
+      flashBtn.disabled = false;
+    }
+  };
 
-            log("BAĞLANDI! Dosya seçme ekranı açılıyor...");
-            btnConnect.classList.add("hidden");
-            controls.classList.remove("hidden");
-
-        } catch (e) {
-            log("BAĞLANTI HATASI: " + e.message);
-        }
-    };
-
-    // DOSYA SEÇİMİ
-    fileInput.onchange = () => {
-        if (fileInput.files.length > 0) {
-            btnFlash.disabled = false;
-            log("Dosya seçildi.");
-        }
-    };
-
-    // 2. SİLME (ERASE)
-    btnErase.onclick = async () => {
-        if(!confirm("Emin misiniz? Her şey silinecek.")) return;
-        try {
-            btnErase.disabled = true;
-            btnFlash.disabled = true;
-            log("SİLİNİYOR... Lütfen bekleyin...");
-            
-            await esploader.erase_flash();
-            
-            log("✅ SİLME TAMAMLANDI!");
-        } catch(e) {
-            log("Silme Hatası: " + e.message);
-        } finally {
-            btnErase.disabled = false;
-            if(fileInput.files.length > 0) btnFlash.disabled = false;
-        }
-    };
-
-    // 3. YÜKLEME (FLASH)
-    btnFlash.onclick = async () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        
-        // v0.2.0 İÇİN KRİTİK NOKTA: BinaryString OKUMA
-        reader.onload = async (e) => {
-            const data = e.target.result;
-            
-            try {
-                btnFlash.disabled = true;
-                btnErase.disabled = true;
-                log("Yükleme Başlıyor...");
-
-                // v0.2.0 Write Flash Parametreleri
-                await esploader.write_flash(
-                    [{ data: data, address: 0x0000 }], 
-                    'keep', 
-                    'keep', 
-                    'keep', 
-                    false, // erase_all (zaten yaptık)
-                    true,  // compress
-                    (fileIndex, written, total) => {
-                        const p = Math.round((written / total) * 100);
-                        if(p % 10 === 0) log("Yükleniyor: %" + p);
-                    }
-                );
-
-                log("🎉 İŞLEM BİTTİ! Cihaz resetleniyor...");
-                
-                await transport.set_dtr(false);
-                await transport.set_rts(true);
-                await new Promise(r => setTimeout(r, 100));
-                await transport.set_rts(false);
-                
-                log("Cihazınız fabrika ayarlarıyla açılıyor.");
-                alert("Başarılı!");
-
-            } catch (err) {
-                log("Yükleme Hatası: " + err.message);
-            } finally {
-                btnFlash.disabled = false;
-                btnErase.disabled = false;
-            }
-        };
-
-        reader.readAsBinaryString(file);
-    };
+  async function espToolTransport() {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 921600 });
+    return new Transport(port);
+  }
 </script>
 
 </body>
