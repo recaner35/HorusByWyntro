@@ -3,54 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- esptool-js -->
+  <!-- esptool-js (UYUMLU SÜRÜM) -->
   <script src="https://unpkg.com/esptool-js@0.4.7/bundle.js"></script>
 
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
-      background: #0f1115;
-      color: #eaeaea;
+      margin: 0;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      margin: 0;
+      background: #0f1115;
+      color: #eaeaea;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
     }
 
     .card {
+      width: 420px;
       background: #171a21;
-      border-radius: 14px;
       padding: 28px;
-      width: 100%;
-      max-width: 420px;
+      border-radius: 14px;
       box-shadow: 0 0 40px rgba(0,0,0,.6);
     }
 
     h1 {
+      margin: 0 0 6px;
       font-size: 20px;
-      margin-bottom: 8px;
     }
 
     p {
+      margin: 0 0 18px;
       font-size: 14px;
-      opacity: 0.85;
+      opacity: .85;
     }
 
     button {
       width: 100%;
       padding: 14px;
-      margin-top: 16px;
+      margin-top: 12px;
       border-radius: 10px;
       border: none;
       font-size: 15px;
       font-weight: 600;
+      cursor: pointer;
       background: #3b82f6;
       color: #fff;
-      cursor: pointer;
     }
 
     button:disabled {
@@ -59,12 +58,12 @@
     }
 
     pre {
+      margin-top: 16px;
+      padding: 12px;
+      height: 170px;
+      overflow-y: auto;
       background: #0b0d11;
       border-radius: 10px;
-      padding: 12px;
-      margin-top: 16px;
-      height: 160px;
-      overflow-y: auto;
       font-size: 12px;
     }
   </style>
@@ -82,40 +81,59 @@
 </div>
 
 <script>
+  /* ===================== AYAR ===================== */
+
   const FACTORY_BIN_URL =
     "https://github.com/recaner35/HorusByWyntro/releases/download/1.0.212/HorusByWyntro-factory.bin";
+
+  const BAUDRATE = 921600;
+
+  /* ===================== UI ===================== */
 
   const logEl = document.getElementById("log");
   const connectBtn = document.getElementById("connectBtn");
   const flashBtn = document.getElementById("flashBtn");
-
-  let transport;
-  let esptool;
 
   function log(msg) {
     logEl.textContent += msg + "\n";
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  /* ===================== ESPTOOL ===================== */
+
+  let transport;
+  let esploader;
+
+  async function createTransport() {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: BAUDRATE });
+
+    // 🔴 KRİTİK NOKTA – HATA BURADAYDI
+    return new ESPLoader.Transport(port);
+  }
+
   connectBtn.onclick = async () => {
     try {
       log("Seri port seçiliyor...");
-      transport = await espToolTransport();
 
-      esptool = new ESPLoader({
+      transport = await createTransport();
+
+      esploader = new ESPLoader({
         transport,
-        baudrate: 921600,
-        terminal: { writeLine: log }
+        baudrate: BAUDRATE,
+        terminal: {
+          writeLine: log
+        }
       });
 
       log("ESP32 bağlanıyor...");
-      await esptool.main();
+      await esploader.main();
 
       log("Bağlantı başarılı.");
       flashBtn.disabled = false;
 
-    } catch (e) {
-      log("Bağlantı hatası: " + e);
+    } catch (err) {
+      log("Bağlantı hatası: " + err);
     }
   };
 
@@ -124,14 +142,14 @@
       flashBtn.disabled = true;
 
       log("Firmware indiriliyor...");
-      const res = await fetch(FACTORY_BIN_URL);
-      const bin = await res.arrayBuffer();
+      const response = await fetch(FACTORY_BIN_URL);
+      const bin = await response.arrayBuffer();
 
       log("Flash tamamen siliniyor (chip erase)...");
-      await esptool.eraseFlash();
+      await esploader.eraseFlash();
 
       log("Firmware yazılıyor...");
-      await esptool.writeFlash({
+      await esploader.writeFlash({
         fileArray: [
           {
             data: bin,
@@ -142,19 +160,13 @@
       });
 
       log("✔ Yükleme tamamlandı.");
-      log("Cihaz yeniden başlatılabilir.");
+      log("Cihaz otomatik yeniden başlayacaktır.");
 
-    } catch (e) {
-      log("HATA: " + e);
+    } catch (err) {
+      log("HATA: " + err);
       flashBtn.disabled = false;
     }
   };
-
-  async function espToolTransport() {
-    const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 921600 });
-    return new Transport(port);
-  }
 </script>
 
 </body>
