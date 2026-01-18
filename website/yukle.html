@@ -5,9 +5,9 @@
   <title>Horus Firmware Yükleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- DOSYA SEÇMELİ ESP32 FLASHER -->
-  <script
-    type="module"
+  <link rel="icon" href="data:,">
+
+  <script type="module"
     src="https://cdn.jsdelivr.net/npm/esp-web-tools@10/dist/web/esp-web-flasher.js">
   </script>
 
@@ -29,35 +29,24 @@
       width: 360px;
       text-align: center;
     }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 20px;
-    }
-    p {
-      font-size: 12px;
-      opacity: 0.7;
-      margin-top: 16px;
-      line-height: 1.4;
-    }
   </style>
 </head>
 <body>
 
-  <div class="box">
-    <h1>Horus by Wyntro</h1>
+<div class="box">
+  <h1>Horus by Wyntro</h1>
 
-    <!-- BURASI ÖNEMLİ -->
-    <esp-web-flasher
-      chip="ESP32"
-      erase-first>
-    </esp-web-flasher>
+  <esp-web-flasher
+    chip="esp32"
+    erase-first>
+  </esp-web-flasher>
 
-    <p>
-      • Factory.bin dosyasını seç<br>
-      • Flash öncesi tam silme yapılır<br>
-      • Chrome / Edge (Masaüstü)
-    </p>
-  </div>
+  <p>
+    • Factory.bin dosyasını seç<br>
+    • Flash öncesi tam silme yapılır<br>
+    • Chrome / Edge (Masaüstü)
+  </p>
+</div>
 
 </body>
 </html>
