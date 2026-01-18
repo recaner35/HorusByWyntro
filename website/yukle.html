@@ -5,9 +5,6 @@
   <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- DOĞRU BUNDLE -->
-  <script src="https://unpkg.com/esptool-js@0.4.7/bundle.js"></script>
-
   <style>
     body {
       margin: 0;
@@ -67,15 +64,14 @@
   <pre id="log"></pre>
 </div>
 
-<script>
-  /* ===================== AYAR ===================== */
+<!-- 🔑 KRİTİK NOKTA: ES MODULE -->
+<script type="module">
+  import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.7/dist/web/index.js";
 
   const FACTORY_BIN_URL =
     "https://github.com/recaner35/HorusByWyntro/releases/download/1.0.212/HorusByWyntro-factory.bin";
 
   const BAUDRATE = 921600;
-
-  /* ===================== UI ===================== */
 
   const logEl = document.getElementById("log");
   const connectBtn = document.getElementById("connectBtn");
@@ -86,70 +82,51 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
-  /* ===================== ESPTOOL ===================== */
-
   let transport;
   let loader;
 
-  async function createTransport() {
+  async function connect() {
+    log("Seri port seçiliyor...");
+
     const port = await navigator.serial.requestPort();
     await port.open({ baudRate: BAUDRATE });
 
-    // 🔴 TEK DOĞRU KULLANIM
-    return new window.esptooljs.Transport(port);
+    transport = new Transport(port);
+
+    loader = new ESPLoader({
+      transport,
+      baudrate: BAUDRATE,
+      terminal: { writeLine: log }
+    });
+
+    log("ESP32 bağlanıyor...");
+    await loader.main();
+
+    log("Bağlantı başarılı.");
+    flashBtn.disabled = false;
   }
 
-  connectBtn.onclick = async () => {
-    try {
-      log("Seri port seçiliyor...");
+  async function flash() {
+    flashBtn.disabled = true;
 
-      transport = await createTransport();
+    log("Firmware indiriliyor...");
+    const res = await fetch(FACTORY_BIN_URL);
+    const bin = await res.arrayBuffer();
 
-      loader = new window.esptooljs.ESPLoader({
-        transport,
-        baudrate: BAUDRATE,
-        terminal: {
-          writeLine: log
-        }
-      });
+    log("Flash tamamen siliniyor (chip erase)...");
+    await loader.eraseFlash();
 
-      log("ESP32 bağlanıyor...");
-      await loader.main();
+    log("Firmware yazılıyor...");
+    await loader.writeFlash({
+      fileArray: [{ data: bin, address: 0x0000 }],
+      flashSize: "detect"
+    });
 
-      log("Bağlantı başarılı.");
-      flashBtn.disabled = false;
+    log("✔ Yükleme tamamlandı.");
+  }
 
-    } catch (err) {
-      log("Bağlantı hatası: " + err);
-    }
-  };
-
-  flashBtn.onclick = async () => {
-    try {
-      flashBtn.disabled = true;
-
-      log("Firmware indiriliyor...");
-      const response = await fetch(FACTORY_BIN_URL);
-      const bin = await response.arrayBuffer();
-
-      log("Flash tamamen siliniyor (chip erase)...");
-      await loader.eraseFlash();
-
-      log("Firmware yazılıyor...");
-      await loader.writeFlash({
-        fileArray: [
-          { data: bin, address: 0x0000 }
-        ],
-        flashSize: "detect"
-      });
-
-      log("✔ Yükleme tamamlandı.");
-
-    } catch (err) {
-      log("HATA: " + err);
-      flashBtn.disabled = false;
-    }
-  };
+  connectBtn.onclick = () => connect().catch(e => log("Bağlantı hatası: " + e));
+  flashBtn.onclick = () => flash().catch(e => log("HATA: " + e));
 </script>
 
 </body>
