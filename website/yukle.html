@@ -5,36 +5,36 @@
   <title>Horus Firmware Yükleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- ESP Web Tools -->
-  <script
-    type="module"
-    src="https://unpkg.com/esp-web-tools@9/dist/web/esp-web-flasher.js">
+  <!-- ESP Web Tools (CORS UYUMLU CDN) -->
+  <script type="module"
+    src="https://cdn.jsdelivr.net/npm/esp-web-tools@9.4.3/dist/web/esp-web-flasher.js">
   </script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #0f1115;
-      color: #fff;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100vh;
     }
     .box {
-      text-align: center;
+      background: #1a1d24;
       padding: 40px;
       border-radius: 12px;
-      background: #1a1d24;
-      width: 340px;
+      width: 360px;
+      text-align: center;
     }
     h1 {
-      margin-bottom: 20px;
       font-size: 20px;
+      margin-bottom: 20px;
     }
     p {
       font-size: 13px;
       opacity: 0.7;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -43,14 +43,14 @@
   <div class="box">
     <h1>Horus by Wyntro<br>Firmware Yükleyici</h1>
 
-    <!-- DOSYA SEÇMELİ FLASHER -->
+    <!-- DOSYA SEÇMELİ ESP32 FLASHER -->
     <esp-web-flasher
-      erase-first
-      chip="ESP32">
+      chip="ESP32"
+      erase-first>
     </esp-web-flasher>
 
-    <p style="margin-top:20px">
-      • Önce cihaz silinir<br>
+    <p>
+      • Önce flash tamamen silinir<br>
       • Seçtiğin <b>factory.bin</b> yüklenir<br>
       • Chrome / Edge (Desktop)
     </p>
