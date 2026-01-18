@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- esptool-js BUNDLE -->
+  <!-- DOĞRU BUNDLE -->
   <script src="https://unpkg.com/esptool-js@0.4.7/bundle.js"></script>
 
   <style>
@@ -40,7 +40,10 @@
       background: #3b82f6;
       color: #fff;
     }
-    button:disabled { background: #555; cursor: not-allowed; }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
     pre {
       margin-top: 16px;
       padding: 12px;
@@ -92,8 +95,8 @@
     const port = await navigator.serial.requestPort();
     await port.open({ baudRate: BAUDRATE });
 
-    // 🔑 DOĞRU NAMESPACE
-    return new esptool.Transport(port);
+    // 🔴 TEK DOĞRU KULLANIM
+    return new window.esptooljs.Transport(port);
   }
 
   connectBtn.onclick = async () => {
@@ -102,7 +105,7 @@
 
       transport = await createTransport();
 
-      loader = new esptool.ESPLoader({
+      loader = new window.esptooljs.ESPLoader({
         transport,
         baudrate: BAUDRATE,
         terminal: {
@@ -135,16 +138,12 @@
       log("Firmware yazılıyor...");
       await loader.writeFlash({
         fileArray: [
-          {
-            data: bin,
-            address: 0x0000
-          }
+          { data: bin, address: 0x0000 }
         ],
         flashSize: "detect"
       });
 
       log("✔ Yükleme tamamlandı.");
-      log("Cihaz yeniden başlatılıyor.");
 
     } catch (err) {
       log("HATA: " + err);
