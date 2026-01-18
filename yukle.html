@@ -2,159 +2,153 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Final Flasher</title>
+    <title>ESP32 Flash Tool (Stable Legacy)</title>
     <style>
-        body { background: #222; color: #ddd; font-family: sans-serif; padding: 20px; text-align: center; }
-        .container { background: #333; max-width: 500px; margin: 0 auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h2 { color: #4db8ff; margin-top: 0; }
-        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-con { background: #007bff; color: white; }
-        .btn-flash { background: #28a745; color: white; }
-        .btn-erase { background: #dc3545; color: white; margin-bottom: 5px; }
-        button:disabled { background: #555; color: #888; cursor: not-allowed; }
-        #log { background: #000; color: #0f0; height: 200px; overflow-y: scroll; text-align: left; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 15px; border: 1px solid #555; }
-        .group { margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 20px; }
+        body { background: #121212; color: #e0e0e0; font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 600px; }
+        h2 { color: #03dac6; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        button { width: 100%; padding: 15px; margin: 10px 0; background: #333; color: white; border: 1px solid #555; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #444; }
+        button:disabled { background: #222; color: #555; cursor: not-allowed; }
+        button.primary { background: #bb86fc; color: #000; border: none; }
+        button.primary:hover { background: #9965f4; }
+        button.danger { background: #cf6679; color: #000; border: none; }
+        #log { width: 100%; height: 250px; background: #000; color: #0f0; border: 1px solid #333; overflow-y: scroll; padding: 10px; margin-top: 15px; font-size: 12px; white-space: pre-wrap; }
     </style>
+    <script src="https://unpkg.com/esptool-js@0.2.0/bundle.js"></script>
 </head>
 <body>
 
-<div class="container">
-    <h2>ESP32 Kesin Çözüm Aracı</h2>
+<div class="box">
+    <h2>ESP32 Factory Flasher (v0.2)</h2>
 
-    <div class="group">
-        <button id="btnConnect" class="btn-con">1. CİHAZA BAĞLAN</button>
+    <button id="btnConnect">1. CİHAZA BAĞLAN</button>
+    
+    <div id="controls" style="display:none;">
+        <p>Dosya Seç (factory.bin):</p>
+        <input type="file" id="fileInput" accept=".bin" style="width:100%; margin-bottom:10px; padding:10px; background:#222; border:1px solid #444;">
+        
+        <button id="btnErase" class="danger">⚠️ ÖNCE BUNU YAP: ÇİPİ SİL (ERASE)</button>
+        <button id="btnFlash" class="primary" disabled>SONRA YÜKLE (FLASH)</button>
     </div>
 
-    <div class="group" id="controls" style="opacity: 0.4; pointer-events: none;">
-        <p style="margin:5px 0; font-weight:bold;">Önce Dosya Seç:</p>
-        <input type="file" id="fileInput" accept=".bin" style="margin-bottom: 15px;">
-        
-        <p style="margin:5px 0; font-weight:bold; color:#ff8888;">Hata alıyorsanız önce buna basın:</p>
-        <button id="btnErase" class="btn-erase">ÇİPİ TAMAMEN SİL (ERASE)</button>
-        
-        <p style="margin:5px 0; font-weight:bold;">Sonra Yükleyin:</p>
-        <button id="btnFlash" class="btn-flash">FACTORY.BIN YÜKLE</button>
-    </div>
-
-    <div id="log">Sistem hazır...</div>
+    <div id="log">Hazır. Bağlan'a basın...</div>
 </div>
 
-<script type="module">
-    // Spacehuhn'dan farklı olarak, doğrudan modern modülü çekiyoruz.
-    // Bu sayede "undefined" hatası almazsınız.
-    import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js/bundle.js';
-
-    let device = null;
-    let transport = null;
-    let esploader = null;
+<script>
+    let esploader;
+    let transport;
 
     const logEl = document.getElementById("log");
+    const btnConnect = document.getElementById("btnConnect");
     const controls = document.getElementById("controls");
-    
-    const log = (msg) => {
+    const btnFlash = document.getElementById("btnFlash");
+    const btnErase = document.getElementById("btnErase");
+    const fileInput = document.getElementById("fileInput");
+
+    function log(msg) {
         logEl.innerHTML += msg + "\n";
         logEl.scrollTop = logEl.scrollHeight;
-    };
+    }
 
-    // BAĞLAN BUTONU
-    document.getElementById("btnConnect").onclick = async () => {
-        if (!navigator.serial) return alert("Web Serial desteklenmiyor. Chrome kullanın.");
+    // 1. BAĞLANTI
+    btnConnect.onclick = async () => {
+        if (!navigator.serial) return alert("Sadece Chrome/Edge masaüstünde çalışır.");
 
         try {
-            device = await navigator.serial.requestPort();
-            transport = new Transport(device);
-            log("Port seçildi. Bağlantı kuruluyor...");
+            const device = await navigator.serial.requestPort();
+            transport = new esptooljs.Transport(device);
+            
+            // v0.2.0'da constructor farklıdır, daha basittir.
+            // Baudrate: 115200 (Boot), rom_baud_rate
+            esploader = new esptooljs.ESPLoader(transport, 115200, null);
 
-            // UI güncellemesi için terminal wrapper
-            const term = { clean:()=>{}, writeLine:(s)=>log(s), write:(s)=>log(s) };
-
-            try {
-                // Loader'ı başlatıyoruz
-                esploader = new ESPLoader(transport, 115200, term);
-                
-                log("ESP32 Boot moduna alınıyor...");
-                await esploader.main_fn();
-                await esploader.flash_id(); // Çip bilgisini al
-
-                log("✅ BAĞLANDI! Çip: " + await esploader.chip_name);
-                
-                // Arayüzü aç
-                document.getElementById("btnConnect").textContent = "BAĞLI";
-                document.getElementById("btnConnect").disabled = true;
-                controls.style.opacity = "1";
-                controls.style.pointerEvents = "auto";
-
-            } catch(e) {
-                log("❌ BAĞLANTI HATASI: " + e.message);
-                log("👉 İPUCU: Kabloyu çıkarıp takın ve BOOT tuşuna basılı tutarak tekrar deneyin.");
-            }
+            log("Bağlanılıyor... (Log akmazsa BOOT tuşuna basın)");
+            
+            await esploader.main_fn();
+            
+            log("✅ BAĞLANDI!");
+            log("Chip: " + await esploader.chip_name());
+            
+            btnConnect.style.display = 'none';
+            controls.style.display = 'block';
 
         } catch (e) {
-            log("Hata: " + e.message);
+            log("❌ HATA: " + e.message);
+            console.error(e);
         }
     };
 
-    // SİLME BUTONU (ERASE)
-    document.getElementById("btnErase").onclick = async () => {
-        if(!confirm("Tüm veriler silinecek. Emin misiniz?")) return;
+    // DOSYA SEÇİMİ
+    fileInput.onchange = () => {
+        if (fileInput.files.length > 0) {
+            btnFlash.disabled = false;
+            log("Dosya seçildi: " + fileInput.files[0].name);
+        }
+    };
+
+    // 2. SİLME (ERASE) - MUTLAKA YAPILMALI
+    btnErase.onclick = async () => {
+        if (!confirm("Emin misiniz? Tüm veriler silinecek.")) return;
         try {
-            document.getElementById("btnErase").disabled = true;
-            log("🧹 SİLİNİYOR (ERASE)... Lütfen bekleyin...");
+            btnErase.disabled = true;
+            log("🧹 Siliniyor... (Bu işlem 10-20sn sürebilir, bekleyin)");
+            
+            // v0.2.0 erase fonksiyonu
             await esploader.erase_flash();
-            log("✅ SİLME TAMAMLANDI!");
-        } catch(e) {
+            
+            log("✅ SİLME BAŞARILI! Şimdi yükleyebilirsiniz.");
+        } catch (e) {
             log("Silme Hatası: " + e.message);
         } finally {
-            document.getElementById("btnErase").disabled = false;
+            btnErase.disabled = false;
         }
     };
 
-    // YÜKLEME BUTONU (FLASH)
-    document.getElementById("btnFlash").onclick = async () => {
-        const fileInput = document.getElementById("fileInput");
-        if (!fileInput.files[0]) return alert("Dosya seçmediniz!");
-
+    // 3. YÜKLEME (FLASH)
+    btnFlash.onclick = async () => {
         const file = fileInput.files[0];
-        const reader = new FileReader();
+        if (!file) return;
 
+        const reader = new FileReader();
         reader.onload = async (e) => {
             const data = e.target.result;
+            
             try {
-                document.getElementById("btnFlash").disabled = true;
-                log("📦 Yükleme başlıyor...");
+                btnFlash.disabled = true;
+                log("📦 Yükleme Başlıyor...");
 
-                const fileArray = [{ data: new Uint8Array(data), address: 0x0000 }];
-
-                await esploader.write_flash({
-                    fileArray: fileArray,
-                    flash_size: "keep",
-                    flash_mode: "keep",
-                    flash_freq: "keep",
-                    erase_all: false, // Manuel sildik zaten
-                    compress: true,
-                    reportProgress: (fileIndex, written, total) => {
-                        log(`Yükleniyor: %${Math.round((written/total)*100)}`);
+                // v0.2.0 write_flash parametreleri biraz daha basittir
+                await esploader.write_flash(
+                    [{ data: data, address: 0x0000 }], // factory.bin -> 0x0000
+                    'keep', // flash_size
+                    'keep', // flash_mode
+                    'keep', // flash_freq
+                    false,  // erase_all (zaten sildik)
+                    true,   // compress
+                    (fileIndex, written, total) => {
+                        const p = Math.round((written / total) * 100);
+                        log("Yükleniyor: %" + p);
                     }
-                });
+                );
 
-                log("🎉 İŞLEM BAŞARILI! Cihaz resetleniyor...");
+                log("🎉 BİTTİ! Cihaz resetleniyor...");
                 
-                // RESET KOMUTU
-                await transport.setDTR(false);
-                await transport.setRTS(true);
+                // Manuel Reset (RTS/DTR Oynama)
+                await transport.set_dtr(false);
+                await transport.set_rts(true);
                 await new Promise(r => setTimeout(r, 100));
-                await transport.setRTS(false);
+                await transport.set_rts(false);
                 
-                log("Bitti. Cihazınız factory ayarlarıyla açılıyor.");
+                log("Cihazınız fabrika ayarlarıyla açılıyor.");
 
-            } catch (e) {
-                log("Yükleme Hatası: " + e.message);
+            } catch (err) {
+                log("Yükleme Hatası: " + err.message);
             } finally {
-                document.getElementById("btnFlash").disabled = false;
+                btnFlash.disabled = false;
             }
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsBinaryString(file); // v0.2.0 BinaryString sever
     };
 </script>
 
