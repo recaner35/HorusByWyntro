@@ -1,222 +1,159 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<title>Horus Web Flasher</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<script type="module">
- import { ESPLoader, Transport } from "https://espressif.github.io/esptool-js/esptool-bundle.js";
- window.ESPLoader = ESPLoader;
- window.Transport = Transport;
-</script>
-
-<style>
-body {
- font-family: Arial, sans-serif;
- background: #0f172a;
- color: #e5e7eb;
- display: flex;
- justify-content: center;
- align-items: center;
- height: 100vh;
- margin: 0;
-}
-.card {
- background: #020617;
- width: 520px;
- padding: 24px;
- border-radius: 14px;
- box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-h2 { margin-top: 0; }
-button {
- width: 100%;
- padding: 12px;
- margin-top: 10px;
- border-radius: 8px;
- border: none;
- background: #2563eb;
- color: white;
- font-weight: bold;
- cursor: pointer;
- transition: background 0.2s;
-}
-button:hover:not(:disabled) { background: #1d4ed8; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-#log, #serial {
- background: #000;
- font-family: 'Courier New', monospace;
- font-size: 12px;
- padding: 10px;
- margin-top: 10px;
- height: 120px;
- overflow-y: auto;
- border-radius: 6px;
- white-space: pre-wrap;
- border: 1px solid #334155;
-}
-.small { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
-.divider { text-align: center; margin: 10px 0; font-size: 12px; color: #64748b; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Fix Tool (Erase & Flash)</title>
+    <style>
+        body { background: #1a1a1a; color: #fff; font-family: monospace; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: #e63946; }
+        .controls { background: #333; padding: 20px; border-radius: 8px; width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
+        button { padding: 12px; cursor: pointer; font-weight: bold; font-size: 16px; border: none; border-radius: 4px; transition: 0.2s; }
+        .btn-connect { background: #007bff; color: white; }
+        .btn-flash { background: #28a745; color: white; }
+        .btn-disabled { background: #555; color: #aaa; cursor: not-allowed; }
+        #terminal { background: #000; color: #0f0; width: 100%; max-width: 800px; height: 350px; overflow-y: auto; padding: 10px; margin-top: 20px; border: 1px solid #444; font-size: 14px; white-space: pre-wrap; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; background: #444; padding: 10px; border-radius: 4px; border: 1px solid #e63946; }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: #e63946; }
+    </style>
+    <script src="https://unpkg.com/esptool-js@0.5.4/bundle.js"></script>
 </head>
-
 <body>
-<div class="card">
- <h2>Horus Web Flasher</h2>
- <div class="small" id="version">Release: latest</div>
 
- <button id="connectBtn">🔌 Cihaza Bağlan</button>
- <button id="githubBtn">⬇ GitHub Latest (Factory)</button>
+    <h1>ESP32 Kurtarma ve Yükleme</h1>
 
- <div class="divider">veya manuel dosya seç</div>
- <input type="file" id="fileInput" accept=".bin" style="width: 100%; color: #9ca3af;">
+    <div class="controls">
+        <label>1. Cihaza Bağlan:</label>
+        <button id="connectBtn" class="btn-connect">BAĞLAN (Connect)</button>
 
- <button id="flashBtn" disabled>⚡ Flash Et</button>
+        <label>2. Dosya Seç (factory.bin):</label>
+        <input type="file" id="fileInput" accept=".bin" disabled>
 
- <div id="log">Logs...</div>
- <div id="serial">Serial output...</div>
-</div>
+        <div class="checkbox-container">
+            <input type="checkbox" id="eraseCheck" checked>
+            <label for="eraseCheck" style="color: #ff9999; font-weight: bold;">⚠️ Yüklemeden önce Çipi TAMAMEN SİL (Erase Flash)</label>
+        </div>
+        <small style="color: #ccc;">"Invalid magic byte" veya "OTA partition" hatası alıyorsanız bunu mutlaka seçin.</small>
 
-<script>
-const OWNER = "recaner35";
-const REPO = "HorusByWyntro";
-const FACTORY_URL =
- `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+        <label>3. İşlemi Başlat:</label>
+        <button id="flashBtn" class="btn-flash btn-disabled" disabled>YÜKLE (Flash)</button>
+    </div>
 
-let port, transport, esploader;
-let selectedBin = null;
-let selectedBinName = "";
+    <div id="terminal">Loglar burada görünecek...</div>
 
-const logBox = document.getElementById("log");
-const serialBox = document.getElementById("serial");
-const flashBtn = document.getElementById("flashBtn");
+    <script>
+        let port;
+        let transport;
+        let esploader;
+        
+        const term = document.getElementById("terminal");
+        const connectBtn = document.getElementById("connectBtn");
+        const flashBtn = document.getElementById("flashBtn");
+        const fileInput = document.getElementById("fileInput");
+        const eraseCheck = document.getElementById("eraseCheck");
 
-function log(msg) {
- logBox.innerHTML += `<div>> ${msg}</div>`;
- logBox.scrollTop = logBox.scrollHeight;
-}
+        function log(msg) {
+            term.innerHTML += msg + "\n";
+            term.scrollTop = term.scrollHeight;
+        }
 
-function serial(msg) {
- serialBox.textContent += msg;
- serialBox.scrollTop = serialBox.scrollHeight;
-}
+        connectBtn.onclick = async () => {
+            if (!navigator.serial) return alert("Chrome kullanın.");
 
-function updateFlashButton() {
- flashBtn.disabled = !selectedBin || !esploader;
- if(!flashBtn.disabled) {
-  flashBtn.innerText = `⚡ Flash Et (${selectedBinName})`;
- }
-}
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
 
-const terminalAdapter = {
- clean: () => { serialBox.textContent = ""; },
- writeLine: (data) => { serial(data + "\n"); },
- write: (data) => { serial(data); }
-};
+                log("Seri port açıldı. Bağlanılıyor...");
 
-document.getElementById("connectBtn").onclick = async () => {
- try {
-  if (!navigator.serial) {
-   throw new Error("Tarayıcınız Web Serial API desteklemiyor (Chrome/Edge kullanın).");
-  }
+                const Transport = window.esptooljs.Transport;
+                const ESPLoader = window.esptooljs.ESPLoader;
 
-  log("Port seçimi penceresi açılıyor... Lütfen cihazınızı seçin.");
-  port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x10c4 }] });  // CP210x filtre ekle, daha hızlı seçer
+                transport = new Transport(port);
+                
+                const terminalWrapper = {
+                    clean: () => {}, 
+                    writeLine: (data) => log(data),
+                    write: (data) => log(data) 
+                };
 
-  if (!port) {
-   throw new Error("Port seçilmedi veya iptal edildi.");
-  }
+                esploader = new ESPLoader(transport, 115200, terminalWrapper);
+                await esploader.main_fn(); 
+                
+                connectBtn.textContent = "BAĞLANDI";
+                connectBtn.classList.add("btn-disabled");
+                connectBtn.disabled = true;
+                fileInput.disabled = false;
+                
+                log("\n✅ Cihaz Hazır. Dosyayı seçin ve silme seçeneğinin işaretli olduğundan emin olun.");
 
-  // Port'u açmayı dene (bazı durumlarda getInfo öncesi open gerekli)
-  try {
-   await port.open({ baudRate: 115200 });
-   log("Port başarıyla açıldı.");
-  } catch (openErr) {
-   log("Port açma uyarısı (devam ediyoruz): " + openErr.message);
-  }
+            } catch (e) {
+                log("HATA: " + e.message);
+                if(port) await port.close(); 
+            }
+        };
 
-  // Info'yu güvenli al
-  let portInfo = "Bilinmeyen";
-  try {
-   const info = await port.getInfo();
-   portInfo = `VID: ${info.usbVendorId?.toString(16) || '?'} PID: ${info.usbProductId?.toString(16) || '?'}`;
-  } catch (e) {
-   log("getInfo alınamadı ama devam: " + e.message);
-  }
-  log(`Seçilen port: ${portInfo}`);
+        fileInput.onchange = () => {
+            if (fileInput.files.length > 0) {
+                flashBtn.disabled = false;
+                flashBtn.classList.remove("btn-disabled");
+                log(`Dosya hazır: ${fileInput.files[0].name}`);
+            }
+        };
 
-  transport = new Transport(port);
+        flashBtn.onclick = async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
 
-  log("ESPLoader başlatılıyor (düşük baud ile)...");
-  // Düşük baud ile başla → stabilite artar
-  esploader = new ESPLoader(transport, 115200, terminalAdapter);
+            const shouldErase = eraseCheck.checked;
+            const reader = new FileReader();
 
-  log("Chip algılama başlıyor...");
-  const chip = await esploader.main_fn();
-  log("Bağlandı: " + chip);
+            reader.onload = async (e) => {
+                const data = e.target.result;
+                
+                try {
+                    flashBtn.disabled = true;
+                    log("\n--- İŞLEM BAŞLIYOR ---");
 
-  updateFlashButton();
+                    if (shouldErase) {
+                        log("⚠️ DİKKAT: Çip tamamen siliniyor (Bu işlem 10-30 saniye sürebilir)...");
+                        // Silme komutu
+                        await esploader.erase_flash();
+                        log("✅ Silme işlemi tamamlandı. Tertemiz bir sayfa açıldı.");
+                    }
 
- } catch (e) {
-  console.error(e);
-  log("❌ Bağlantı hatası: " + (e.message || String(e)));
- }
-};
+                    log("Dosya yazılıyor...");
+                    const fileArray = [{ data: new Uint8Array(data), address: 0x0000 }];
+                    
+                    await esploader.write_flash({
+                        fileArray: fileArray,
+                        flash_size: "keep",
+                        flash_mode: "keep",
+                        flash_freq: "keep",
+                        erase_all: false, // Yukarıda manuel sildiğimiz için burada false
+                        compress: true,
+                        reportProgress: (fileIndex, written, total) => {
+                            const percent = Math.round((written / total) * 100);
+                            if (percent % 10 === 0) log(`Yükleniyor... %${percent}`);
+                        },
+                    });
 
-document.getElementById("githubBtn").onclick = async () => {
- try {
-  log("Factory.bin GitHub'dan indiriliyor...");
-  const res = await fetch(FACTORY_URL);
-  if (!res.ok) throw new Error(`Download başarısız: ${res.status}`);
-
-  const blob = await res.blob();
-  selectedBin = await blob.arrayBuffer();
-  selectedBinName = "GitHub Factory";
-  
-  log("Factory.bin indirildi ve hazır.");
-  updateFlashButton();
- } catch (e) {
-  log("GitHub hatası: " + e.message);
- }
-};
-
-document.getElementById("fileInput").onchange = async e => {
- const file = e.target.files[0];
- if (!file) return;
- 
- selectedBin = await file.arrayBuffer();
- selectedBinName = file.name;
- 
- log("Dosya seçildi: " + file.name);
- updateFlashButton();
-};
-
-flashBtn.onclick = async () => {
- if (!esploader || !selectedBin) return;
-
- try {
-  log("Flash işlemi başlıyor...");
-  log("Lütfen bekleyin, bu işlem biraz sürebilir.");
-  
-  const fileArray = [{ data: new Uint8Array(selectedBin), address: 0x0 }];
-
-  await esploader.write_flash(
-   fileArray,
-   'keep', // flash_size
-   'keep', // flash_mode
-   'keep', // flash_freq
-   false, // compress
-   true // erase_all
-  );
-
-  log("✅ Flash BAŞARIYLA tamamlandı! Cihaz resetleniyor...");
-  
- } catch (e) {
-  console.error(e);
-  log("❌ Flash hatası: " + e.message);
- }
-};
-</script>
+                    log("\n✅ Yükleme Başarılı! Cihaz resetleniyor...");
+                    
+                    await transport.setDTR(false);
+                    await transport.setRTS(true);
+                    await new Promise(r => setTimeout(r, 100));
+                    await transport.setRTS(false);
+                    
+                    log("BİTTİ. Cihazınız artık 'factory' modundan açılmalı.");
+                    
+                } catch (e) {
+                    log("Yükleme Hatası: " + e.message);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        };
+    </script>
 </body>
 </html>
