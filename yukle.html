@@ -5,9 +5,10 @@
   <title>Horus Firmware Yükleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- ESP Web Tools (CORS UYUMLU CDN) -->
-  <script type="module"
-    src="https://cdn.jsdelivr.net/npm/esp-web-tools@9.4.3/dist/web/esp-web-flasher.js">
+  <!-- DOĞRU ESP WEB TOOLS -->
+  <script
+    type="module"
+    src="https://cdn.jsdelivr.net/npm/esp-web-tools@10/dist/web/install-button.js">
   </script>
 
   <style>
@@ -19,6 +20,7 @@
       align-items: center;
       justify-content: center;
       height: 100vh;
+      margin: 0;
     }
     .box {
       background: #1a1d24;
@@ -35,6 +37,7 @@
       font-size: 13px;
       opacity: 0.7;
       margin-top: 20px;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -43,16 +46,17 @@
   <div class="box">
     <h1>Horus by Wyntro<br>Firmware Yükleyici</h1>
 
-    <!-- DOSYA SEÇMELİ ESP32 FLASHER -->
-    <esp-web-flasher
-      chip="ESP32"
-      erase-first>
-    </esp-web-flasher>
+    <!-- ÇALIŞAN BUTON -->
+    <esp-web-install-button erase-first>
+      <button slot="activate">
+        Cihaza Bağlan
+      </button>
+    </esp-web-install-button>
 
     <p>
-      • Önce flash tamamen silinir<br>
-      • Seçtiğin <b>factory.bin</b> yüklenir<br>
-      • Chrome / Edge (Desktop)
+      • Chrome / Edge (Masaüstü)<br>
+      • ESP32-WROOM-32D<br>
+      • Factory.bin dosyasını seç
     </p>
   </div>
 
