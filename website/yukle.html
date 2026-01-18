@@ -1,133 +1,60 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Horus by Wyntro – ESP32 Firmware Yükleyici</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <title>Horus Firmware Yükleyici</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ESP Web Tools -->
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@9/dist/web/esp-web-flasher.js">
+  </script>
 
   <style>
     body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      font-family: Arial, sans-serif;
       background: #0f1115;
-      color: #eaeaea;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
-    }
-    .card {
-      width: 420px;
-      background: #171a21;
-      padding: 28px;
-      border-radius: 14px;
-      box-shadow: 0 0 40px rgba(0,0,0,.6);
-    }
-    h1 { margin: 0 0 6px; font-size: 20px; }
-    p { margin: 0 0 18px; font-size: 14px; opacity: .85; }
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 12px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      background: #3b82f6;
       color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
+    .box {
+      text-align: center;
+      padding: 40px;
+      border-radius: 12px;
+      background: #1a1d24;
+      width: 340px;
     }
-    pre {
-      margin-top: 16px;
-      padding: 12px;
-      height: 170px;
-      overflow-y: auto;
-      background: #0b0d11;
-      border-radius: 10px;
-      font-size: 12px;
+    h1 {
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    p {
+      font-size: 13px;
+      opacity: 0.7;
     }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <h1>Horus by Wyntro</h1>
-  <p>ESP32 Firmware Yükleyici</p>
+  <div class="box">
+    <h1>Horus by Wyntro<br>Firmware Yükleyici</h1>
 
-  <button id="connectBtn">Cihaza Bağlan</button>
-  <button id="flashBtn" disabled>Sil ve Firmware Yükle</button>
+    <!-- DOSYA SEÇMELİ FLASHER -->
+    <esp-web-flasher
+      erase-first
+      chip="ESP32">
+    </esp-web-flasher>
 
-  <pre id="log"></pre>
-</div>
-
-<!-- 🔑 KRİTİK NOKTA: ES MODULE -->
-<script type="module">
-  import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.7/dist/web/index.js";
-
-  const FACTORY_BIN_URL =
-    "https://github.com/recaner35/HorusByWyntro/releases/download/1.0.212/HorusByWyntro-factory.bin";
-
-  const BAUDRATE = 921600;
-
-  const logEl = document.getElementById("log");
-  const connectBtn = document.getElementById("connectBtn");
-  const flashBtn = document.getElementById("flashBtn");
-
-  function log(msg) {
-    logEl.textContent += msg + "\n";
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  let transport;
-  let loader;
-
-  async function connect() {
-    log("Seri port seçiliyor...");
-
-    const port = await navigator.serial.requestPort();
-    await port.open({ baudRate: BAUDRATE });
-
-    transport = new Transport(port);
-
-    loader = new ESPLoader({
-      transport,
-      baudrate: BAUDRATE,
-      terminal: { writeLine: log }
-    });
-
-    log("ESP32 bağlanıyor...");
-    await loader.main();
-
-    log("Bağlantı başarılı.");
-    flashBtn.disabled = false;
-  }
-
-  async function flash() {
-    flashBtn.disabled = true;
-
-    log("Firmware indiriliyor...");
-    const res = await fetch(FACTORY_BIN_URL);
-    const bin = await res.arrayBuffer();
-
-    log("Flash tamamen siliniyor (chip erase)...");
-    await loader.eraseFlash();
-
-    log("Firmware yazılıyor...");
-    await loader.writeFlash({
-      fileArray: [{ data: bin, address: 0x0000 }],
-      flashSize: "detect"
-    });
-
-    log("✔ Yükleme tamamlandı.");
-  }
-
-  connectBtn.onclick = () => connect().catch(e => log("Bağlantı hatası: " + e));
-  flashBtn.onclick = () => flash().catch(e => log("HATA: " + e));
-</script>
+    <p style="margin-top:20px">
+      • Önce cihaz silinir<br>
+      • Seçtiğin <b>factory.bin</b> yüklenir<br>
+      • Chrome / Edge (Desktop)
+    </p>
+  </div>
 
 </body>
 </html>
