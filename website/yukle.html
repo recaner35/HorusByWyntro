@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script type="module">
- import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.4/bundle.js";
+ import { ESPLoader, Transport } from "https://espressif.github.io/esptool-js/esptool-bundle.js";
  window.ESPLoader = ESPLoader;
  window.Transport = Transport;
 </script>
@@ -57,7 +57,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
  border: 1px solid #334155;
 }
 .small { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
-.divider { text-align: center; margin: 16px 0; font-size: 13px; color: #64748b; }
+.divider { text-align: center; margin: 10px 0; font-size: 12px; color: #64748b; }
 </style>
 </head>
 
@@ -67,9 +67,10 @@ button:disabled { opacity: .4; cursor: not-allowed; }
  <div class="small" id="version">Release: latest</div>
 
  <button id="connectBtn">🔌 Cihaza Bağlan</button>
+ <button id="githubBtn">⬇ GitHub Latest (Factory)</button>
 
- <div class="divider">Flash etmek istediğin .bin dosyasını seç</div>
- <input type="file" id="fileInput" accept=".bin" style="width: 100%; color: #9ca3af; margin-bottom: 12px;">
+ <div class="divider">veya manuel dosya seç</div>
+ <input type="file" id="fileInput" accept=".bin" style="width: 100%; color: #9ca3af;">
 
  <button id="flashBtn" disabled>⚡ Flash Et</button>
 
@@ -78,6 +79,11 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 </div>
 
 <script>
+const OWNER = "recaner35";
+const REPO = "HorusByWyntro";
+const FACTORY_URL =
+ `https://github.com/${OWNER}/${REPO}/releases/latest/download/HorusByWyntro-factory.bin`;
+
 let port, transport, esploader;
 let selectedBin = null;
 let selectedBinName = "";
@@ -103,7 +109,6 @@ function updateFlashButton() {
  }
 }
 
-// esptool-js için terminal adaptörü
 const terminalAdapter = {
  clean: () => { serialBox.textContent = ""; },
  writeLine: (data) => { serial(data + "\n"); },
@@ -116,22 +121,63 @@ document.getElementById("connectBtn").onclick = async () => {
    throw new Error("Tarayıcınız Web Serial API desteklemiyor (Chrome/Edge kullanın).");
   }
 
-  port = await navigator.serial.requestPort();
-  
-  transport = new window.Transport(port);
-  
-  esploader = new window.ESPLoader(transport, 115200, terminalAdapter);
+  log("Port seçimi penceresi açılıyor... Lütfen cihazınızı seçin.");
+  port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x10c4 }] });  // CP210x filtre ekle, daha hızlı seçer
 
-  log("Bağlantı kuruluyor...");
-  
+  if (!port) {
+   throw new Error("Port seçilmedi veya iptal edildi.");
+  }
+
+  // Port'u açmayı dene (bazı durumlarda getInfo öncesi open gerekli)
+  try {
+   await port.open({ baudRate: 115200 });
+   log("Port başarıyla açıldı.");
+  } catch (openErr) {
+   log("Port açma uyarısı (devam ediyoruz): " + openErr.message);
+  }
+
+  // Info'yu güvenli al
+  let portInfo = "Bilinmeyen";
+  try {
+   const info = await port.getInfo();
+   portInfo = `VID: ${info.usbVendorId?.toString(16) || '?'} PID: ${info.usbProductId?.toString(16) || '?'}`;
+  } catch (e) {
+   log("getInfo alınamadı ama devam: " + e.message);
+  }
+  log(`Seçilen port: ${portInfo}`);
+
+  transport = new Transport(port);
+
+  log("ESPLoader başlatılıyor (düşük baud ile)...");
+  // Düşük baud ile başla → stabilite artar
+  esploader = new ESPLoader(transport, 115200, terminalAdapter);
+
+  log("Chip algılama başlıyor...");
   const chip = await esploader.main_fn();
   log("Bağlandı: " + chip);
 
   updateFlashButton();
-  
+
  } catch (e) {
   console.error(e);
-  log("Bağlantı hatası: " + e.message);
+  log("❌ Bağlantı hatası: " + (e.message || String(e)));
+ }
+};
+
+document.getElementById("githubBtn").onclick = async () => {
+ try {
+  log("Factory.bin GitHub'dan indiriliyor...");
+  const res = await fetch(FACTORY_URL);
+  if (!res.ok) throw new Error(`Download başarısız: ${res.status}`);
+
+  const blob = await res.blob();
+  selectedBin = await blob.arrayBuffer();
+  selectedBinName = "GitHub Factory";
+  
+  log("Factory.bin indirildi ve hazır.");
+  updateFlashButton();
+ } catch (e) {
+  log("GitHub hatası: " + e.message);
  }
 };
 
@@ -157,11 +203,11 @@ flashBtn.onclick = async () => {
 
   await esploader.write_flash(
    fileArray,
-   'keep',
-   'keep',
-   'keep',
-   false,
-   true
+   'keep', // flash_size
+   'keep', // flash_mode
+   'keep', // flash_freq
+   false, // compress
+   true // erase_all
   );
 
   log("✅ Flash BAŞARIYLA tamamlandı! Cihaz resetleniyor...");
