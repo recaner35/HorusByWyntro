@@ -108,26 +108,22 @@ jobs:
     - name: Prepare custom partitions
       run: |
         mkdir -p build
-        cp partitions/partitions_horus_ota.csv build/partitions.csv
+        # CSV dosyasını partitions.csv olarak ana dizine (ino yanına) kopyalıyoruz
+        cp partitions/partitions_horus_ota.csv partitions.csv
 
     - name: Compile Sketch
       run: |
         arduino-cli compile \
           --fqbn esp32:esp32:esp32 \
           --build-path build \
-          --build-property build.partitions=partitions \
-          --build-property build.custom_partitions=build/partitions.csv \
           HorusByWyntro.ino
 
-    # --- YENİ EKLENEN ADIM: GZIP SIKIŞTIRMA ---
     - name: Compress Web Assets (Gzip)
       run: |
         echo "Web dosyalari 190KB limitine sigmasi icin sikistiriliyor..."
         DATA_PATH=$(find . -type d -name "data" | head -n 1)
         
         if [ -d "$DATA_PATH" ]; then
-          # HTML, JS, CSS ve JSON dosyalarini en yuksek seviyede (-9) sikistir
-          # -f: Zorla üzerine yaz (dosya.html -> dosya.html.gz olur ve orijinal silinir)
           find "$DATA_PATH" -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.json" \) -exec gzip -9 -v -f -n {} \;
           
           echo "Sıkıştırma tamamlandı. Yeni dosya listesi ve boyutları:"
@@ -152,9 +148,7 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        # Sıkıştırılmış dosyalarla imaj oluşturuluyor (190KB limit)
         "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 192512 ./build/HorusByWyntro.littlefs.bin
-
 
     - name: Generate Factory Bin
       run: |
@@ -182,7 +176,6 @@ jobs:
           0x3D0000 "$LITTLEFS_BIN"
 
         echo "Factory bin hazır"
-
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
