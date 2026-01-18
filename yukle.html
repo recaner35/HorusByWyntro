@@ -1,52 +1,132 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
-  <title>Horus Firmware Yükleyici</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="icon" href="data:,">
-
-  <script type="module"
-    src="https://cdn.jsdelivr.net/npm/esp-web-tools@10/dist/web/esp-web-flasher.js">
-  </script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Horus ESP32 Firmware Yükleyici</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f1115;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .box {
-      background: #1a1d24;
-      padding: 40px;
-      border-radius: 12px;
-      width: 360px;
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
+    button { padding: 0.7rem 1.4rem; margin: 0.5rem 0.8rem 0.5rem 0; font-size: 1rem; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .success { color: #2e7d32; }
+    .error   { color: #c62828; }
   </style>
 </head>
 <body>
+  <h1>Horus Firmware Yükleyici (ESP32-WROOM-32D • 4MB)</h1>
 
-<div class="box">
-  <h1>Horus by Wyntro</h1>
+  <p><strong>Adımlar:</strong></p>
+  <ol>
+    <li>ESP32'yi <strong>bootloader moduna</strong> alın (GPIO0 → GND bağlayın → EN/Reset tuşuna basın veya kısa devre yapın)</li>
+    <li>Aşağıdan <strong>HorusByWyntro-factory.bin</strong> dosyanızı seçin</li>
+    <li>"ESP32'ye Bağlan" butonuna basın ve tarayıcıdan COM portunuzu seçin</li>
+    <li>"Firmware'i Yükle (Erase + Flash)" butonuna basın</li>
+  </ol>
 
-  <esp-web-flasher
-    chip="esp32"
-    erase-first>
-  </esp-web-flasher>
+  <hr>
 
-  <p>
-    • Factory.bin dosyasını seç<br>
-    • Flash öncesi tam silme yapılır<br>
-    • Chrome / Edge (Masaüstü)
-  </p>
-</div>
+  <label for="binFile"><strong>Factory .bin dosyasını seçin:</strong></label><br>
+  <input type="file" id="binFile" accept=".bin"/><br><br>
 
+  <button id="connectBtn">ESP32'ye Bağlan</button>
+  <button id="flashBtn" disabled>Firmware'i Yükle (Erase + Flash)</button>
+
+  <h3>Konsol Çıktısı:</h3>
+  <pre id="output">Durum: Hazır...\n</pre>
+
+  <!-- esptool-js (en güncel sürümü kullanmak daha iyi) -->
+  <script src="https://unpkg.com/esptool-js@0.2.0/dist/web/index.js"></script>
+
+  <script>
+    const binFileInput = document.getElementById('binFile');
+    const connectBtn   = document.getElementById('connectBtn');
+    const flashBtn     = document.getElementById('flashBtn');
+    const output       = document.getElementById('output');
+
+    let transport;
+    let esploader;
+    let binData;
+
+    function log(msg, className = '') {
+      const line = document.createElement('div');
+      line.textContent = msg;
+      if (className) line.className = className;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // Dosya seçildiğinde
+    binFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file?.name.endsWith('.bin')) {
+        log('Lütfen geçerli bir .bin dosyası seçin!', 'error');
+        return;
+      }
+
+      try {
+        const buffer = await file.arrayBuffer();
+        binData = new Uint8Array(buffer);
+        log(`Dosya yüklendi: \( {file.name} ( \){(binData.length/1024).toFixed(1)} KB)`, 'success');
+        flashBtn.disabled = !(transport && esploader && binData);
+      } catch (err) {
+        log('Dosya okuma hatası: ' + err.message, 'error');
+      }
+    });
+
+    // Bağlantı
+    connectBtn.addEventListener('click', async () => {
+      try {
+        const serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 115200 });
+
+        transport = new Transport(serialPort);
+        esploader = await ESPLoader.init(transport, {
+          baudRate: 115200,           // başlangıç
+          flashMode: 'dio',
+          flashFreq: '80m',           // ← istediğin değer (override)
+          flashSize: '4MB',
+        }, console);  // debug için console
+
+        log('Bağlantı başarılı! Chip: ' + esploader.chipName, 'success');
+        connectBtn.disabled = true;
+        flashBtn.disabled = !binData;
+      } catch (err) {
+        log('Bağlantı hatası: ' + err.message, 'error');
+      }
+    });
+
+    // Flash işlemi
+    flashBtn.addEventListener('click', async () => {
+      if (!esploader || !binData) {
+        log('Önce bağlantı kurun ve .bin dosyasını seçin!', 'error');
+        return;
+      }
+
+      flashBtn.disabled = true;
+      log('İşlem başlıyor... Lütfen bekleyin (5-10 dk sürebilir)');
+
+      try {
+        // 1. Tam erase
+        log('Tüm flash siliniyor (full chip erase)...');
+        await esploader.eraseFlash();
+
+        // 2. Factory bin'i offset 0'dan yaz
+        log('Factory firmware yazılıyor (offset 0x0)...');
+        await esploader.writeFlash([{
+          data: binData,
+          address: 0x0
+        }]);
+
+        log('Yükleme TAMAMLANDI! 🎉', 'success');
+        log('ESP32\'yi resetleyin (GPIO0 bağlantısını kesin).');
+      } catch (err) {
+        log('HATA: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        flashBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
