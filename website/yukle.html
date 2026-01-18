@@ -2,78 +2,175 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Horus by Wyntro – Installer</title>
+<title>Horus Web Flasher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type="module"
-  src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js">
+<script type="module">
+ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.4/bundle.js";
+ window.ESPLoader = ESPLoader;
+ window.Transport = Transport;
 </script>
 
 <style>
-body { background:#0f1115; color:#eaeaea; font-family:sans-serif; }
-.container { max-width:420px; margin:80px auto; text-align:center; }
-button { width:100%; padding:12px; margin:8px 0; border-radius:6px; border:none; }
-.primary { background:#4caf50; }
-.danger { background:#f44336; color:#fff; }
-pre { background:#000; color:#0f0; padding:10px; height:180px; overflow:auto; }
+body {
+ font-family: Arial, sans-serif;
+ background: #0f172a;
+ color: #e5e7eb;
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ height: 100vh;
+ margin: 0;
+}
+.card {
+ background: #020617;
+ width: 520px;
+ padding: 24px;
+ border-radius: 14px;
+ box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+h2 { margin-top: 0; }
+button {
+ width: 100%;
+ padding: 12px;
+ margin-top: 10px;
+ border-radius: 8px;
+ border: none;
+ background: #2563eb;
+ color: white;
+ font-weight: bold;
+ cursor: pointer;
+ transition: background 0.2s;
+}
+button:hover:not(:disabled) { background: #1d4ed8; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+#log, #serial {
+ background: #000;
+ font-family: 'Courier New', monospace;
+ font-size: 12px;
+ padding: 10px;
+ margin-top: 10px;
+ height: 120px;
+ overflow-y: auto;
+ border-radius: 6px;
+ white-space: pre-wrap;
+ border: 1px solid #334155;
+}
+.small { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
+.divider { text-align: center; margin: 16px 0; font-size: 13px; color: #64748b; }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <h2>Horus by Wyntro</h2>
+<div class="card">
+ <h2>Horus Web Flasher</h2>
+ <div class="small" id="version">Release: latest</div>
 
-  <esp-web-install-button id="install">
-    <button class="primary">Firmware Yükle</button>
-  </esp-web-install-button>
+ <button id="connectBtn">🔌 Cihaza Bağlan</button>
 
-  <button id="erase" class="danger">Manuel Flash Erase</button>
+ <div class="divider">Flash etmek istediğin .bin dosyasını seç</div>
+ <input type="file" id="fileInput" accept=".bin" style="width: 100%; color: #9ca3af; margin-bottom: 12px;">
 
-  <pre id="log"></pre>
+ <button id="flashBtn" disabled>⚡ Flash Et</button>
+
+ <div id="log">Logs...</div>
+ <div id="serial">Serial output...</div>
 </div>
 
-<script type="module">
-const logEl = document.getElementById("log");
-const log = m => { logEl.textContent += m + "\n"; };
+<script>
+let port, transport, esploader;
+let selectedBin = null;
+let selectedBinName = "";
 
-async function prepareManifest() {
-  log("version.json okunuyor...");
+const logBox = document.getElementById("log");
+const serialBox = document.getElementById("serial");
+const flashBtn = document.getElementById("flashBtn");
 
-  const res = await fetch("version.json");
-  const data = await res.json();
-
-  const factoryUrl = data.url.replace(
-    "HorusByWyntro.ino.bin",
-    "HorusByWyntro-factory.bin"
-  );
-
-  log("Sürüm: " + data.version);
-  log("Factory: " + factoryUrl);
-
-  const manifest = {
-    name: "Horus by Wyntro",
-    version: data.version,
-    new_install_prompt_erase: true,
-    builds: [{
-      chipFamily: "ESP32",
-      parts: [{ path: factoryUrl, offset: 0 }]
-    }]
-  };
-
-  const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-  document.getElementById("install")
-    .setAttribute("manifest", URL.createObjectURL(blob));
-
-  log("Installer hazır.");
+function log(msg) {
+ logBox.innerHTML += `<div>> ${msg}</div>`;
+ logBox.scrollTop = logBox.scrollHeight;
 }
 
-prepareManifest();
+function serial(msg) {
+ serialBox.textContent += msg;
+ serialBox.scrollTop = serialBox.scrollHeight;
+}
 
-/* MANUEL ERASE – ESP WEB TOOLS DIŞI */
-document.getElementById("erase").onclick = async () => {
-  log("Manuel erase için ESP Web Tools içindeki erase'i kullanma!");
-  log("Bu buton sadece servis içindir.");
+function updateFlashButton() {
+ flashBtn.disabled = !selectedBin || !esploader;
+ if(!flashBtn.disabled) {
+  flashBtn.innerText = `⚡ Flash Et (${selectedBinName})`;
+ }
+}
+
+// esptool-js için terminal adaptörü
+const terminalAdapter = {
+ clean: () => { serialBox.textContent = ""; },
+ writeLine: (data) => { serial(data + "\n"); },
+ write: (data) => { serial(data); }
+};
+
+document.getElementById("connectBtn").onclick = async () => {
+ try {
+  if (!navigator.serial) {
+   throw new Error("Tarayıcınız Web Serial API desteklemiyor (Chrome/Edge kullanın).");
+  }
+
+  port = await navigator.serial.requestPort();
+  
+  transport = new window.Transport(port);
+  
+  esploader = new window.ESPLoader(transport, 115200, terminalAdapter);
+
+  log("Bağlantı kuruluyor...");
+  
+  const chip = await esploader.main_fn();
+  log("Bağlandı: " + chip);
+
+  updateFlashButton();
+  
+ } catch (e) {
+  console.error(e);
+  log("Bağlantı hatası: " + e.message);
+ }
+};
+
+document.getElementById("fileInput").onchange = async e => {
+ const file = e.target.files[0];
+ if (!file) return;
+ 
+ selectedBin = await file.arrayBuffer();
+ selectedBinName = file.name;
+ 
+ log("Dosya seçildi: " + file.name);
+ updateFlashButton();
+};
+
+flashBtn.onclick = async () => {
+ if (!esploader || !selectedBin) return;
+
+ try {
+  log("Flash işlemi başlıyor...");
+  log("Lütfen bekleyin, bu işlem biraz sürebilir.");
+  
+  const fileArray = [{ data: new Uint8Array(selectedBin), address: 0x0 }];
+
+  await esploader.write_flash(
+   fileArray,
+   'keep',
+   'keep',
+   'keep',
+   false,
+   true
+  );
+
+  log("✅ Flash BAŞARIYLA tamamlandı! Cihaz resetleniyor...");
+  
+ } catch (e) {
+  console.error(e);
+  log("❌ Flash hatası: " + e.message);
+ }
 };
 </script>
-
 </body>
 </html>
