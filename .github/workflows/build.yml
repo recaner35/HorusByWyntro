@@ -177,6 +177,12 @@ jobs:
 
         echo "Factory bin hazır"
 
+    - name: Copy factory.bin to website folder for web installer
+      run: |
+          mkdir -p website
+          cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin
+          echo "Factory bin website klasörüne kopyalandı"
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -205,6 +211,31 @@ jobs:
             echo "Error: 'website' directory not found!"
             exit 1
         fi
+
+    - name: Generate dynamic manifest.json
+      run: |
+          cat <<EOF > website/manifest.json
+          {
+            "name": "Horus Factory Firmware",
+            "version": "${{ env.NEW_VERSION }}",
+            "new_install_prompt_erase": true,
+            "chipFamily": "ESP32",
+            "flashSize": "4MB",
+            "flashMode": "dio",
+            "flashFreq": "80m",
+            "builds": [
+              {
+                "chipFamily": "ESP32",
+                "parts": [
+                  {
+                    "path": "HorusByWyntro-factory.bin",
+                    "offset": 0
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
