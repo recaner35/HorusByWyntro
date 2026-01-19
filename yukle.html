@@ -1,114 +1,39 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Horus Factory Firmware Yükleyici</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horus Factory Yükleyici</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; line-height: 1.6; background: #f9f9f9; }
-    h1 { color: #1a73e8; }
-    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; overflow-y: auto; max-height: 400px; font-size: 0.9rem; }
-    button { padding: 0.8rem 1.6rem; margin: 0.5rem 1rem 0.5rem 0; font-size: 1.1rem; cursor: pointer; border: none; border-radius: 6px; }
-    #connectBtn { background: #4285f4; color: white; }
-    #flashBtn { background: #34a853; color: white; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .success { color: #34a853; font-weight: bold; }
-    .error { color: #ea4335; font-weight: bold; }
-    input[type="file"] { margin: 1rem 0; }
+    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f4f8; }
+    h1 { color: #333; }
+    esp-web-install-button { 
+      --esp-tools-button-color: #4CAF50; 
+      font-size: 1.6rem; 
+      padding: 20px 40px; 
+      border-radius: 10px; 
+    }
   </style>
 </head>
 <body>
-  <h1>Horus Factory Firmware Yükleyici (Otomatik)</h1>
+  <h1>Horus Firmware'i Tarayıcıdan Yükle</h1>
+  <p>Kartınızı USB'ye takın.<br>
+     <strong>Hiçbir tuşa basmanıza gerek yok!</strong><br>
+     Aşağıdaki butona basın, portu seçin ve yükleme başlasın.</p>
 
-  <p><strong>Adımlar:</strong></p>
-  <ol>
-    <li>Kartı USB'ye takın (<strong>hiç tuşa basmayın</strong> – kartınız otomatik bootloader'a girer)</li>
-    <li>Aşağıdan <strong>HorusByWyntro-factory.bin</strong> dosyanızı seçin</li>
-    <li>"ESP32'ye Bağlan" → port seçin</li>
-    <li>"Yükle (Erase + Flash)" butonuna basın</li>
-  </ol>
+  <esp-web-install-button 
+    manifest="manifest.json"
+    install-title="En Güncel Factory Firmware'i Yükle">
+  </esp-web-install-button>
 
-  <input type="file" id="binFile" accept=".bin" />
-  <br><br>
+  <p style="margin-top: 40px; color: #555;">
+    Chrome veya Edge tarayıcı kullanın.<br>
+    Her yeni sürümde otomatik güncellenir!
+  </p>
 
-  <button id="connectBtn">ESP32'ye Bağlan</button>
-  <button id="flashBtn" disabled>Yükle (Tam Erase + Flash)</button>
-
-  <h3>İşlem Logu:</h3>
-  <pre id="output">Durum: Hazır... (Chrome/Edge kullanın)\n</pre>
-
-  <script src="https://unpkg.com/esptool-js@0.2.0/dist/web/index.js"></script>
-  <script>
-    const binInput = document.getElementById('binFile');
-    const connectBtn = document.getElementById('connectBtn');
-    const flashBtn = document.getElementById('flashBtn');
-    const output = document.getElementById('output');
-
-    let transport, esploader, binArray;
-
-    function log(msg, type = '') {
-      const div = document.createElement('div');
-      div.textContent = msg;
-      if (type) div.className = type;
-      output.appendChild(div);
-      output.scrollTop = output.scrollHeight;
-    }
-
-    binInput.addEventListener('change', async e => {
-      const file = e.target.files[0];
-      if (!file?.name.endsWith('.bin')) return log('Geçersiz dosya! Sadece .bin seçin.', 'error');
-
-      try {
-        binArray = new Uint8Array(await file.arrayBuffer());
-        log(`Dosya yüklendi: \( {file.name} ( \){(binArray.length / 1024 / 1024).toFixed(2)} MB)`, 'success');
-        flashBtn.disabled = !(transport && esploader);
-      } catch (err) {
-        log('Dosya okuma hatası: ' + err.message, 'error');
-      }
-    });
-
-    connectBtn.addEventListener('click', async () => {
-      try {
-        const port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
-
-        transport = new Transport(port);
-        esploader = await ESPLoader.init(transport, {
-          baudRate: 115200,
-          flashMode: 'dio',
-          flashFreq: '80m',
-          flashSize: '4MB'
-        }, console);
-
-        log(`Bağlantı OK! Chip: ${esploader.chipName} • MAC: ${esploader.macAddr}`, 'success');
-        connectBtn.disabled = true;
-        flashBtn.disabled = !binArray;
-      } catch (err) {
-        log('Bağlantı hatası: ' + err.message + ' (Kart takılı mı? Bootloader modunda mı?)', 'error');
-      }
-    });
-
-    flashBtn.addEventListener('click', async () => {
-      if (!esploader || !binArray) return log('Önce bağlanın ve dosya seçin!', 'error');
-
-      flashBtn.disabled = true;
-      log('İşlem başlıyor... (3-8 dk sürebilir, sabırlı olun)');
-
-      try {
-        log('1. Tam flash siliniyor (erase chip)...');
-        await esploader.eraseFlash();
-
-        log('2. Factory.bin yazılıyor (offset 0x0)...');
-        await esploader.writeFlash([{ data: binArray, address: 0 }]);
-
-        log('YÜKLEME TAMAMLANDI! 🎉 Kartı USB\'den çıkarıp takabilirsiniz.', 'success');
-      } catch (err) {
-        log('HATA: ' + err.message, 'error');
-        console.error(err);
-      } finally {
-        flashBtn.disabled = false;
-      }
-    });
+  <script type="module">
+    import { defineCustomElements } from 'https://unpkg.com/esp-web-tools@10/dist/loader/index.js';
+    defineCustomElements(window);
   </script>
 </body>
 </html>
