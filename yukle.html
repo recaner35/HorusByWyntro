@@ -12,26 +12,40 @@
       font-size: 1.6rem; 
       padding: 20px 40px; 
       border-radius: 10px; 
+      display: inline-block; 
     }
+    #status { margin-top: 20px; font-size: 1.1rem; color: #555; min-height: 100px; }
   </style>
 </head>
 <body>
-  <h1>Horus Firmware'i Tarayıcıdan Yükle</h1>
-  <p>Kartınızı USB'ye takın.<br>
-     <strong>Hiçbir tuşa basmanıza gerek yok!</strong><br>
-     Butona basın → port seçin → yükleme başlasın.</p>
+  <h1>Horus Firmware Yükleyici</h1>
+  <p>Kart USB'de bağlı olsun.<br><strong>Tuş basmana gerek yok!</strong><br>Butona bas → port seç → işlem başlar.</p>
 
   <esp-web-install-button 
     manifest="manifest.json"
-    install-title="En Güncel Factory Firmware'i Yükle">
+    install-title="Firmware'i Yükle (Erase + Flash)">
   </esp-web-install-button>
 
-  <p style="margin-top: 40px; color: #555;">
-    Chrome veya Edge kullanın.<br>
-    Her yeni sürümde otomatik güncellenir!
+  <div id="status">Durum: Butona basmayı bekliyor...</div>
+
+  <p style="margin-top: 40px; color: #555; font-size: 0.9em;">
+    Chrome/Edge kullanın. İşlem 2-5 dk sürer.
   </p>
 
-  <!-- Self-hosted script (CORS sorunu yok) -->
-  <script type="module" src="./esp-web-tools/install-button.js"></script>
+  <!-- Self-hosted esp-web-tools -->
+  <script type="module">
+    import { defineCustomElements } from './esp-web-tools/install-button.js';
+    defineCustomElements(window);
+
+    // İlerleme takibi için basit listener (isteğe bağlı)
+    document.addEventListener('ewt-install-dialog-state-change', (e) => {
+      const status = document.getElementById('status');
+      if (e.detail.state === 'preparing') status.textContent = 'Hazırlık yapılıyor...';
+      if (e.detail.state === 'erasing') status.textContent = 'Flash siliniyor...';
+      if (e.detail.state === 'flashing') status.textContent = 'Firmware yazılıyor...';
+      if (e.detail.state === 'finished') status.textContent = 'İşlem TAMAMLANDI! 🎉';
+      if (e.detail.state === 'error') status.textContent = 'Hata: ' + e.detail.error;
+    });
+  </script>
 </body>
 </html>
