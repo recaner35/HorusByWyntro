@@ -1,11 +1,11 @@
 {
-  "name": "Horus Factory Firmware (Parçalı)",
+  "name": "Horus Factory Firmware",
   "version": "otomatik",
   "new_install_prompt_erase": true,
   "chipFamily": "ESP32",
   "flashSize": "4MB",
   "flashMode": "dio",
-  "flashFreq": "keep",
+  "flashFreq": "40m",
   "builds": [
     {
       "chipFamily": "ESP32",
@@ -19,15 +19,11 @@
           "offset": 32768
         },
         {
-          "path": "boot_app0.bin",
-          "offset": 57344
-        },
-        {
           "path": "firmware.bin",
           "offset": 65536
         },
         {
-          "path": "littlefs.bin",
+          "path": "spiffs.bin",
           "offset": 3997696
         }
       ]
