@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horus Factory Yükleyici</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f4f8; }
+    h1 { color: #333; }
+    esp-web-install-button { 
+      --esp-tools-button-color: #4CAF50; 
+      font-size: 1.6rem; 
+      padding: 20px 40px; 
+      border-radius: 10px; 
+      display: inline-block; 
+    }
+    #status { margin-top: 20px; font-size: 1.1rem; color: #555; min-height: 100px; background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Horus Firmware Yükleyici</h1>
+  <p>Kartınızı USB'ye takın.<br>
+     <strong>Hiçbir tuşa basmanıza gerek yok!</strong><br>
+     Aşağıdaki butona basın, portu seçin ve işlem başlasın (ilerleme burada görünür).</p>
+
+  <esp-web-install-button 
+    manifest="manifest.json"
+    install-title="Firmware'i Yükle (Erase + Flash)">
+  </esp-web-install-button>
+
+  <div id="status">Durum: Butona basmayı bekliyor...</div>
+
+  <p style="margin-top: 40px; color: #555; font-size: 0.9em;">
+    Chrome veya Edge tarayıcı kullanın.<br>
+    İşlem 2-5 dakika sürer. Herhangi bir hata olursa konsolu açıp (F12) paylaşın.
+  </p>
+
+  <!-- jsDelivr CDN – en stabil olanı -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/esp-web-tools@10.1.1/dist/web/install-button.js"></script>
+
+  <!-- Opsiyonel: İlerleme takibi için basit event listener -->
+  <script>
+    window.addEventListener('ewt-install-progress', (e) => {
+      document.getElementById('status').textContent = e.detail.message || 'İşlem devam ediyor...';
+      document.getElementById('status').style.color = '#2196F3';
+    });
+    window.addEventListener('ewt-install-success', () => {
+      document.getElementById('status').textContent = 'Yükleme TAMAMLANDI! 🎉 Kartı çıkarıp tekrar takabilirsiniz.';
+      document.getElementById('status').style.color = '#4CAF50';
+    });
+    window.addEventListener('ewt-install-error', (e) => {
+      document.getElementById('status').textContent = 'Hata: ' + (e.detail.error || 'Bilinmeyen sorun');
+      document.getElementById('status').style.color = '#f44336';
+    });
+  </script>
+</body>
+</html>
