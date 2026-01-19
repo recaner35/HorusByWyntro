@@ -1,6 +1,11 @@
 {
-  "name": "Horus by Wyntro",
-  "version": "1.0.0",
+  "name": "Horus Factory Firmware (Güncel)",
+  "version": "otomatik",
+  "new_install_prompt_erase": true,
+  "chipFamily": "ESP32",
+  "flashSize": "4MB",
+  "flashMode": "dio",
+  "flashFreq": "80m",
   "builds": [
     {
       "chipFamily": "ESP32",
