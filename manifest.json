@@ -2,20 +2,14 @@
   "name": "Horus Factory Firmware (Güncel)",
   "version": "otomatik",
   "new_install_prompt_erase": true,
-  "chipFamily": "ESP32",
+  "chipFamily": "ESP32",           // Root seviyesinde chipFamily opsiyonel ama iyi olur
   "flashSize": "4MB",
   "flashMode": "dio",
-  "flashFreq": "keep",
-  "parts": [
-        { "path": "bootloader.bin", "offset": 4096 },   // 0x1000
-        { "path": "partitions.bin", "offset": 32768 },  // 0x8000
-        { "path": "boot_app0.bin", "offset": 57344 },   // 0xe000
-        { "path": "firmware.bin", "offset": 65536 },    // 0x10000
-        { "path": "littlefs.bin", "offset": 3997696 }   // 0x3D0000
-      ]
+  "flashFreq": "keep",             // Bu override'ı kaldırır, bin içindeki header kullanılır
+  "builds": [                      // ← Zorunlu array!
     {
       "chipFamily": "ESP32",
-      "parts": [
+      "parts": [                   // ← parts buraya gelir!
         {
           "path": "HorusByWyntro-factory.bin",
           "offset": 0
