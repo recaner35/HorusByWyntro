@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>Horus Firmware Yükleyici</h1>
-  <p>Kart USB'de bağlı olsun.<br><strong>Tuş basmana gerek yok!</strong><br>Butona bas → port seç → işlem başlar.</p>
+  <p>Kart USB'de bağlı olsun.<br><strong>Tuş basmana gerek yok!</strong><br>Butona bas → port seç → işlem başlar (ilerleme gösterir).</p>
 
   <esp-web-install-button 
     manifest="manifest.json"
@@ -32,20 +32,19 @@
     Chrome/Edge kullanın. İşlem 2-5 dk sürer.
   </p>
 
-  <!-- Self-hosted esp-web-tools -->
-  <script type="module">
-    import { defineCustomElements } from './esp-web-tools/install-button.js';
-    defineCustomElements(window);
-
-    // İlerleme takibi için basit listener (isteğe bağlı)
-    document.addEventListener('ewt-install-dialog-state-change', (e) => {
-      const status = document.getElementById('status');
-      if (e.detail.state === 'preparing') status.textContent = 'Hazırlık yapılıyor...';
-      if (e.detail.state === 'erasing') status.textContent = 'Flash siliniyor...';
-      if (e.detail.state === 'flashing') status.textContent = 'Firmware yazılıyor...';
-      if (e.detail.state === 'finished') status.textContent = 'İşlem TAMAMLANDI! 🎉';
-      if (e.detail.state === 'error') status.textContent = 'Hata: ' + e.detail.error;
-    });
-  </script>
+  <!-- Sadece bu satır yeterli – otomatik register eder -->
+  <script type="module" src="./esp-web-tools/install-button.js"></script>
+  <script>
+  // İlerleme için basit listener (dialog'dan event dinle)
+  window.addEventListener('ewt-install-progress', (e) => {
+    document.getElementById('status').textContent = e.detail.message || 'İşlem devam ediyor...';
+  });
+  window.addEventListener('ewt-install-success', () => {
+    document.getElementById('status').textContent = 'Yükleme TAMAMLANDI! 🎉 Kartı resetleyin.';
+  });
+  window.addEventListener('ewt-install-error', (e) => {
+    document.getElementById('status').textContent = 'Hata: ' + (e.detail.error || 'Bilinmeyen sorun');
+  });
+</script>
 </body>
 </html>
