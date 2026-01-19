@@ -2,13 +2,12 @@
  * PROJE ADI: HORUS BY WYNTRO
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
- *
+ * TASARIM: Caner Kocacık
  * AÇIKLAMA:
  * Bu kod, Horus IoT Saat Kurma Makinesi'nin (Watch Winder) ana yazılımıdır.
  * Web arayüzü ile kontrol edilir, ESP-NOW ile diğer cihazları görür,
  * TTP223 sensörü ile fiziksel kontrol sağlar.
  */
-
 #include <DNSServer.h>
 #include <AccelStepper.h>
 #include <Arduino.h>
