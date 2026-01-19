@@ -349,7 +349,7 @@ void setup() {
     initWiFi();
   }
 
-  if (!LittleFS.begin(false, "/littlefs")) {  // ← Buraya "/littlefs" ekle
+  if (!LittleFS.begin()) {
       Serial.println("LittleFS baslatilamadi!");
   } else {
       Serial.println("LittleFS OK");
