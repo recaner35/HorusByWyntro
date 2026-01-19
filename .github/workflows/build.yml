@@ -182,6 +182,20 @@ jobs:
         mkdir -p website
         cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin || echo "Copy failed - check if build file exists"
         ls -la website/  # Debug: kopyalanan dosyayı logla
+    
+    - name: Copy separate files for partitioned web installer
+      run: |
+          mkdir -p website
+          cp ./build/*.bootloader.bin website/bootloader.bin || echo "Bootloader copy failed"
+          cp ./build/*.partitions.bin website/partitions.bin || echo "Partitions copy failed"
+          # boot_app0.bin genellikle Arduino paketinden gelir
+          BOOT_APP0=$(find ~/.arduino15/packages/esp32/hardware/esp32/*/tools/partitions -name "boot_app0.bin" | head -n 1)
+          cp "$BOOT_APP0" website/boot_app0.bin || echo "boot_app0 copy failed"
+          cp ./build/*.ino.bin website/firmware.bin || echo "Firmware copy failed"
+          cp ./build/HorusByWyntro.littlefs.bin website/littlefs.bin || echo "LittleFS copy failed"
+          # Hala merged bin'i de kopyala (yedek için)
+          cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin
+          ls -la website/  # Debug: kopyalanan dosyaları logla
 
     - name: Commit website changes to main branch (for Pages update)
       run: |
