@@ -19,7 +19,7 @@
   <h1>Horus Firmware'i Tarayıcıdan Yükle</h1>
   <p>Kartınızı USB'ye takın.<br>
      <strong>Hiçbir tuşa basmanıza gerek yok!</strong><br>
-     Aşağıdaki butona basın, portu seçin ve yükleme başlasın.</p>
+     Butona basın → port seçin → yükleme başlasın.</p>
 
   <esp-web-install-button 
     manifest="manifest.json"
@@ -27,13 +27,11 @@
   </esp-web-install-button>
 
   <p style="margin-top: 40px; color: #555;">
-    Chrome veya Edge tarayıcı kullanın.<br>
+    Chrome veya Edge kullanın.<br>
     Her yeni sürümde otomatik güncellenir!
   </p>
 
-  <script type="module">
-    import { defineCustomElements } from 'https://unpkg.com/esp-web-tools@10/dist/loader/index.js';
-    defineCustomElements(window);
-  </script>
+  <!-- Self-hosted script (CORS sorunu yok) -->
+  <script type="module" src="./esp-web-tools/install-button.js"></script>
 </body>
 </html>
