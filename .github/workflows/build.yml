@@ -232,7 +232,7 @@ jobs:
             "chipFamily": "ESP32",
             "flashSize": "4MB",
             "flashMode": "dio",
-            "flashFreq": "80m",
+            "flashFreq": "keep",
             "builds": [
               {
                 "chipFamily": "ESP32",
