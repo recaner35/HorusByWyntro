@@ -349,10 +349,10 @@ void setup() {
     initWiFi();
   }
 
-  if (!LittleFS.begin(false)) {
-    Serial.println("LittleFS baslatilamadi!");
+  if (!LittleFS.begin(false, "/littlefs")) {  // ← Buraya "/littlefs" ekle
+      Serial.println("LittleFS baslatilamadi!");
   } else {
-    Serial.println("LittleFS OK");
+      Serial.println("LittleFS OK");
   }
 
   loadConfig();
