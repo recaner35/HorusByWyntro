@@ -148,7 +148,7 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 192512 ./build/spiffs.bin
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 180224 ./build/spiffs.bin
 
     - name: Generate Factory Bin
       run: |
