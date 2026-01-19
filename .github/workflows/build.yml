@@ -179,9 +179,19 @@ jobs:
 
     - name: Copy factory.bin to website folder for web installer
       run: |
-          mkdir -p website
-          cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin
-          echo "Factory bin website klasörüne kopyalandı"
+        mkdir -p website
+        cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin || echo "Copy failed - check if build file exists"
+        ls -la website/  # Debug: kopyalanan dosyayı logla
+
+    - name: Commit website changes to main branch (for Pages update)
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+        git add website/HorusByWyntro-factory.bin
+        git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No new changes to commit"
+        git push origin HEAD:main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
