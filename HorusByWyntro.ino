@@ -1028,7 +1028,7 @@ void initWebServer() {
          // Tarama henüz başlamadı veya bitti, yeni başlat
          shouldScanWifi = true;
          // Tarama başladığına dair bilgi ver veya boş liste dön (JS polling yapmıyorsa eski cache'i döner)
-         request->send(200, "application/json", "[]")
+         request->send(200, "application/json", "[]");
       } else if (WiFi.scanComplete() == -1) {
          // Tarama şu an devam ediyor
          request->send(200, "application/json", "[]"); 
