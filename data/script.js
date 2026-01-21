@@ -437,81 +437,52 @@ window.deletePeer = function (mac) {
 };
 
 // ================= WIFI LOGIC =================
-
+let isScanning = false;
 function scanWifi() {
-    // Hangi moda olduğumuza göre hedef listeyi seçelim
-    // isSetupMode true ise setupWifiList, değilse wifiList (Ayarlar sekmesi)
-    const targetListId = isSetupMode ? "setupWifiList" : "wifiList";
-    const list = document.getElementById(targetListId);
+    const list = document.getElementById('wifiList');
+    const btn = document.getElementById('scanBtn'); // Eğer butonun ID'si farklıysa güncelle
     
-    if (!list) {
-        console.error("Hedef WiFi listesi bulunamadı: " + targetListId);
-        return;
-    }
+    if (isScanning) return;
+    
+    // UI Güncelleme: Tarama başladığını göster
+    isScanning = true;
+    list.innerHTML = '<div class="scanning">Ağlar taranıyor, lütfen bekleyin...</div>';
+    if(btn) btn.disabled = true;
 
-    list.innerHTML = `<div class="loading-spinner"></div><div style="text-align:center; opacity:0.7">${getTrans('taranıyor')}...</div>`;
-
-    fetch("/api/scan-wifi")
-        .then(r => {
-            if (!r.ok) throw new Error("Tarama hatası");
-            return r.json();
-        })
-        .then(networks => {
-            list.innerHTML = "";
-            
-            // Eğer ağ bulunamazsa
-            if (networks.length === 0) {
-                list.innerHTML = `<div style="text-align:center; padding:20px;">${getTrans('noNetwork')}</div>`;
-                return;
+    // 1. İstek: Taramayı Tetikle
+    fetch('/api/scan-networks')
+        .then(response => response.json())
+        .then(data => {
+            // Eğer ilk cevap boşsa (ki async olduğu için boş gelecek), bekle ve tekrar sor
+            if (data.length === 0) {
+                console.log("Tarama başlatıldı, sonuç bekleniyor...");
+                setTimeout(() => {
+                    // 2. İstek: Sonuçları Çek (2.5 saniye sonra)
+                    fetch('/api/scan-networks')
+                        .then(r => r.json())
+                        .then(networks => {
+                            renderWifiList(networks);
+                            isScanning = false;
+                            if(btn) btn.disabled = false;
+                        })
+                        .catch(err => {
+                            list.innerHTML = '<div class="error">Tarama hatası!</div>';
+                            isScanning = false;
+                            if(btn) btn.disabled = false;
+                        });
+                }, 2500); // ESP32 tarama süresi genelde 2-3sn sürer
+            } else {
+                // Eğer şans eseri hemen geldiyse (cache varsa)
+                renderWifiList(data);
+                isScanning = false;
+                if(btn) btn.disabled = false;
             }
-
-            // Tekrarlanan SSID'leri engellemek için Set kullanalım
-            const seenSSIDs = new Set();
-
-            networks.forEach(net => {
-                if (!net.ssid || seenSSIDs.has(net.ssid)) return;
-                seenSSIDs.add(net.ssid);
-
-                const div = document.createElement("div");
-                div.className = "wifi-item";
-                
-                // Güç göstergesi (icon seçimi)
-                let signalIcon = "wifi-0.svg"; // Varsayılan
-                if(net.rssi > -50) signalIcon = "wifi-3.svg"; // Güçlü
-                else if(net.rssi > -70) signalIcon = "wifi-2.svg"; // Orta
-                else signalIcon = "wifi-1.svg"; // Zayıf
-
-                // Kilit ikonu
-                const lockIcon = net.secure ? 
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>' 
-                    : '';
-
-                div.innerHTML = `
-                    <div class="wifi-info">
-                        <span class="wifi-ssid">${net.ssid}</span>
-                        <span class="wifi-signal" style="font-size:12px; opacity:0.6">${net.rssi} dBm</span>
-                    </div>
-                    <div class="wifi-icons" style="display:flex; align-items:center; gap:8px;">
-                        ${lockIcon}
-                    </div>
-                `;
-                
-                // Tıklama olayı - Şifre modalını aç
-                div.onclick = () => showPasswordModal(net.ssid);
-                list.appendChild(div);
-            });
         })
-        .catch(err => {
-            console.error(err);
-            list.innerHTML = `<div style="text-align:center; color:#ff4444">${getTrans('error')}</div>`;
-            
-            // Hata durumunda tekrar dene butonu
-            const retryBtn = document.createElement("button");
-            retryBtn.innerText = "Tekrar Dene";
-            retryBtn.className = "btn-secondary";
-            retryBtn.style.marginTop = "10px";
-            retryBtn.onclick = scanWifi;
-            list.appendChild(retryBtn);
+        .catch(error => {
+            console.error('Tarama hatası:', error);
+            list.innerHTML = '<div class="error">Bağlantı hatası.</div>';
+            isScanning = false;
+            if(btn) btn.disabled = false;
         });
 }
 
@@ -536,26 +507,31 @@ function checkWifiScanResult() {
 }
 
 function renderWifiList(networks) {
-    var list = document.getElementById('wifiList');
-    list.innerHTML = "";
-    if (networks.length == 0) {
-        list.innerHTML = '<div class="list-item placeholder" data-i18n="no_networks">' + getTrans('no_networks') + '</div>';
+    const list = document.getElementById('wifiList');
+    list.innerHTML = '';
+    
+    if (networks.length === 0) {
+        list.innerHTML = '<div class="empty">Ağ bulunamadı. Tekrar deneyin.</div>';
         return;
     }
 
-    networks.forEach(function (net) {
-        var item = document.createElement('div');
-        item.className = "list-item";
-        item.innerHTML = `
-             <div class="list-info">
-                <span class="ssid">${net.ssid}</span>
-                <span class="rssi">Signal: ${net.rssi} dBm</span>
-            </div>
-            <div class="list-action">
-                <button class="btn-small" onclick="openWifiModal('${net.ssid}')" data-i18n="connect">${getTrans('connect')}</button>
-            </div>
+    // Tekrarlanan SSID'leri temizle (Opsiyonel ama şık durur)
+    const uniqueNetworks = [...new Map(networks.map(item => [item['ssid'], item])).values()];
+
+    uniqueNetworks.forEach(net => {
+        const div = document.createElement('div');
+        div.className = 'wifi-item';
+        // Güvenlik ikonunu ve sinyal seviyesini göster
+        const lockIcon = net.secure ? '🔒' : 'OPEN';
+        div.innerHTML = `
+            <span class="ssid">${net.ssid}</span>
+            <span class=\"signal\">${net.rssi} dBm ${lockIcon}</span>
         `;
-        list.appendChild(item);
+        div.onclick = () => {
+            document.getElementById('ssid').value = net.ssid;
+            document.getElementById('pass').focus();
+        };
+        list.appendChild(div);
     });
 }
 
@@ -791,6 +767,7 @@ function handleInstallClick() {
 function closeIosModal() {
     if(iosModal) iosModal.classList.add('hidden');
 }
+
 
 
 
