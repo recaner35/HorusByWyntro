@@ -360,6 +360,8 @@ void setup() {
 
   // 4. Motor Kurulumu
   initMotor();
+  stepper.setMaxSpeed(600);
+  stepper.setAcceleration(200);
 
   // 5. Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
   // Eğer kayıtlı ağa bağlanamazsa startSetupMode() içinde çağrılacak
@@ -419,16 +421,20 @@ void loop() {
   ws.cleanupClients();
 
   // 5. Motor Hareketi
-  if (isRunning) {
-    startMotorTurn(); // Non-blocking motor adımı
-  } else {
-    stepper.disableOutputs();
+  if (isRunning && stepper.distanceToGo() == 0) {
+    startMotorTurn();
   }
-
   // 6. Zamanlanmış Görevler (schedule, touch, wifi check vb.)
   // Mevcut checkSchedule() ve handlePhysicalControl() fonksiyonlarını çağır
   checkSchedule();
   handlePhysicalControl();
+  stepper.run();
+
+    if (isMotorMoving && stepper.distanceToGo() == 0) {
+        stepper.disableOutputs();   // bobinleri SAL
+        isMotorMoving = false;
+        turnsThisHour++;
+    }
   
   // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
   delay(2); 
@@ -451,7 +457,9 @@ void startMotorTurn() {
     targetPos = -STEPS_PER_REVOLUTION;
   else if (config.direction == 2 && turnsThisHour % 2 != 0)
     targetPos = -STEPS_PER_REVOLUTION;
-  stepper.move(targetPos);
+  if (stepper.distanceToGo() == 0) {
+    stepper.moveTo(stepper.currentPosition() + targetPos);
+  }
   stepper.enableOutputs();
   isMotorMoving = true;
 }
@@ -469,7 +477,6 @@ void checkSchedule() {
     turnsThisHour = 0;
   }
   if (turnsThisHour < targetTurnsPerHour && !isMotorMoving) {
-    startMotorTurn();
   }
 }
 
@@ -1023,19 +1030,14 @@ void initWebServer() {
   server.addHandler(&ws);
 
   server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request){
-      // Eğer tarama daha önce yapıldıysa ve sonuç varsa hemen dön
-      if (WiFi.scanComplete() == -2) {
-         // Tarama henüz başlamadı veya bitti, yeni başlat
-         shouldScanWifi = true;
-         // Tarama başladığına dair bilgi ver veya boş liste dön (JS polling yapmıyorsa eski cache'i döner)
-         request->send(200, "application/json", "[]");
-      } else if (WiFi.scanComplete() == -1) {
-         // Tarama şu an devam ediyor
-         request->send(200, "application/json", "[]"); 
-      } else {
-         // Tarama bitmiş, sonucu dön
-         request->send(200, "application/json", scanJsonResult);
-      }
+    if (WiFi.scanComplete() == -2) {
+      shouldScanWifi = true;
+      request->send(200, "application/json", "[]"); 
+    } else if (WiFi.scanComplete() == -1) {
+      request->send(200, "application/json", "[]");
+    } else {
+      request->send(200, "application/json", scanJsonResult);
+    }
   });
   server.on("/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
       StaticJsonDocument<200> doc;
@@ -1151,12 +1153,12 @@ void initWebServer() {
   });
 
   server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request){
-    String json = "{";
-    json += "\"setup\":";
-    json += (setupMode && !skipSetup) ? "true" : "false";
-    json += "}";
-
-    request->send(200, "application/json", json);
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> doc;
+    doc["setup"] = setupMode;
+    doc["suffix"] = deviceSuffix;
+    serializeJson(doc, *response);
+    request->send(response);
   });
 
   server.on("/api/skip-setup", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -1245,7 +1247,11 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 void startSetupMode() {
   setupMode = true; // Loop'ta DNS'i işlemek için bayrak
   Serial.println("SETUP MODE AKTIF");
-
+  
+  WiFi.disconnect(true); // STA'dan kalanları temizle
+  delay(100);            // Radyonun kapanmasına izin ver
+  WiFi.mode(WIFI_AP);    // AP modunu aç
+  delay(100);
   WiFi.mode(WIFI_AP);
   
   // Standart Captive Portal IP'si
@@ -1253,18 +1259,16 @@ void startSetupMode() {
   IPAddress gateway(192, 168, 4, 1);
   IPAddress subnet(255, 255, 255, 0);
 
+  WiFi.softAP(SETUP_AP_SSID);
+  Serial.print("Setup IP: ");
+  Serial.println(WiFi.softAPIP());
+  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer.start(53, "*", apIP);
   WiFi.softAPConfig(apIP, gateway, subnet);
   
   // Suffix'in dolu olduğundan eminiz çünkü setup başında yaptık
   String ssidName = String(SETUP_AP_SSID) + "-" + deviceSuffix;
   WiFi.softAP(ssidName.c_str(), SETUP_AP_PASS); // Şifresiz kurulum daha pratiktir, istersen SETUP_AP_PASS koy.
-
-  Serial.print("Setup IP: ");
-  Serial.println(WiFi.softAPIP());
-
-  // DNS Server'ı güvenli başlat (Tüm istekleri kendine yönlendir)
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(53, "*", apIP);
 }
 
 
