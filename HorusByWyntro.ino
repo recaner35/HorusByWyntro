@@ -26,6 +26,8 @@
 
 // ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
+bool shouldScanWifi = false;
+String scanJsonResult = "[]";
 void startSetupMode();
 void initWebServer();
 void initWiFi();
@@ -332,116 +334,103 @@ void checkAndPerformUpdate() {
 // ===============================
 void setup() {
   Serial.begin(115200);
-  Serial.println("\nHORUS BY WYNTRO - Baslatiliyor");
-
-  Preferences setupPrefs;
-  setupPrefs.begin("setup", true);
-  skipSetup = setupPrefs.getBool("skip", false);
-  setupPrefs.end();
-
-  bool connected = connectToSavedWiFi();
-
-  if (!connected && !skipSetup) {
-    setupMode = true;
-    startSetupMode();
-  } else {
-    setupMode = false;
-    initWiFi();
+  
+  // 1. Dosya Sistemini Başlat (Config için şart)
+  if (!LittleFS.begin(true)) {
+    Serial.println("LittleFS Mount Failed");
+    return;
   }
+  Serial.println("LittleFS OK");
 
-  if (!LittleFS.begin()) {
-      Serial.println("LittleFS baslatilamadi!");
-  } else {
-      Serial.println("LittleFS OK");
-  }
-
+  // 2. Config ve Suffix'i EN BAŞTA Yükle
   loadConfig();
-
-  pinMode(TOUCH_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT);
-
-  uint64_t chipid = ESP.getEfuseMac();
-  uint32_t low = chipid & 0xFFFFFFFF;
-  uint16_t idHigh = (low >> 0) & 0xFFFF;
-  char idStr[5];
-  sprintf(idStr, "%04X", idHigh);
-  deviceSuffix = String(idStr);
-
+  
+  // MAC Adresini almak için geçici olarak Station modunu aç
+  WiFi.mode(WIFI_STA);
+  myMacAddress = WiFi.macAddress();
+  String macStr = myMacAddress;
+  macStr.replace(":", "");
+  deviceSuffix = macStr.substring(macStr.length() - 4);
   Serial.println("Device Suffix: " + deviceSuffix);
 
-  initMotor();
-  initWebServer();
-  server.begin();
+  // 3. Pinleri Ayarla
+  pinMode(TOUCH_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
-  Serial.println("Web Server BASLADI");
+  // 4. Motor Kurulumu
+  initMotor();
+
+  // 5. Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
+  // Eğer kayıtlı ağa bağlanamazsa startSetupMode() içinde çağrılacak
+  if (!connectToSavedWiFi()) {
+    startSetupMode();
+  } else {
+    initESPNow();
+  }
+
+  // 6. Web Sunucuyu Başlat
+  initWebServer();
 }
 
 // ===============================
 // Ana Döngü (Loop)
 // ===============================
 void loop() {
-  if (shouldUpdate) {
-    shouldUpdate = false;
-    checkAndPerformUpdate();
-  }
-
-  ws.cleanupClients();
-
-  // WiFi Tarama Tetikleyici
-  if (shouldStartScan) {
-    shouldStartScan = false;
-    handleWifiScan();
-  }
-
-  handleWifiConnection();
-  handlePhysicalControl();
-
-  if (isRunning) {
-    checkSchedule();
-  } else {
-    if (stepper.distanceToGo() == 0) {
-      stepper.disableOutputs();
-    }
-  }
-
-  if (isRunning && isMotorMoving) {
-    stepper.run();
-    if (stepper.distanceToGo() == 0) {
-      isMotorMoving = false;
-      turnsThisHour++;
-      if (turnsThisHour >= targetTurnsPerHour) {
-        stepper.disableOutputs();
-      }
-    }
-  }
-
-  static unsigned long lastEspNowCheck = 0;
-  if (millis() - lastEspNowCheck > 5000) {
-    lastEspNowCheck = millis();
-    bool shouldBeActive = !isScanning && config.espNowEnabled && (WiFi.status() == WL_CONNECTED);
-
-    if (shouldBeActive && !isEspNowActive) {
-      Serial.println("WiFi bağlı ve ESP-NOW toggle açık, başlatılıyor...");
-      initESPNow();
-      restorePeers();
-    } else if (!shouldBeActive && isEspNowActive) {
-      Serial.print("ESP-NOW durduruluyor");
-      esp_now_deinit();
-      isEspNowActive = false;
-    }
-  }
-  
+  // 1. DNS Server (Sadece Setup modundaysa işle)
   if (setupMode) {
     dnsServer.processNextRequest();
   }
 
-  static unsigned long lastDiscovery = 0;
-
-  if (!isScanning && config.espNowEnabled && (millis() - lastDiscovery > 10000)) {
-    lastDiscovery = millis();
-    broadcastDiscovery();
+  // 2. Wi-Fi Tarama Mantığı (Non-Blocking)
+  if (shouldScanWifi) {
+    shouldScanWifi = false;
+    Serial.println("Wifi Tarama Baslatiliyor (Async)...");
+    WiFi.scanNetworks(true); // true = Async Mode
   }
 
+  // Tarama bitti mi kontrol et
+  int scanStatus = WiFi.scanComplete();
+  if (scanStatus >= 0) {
+    Serial.print("Tarama Tamamlandi. Bulunan Ag Sayisi: ");
+    Serial.println(scanStatus);
+    
+    // Sonuçları JSON formatına çevir ve cache'le
+    String json = "[";
+    for (int i = 0; i < scanStatus; ++i) {
+      if (i) json += ",";
+      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",";
+      json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+      json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
+    }
+    json += "]";
+    scanJsonResult = json;
+    
+    WiFi.scanDelete(); // Hafızayı temizle
+  }
+
+  // 3. OTA Update Kontrolü
+  if (shouldUpdate) {
+     checkAndPerformUpdate();
+     shouldUpdate = false;
+  }
+
+  // 4. WebSocket Temizliği
+  ws.cleanupClients();
+
+  // 5. Motor Hareketi
+  if (isRunning) {
+    startMotorTurn(); // Non-blocking motor adımı
+  } else {
+    stepper.disableOutputs();
+  }
+
+  // 6. Zamanlanmış Görevler (schedule, touch, wifi check vb.)
+  // Mevcut checkSchedule() ve handlePhysicalControl() fonksiyonlarını çağır
+  checkSchedule();
+  handlePhysicalControl();
+  
+  // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
   delay(2); 
 }
 
@@ -1033,28 +1022,35 @@ void initWebServer() {
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
 
-  server.on("/api/scan-wifi", HTTP_GET, [](AsyncWebServerRequest *request) {
-    int n = WiFi.scanNetworks();
-    
-    // Dinamik JSON dökümanı oluştur (Boyutu ağ sayısına göre ayarla)
-    // Her ağ yaklaşık 100 byte yer tutsa, 50 ağ için 5120 yeterli olur.
-    JsonDocument doc; 
-    JsonArray array = doc.to<JsonArray>();
-
-    for (int i = 0; i < n; ++i) {
-      JsonObject net = array.add<JsonObject>();
-      net["ssid"] = WiFi.SSID(i);
-      net["rssi"] = WiFi.RSSI(i);
-        
-      // Şifreleme türü kontrolü (Basitleştirilmiş)
-      wifi_auth_mode_t encryption = WiFi.encryptionType(i);
-      net["secure"] = (encryption != WIFI_AUTH_OPEN);
+  server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request){
+      // Eğer tarama daha önce yapıldıysa ve sonuç varsa hemen dön
+      if (WiFi.scanComplete() == -2) {
+         // Tarama henüz başlamadı veya bitti, yeni başlat
+         shouldScanWifi = true;
+         // Tarama başladığına dair bilgi ver veya boş liste dön (JS polling yapmıyorsa eski cache'i döner)
+         request->send(200, "application/json", "[]")
+      } else if (WiFi.scanComplete() == -1) {
+         // Tarama şu an devam ediyor
+         request->send(200, "application/json", "[]"); 
+      } else {
+         // Tarama bitmiş, sonucu dön
+         request->send(200, "application/json", scanJsonResult);
       }
-
-    String json;
-    serializeJson(doc, json);
-    
-    request->send(200, "application/json", json);
+  });
+  server.on("/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+      StaticJsonDocument<200> doc;
+      deserializeJson(doc, data);
+      String ssid = doc["ssid"];
+      String pass = doc["pass"];
+      
+      prefs.begin("wifi", false);
+      prefs.putString("ssid", ssid);
+      prefs.putString("pass", pass);
+      prefs.end();
+      
+      request->send(200, "text/plain", "OK");
+      delay(1000);
+      ESP.restart();
   });
   // Android (çoğu sürüm)
   server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1085,10 +1081,19 @@ void initWebServer() {
     request->send(200, "text/plain", "Microsoft Connect Test");
   });
 
-  server.onNotFound([](AsyncWebServerRequest *request){
-    request->redirect("/");
+  server.onNotFound([](AsyncWebServerRequest *request) {
+    if (setupMode) {
+       // Android/iOS captive check url'leri
+       String host = request->host();
+       if (host != "192.168.4.1") {
+         request->redirect("http://192.168.4.1");
+         return;
+       }
+    }
+    request->send(404);
   });
-
+  ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
+  });
   server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Microsoft NCSI");
   });
@@ -1238,20 +1243,28 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 }
 
 void startSetupMode() {
+  setupMode = true; // Loop'ta DNS'i işlemek için bayrak
   Serial.println("SETUP MODE AKTIF");
 
   WiFi.mode(WIFI_AP);
-  IPAddress apIP(8, 8, 8, 8);
-  IPAddress gateway(8, 8, 8, 8);
+  
+  // Standart Captive Portal IP'si
+  IPAddress apIP(192, 168, 4, 1);
+  IPAddress gateway(192, 168, 4, 1);
   IPAddress subnet(255, 255, 255, 0);
 
   WiFi.softAPConfig(apIP, gateway, subnet);
-  WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS);
-
-  dnsServer.start(53, "*", apIP);
+  
+  // Suffix'in dolu olduğundan eminiz çünkü setup başında yaptık
+  String ssidName = String(SETUP_AP_SSID) + "-" + deviceSuffix;
+  WiFi.softAP(ssidName.c_str(), SETUP_AP_PASS); // Şifresiz kurulum daha pratiktir, istersen SETUP_AP_PASS koy.
 
   Serial.print("Setup IP: ");
   Serial.println(WiFi.softAPIP());
+
+  // DNS Server'ı güvenli başlat (Tüm istekleri kendine yönlendir)
+  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer.start(53, "*", apIP);
 }
 
 
