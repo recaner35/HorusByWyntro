@@ -210,9 +210,8 @@ jobs:
         git add website/firmware.bin
         git add website/spiffs.bin
         git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No new changes to commit"
-        git reset --hard
         git pull --rebase origin main
-        git push origin HEAD:main
+        git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -261,20 +260,13 @@ jobs:
                 "chipFamily": "ESP32",
                 "parts": [
                   {
-                    "path": "bootloader.bin",
-                    "offset": 4096
-                  },
-                  {
-                    "path": "partitions.bin",
-                    "offset": 32768
-                  },
-                  {
-                    "path": "firmware.bin",
-                    "offset": 65536
-                  },
-                  {
-                    "path": "spiffs.bin",
-                    "offset": 3997696
+                    "parts": [
+                      { "path": "bootloader.bin", "offset": 4096 },
+                      { "path": "partitions.bin", "offset": 32768 },
+                      { "path": "boot_app0.bin", "offset": 57344 },
+                      { "path": "factory.bin", "offset": 65536 },
+                      { "path": "spiffs.bin", "offset": 3997696 }
+                    ]
                   }
                 ]
              }
