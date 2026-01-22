@@ -1,37 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Horus by Wyntro – Firmware Yükleyici</title>
+  <meta charset="utf-8">
+  <title>Horus Factory Firmware</title>
+  <script type="module"
+    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js">
+  </script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #020617;
+      padding: 32px;
+      border-radius: 16px;
+      text-align: center;
+      width: 360px;
+    }
+    h1 { margin-bottom: 12px; }
+    p { font-size: 14px; opacity: 0.8; margin-bottom: 24px; }
+  </style>
 </head>
 <body>
+  <div class="card">
+    <h1>Horus by Wyntro</h1>
+    <p>Fabrika yazılımını yüklemek için bağlanın</p>
 
-  <h2>Horus by Wyntro – ESP32 Firmware Yükleme</h2>
-
-  <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
-
-  <script type="module">
-    import "https://unpkg.com/esp-web-flash@8/dist/web/install-button.js";
-
-    const manifest = {
-      name: "Horus by Wyntro",
-      builds: [
-        {
-          chipFamily: "ESP32",
-          parts: [
-            {
-              path: "https://recaner35.github.io/HorusByWyntro/HorusByWyntro-factory.bin",
-              offset: 0x0
-            }
-          ]
-        }
-      ]
-    };
-
-    document
-      .querySelector("esp-web-install-button")
-      .manifest = manifest;
-  </script>
-
+    <esp-web-install-button
+      manifest="./manifest.json">
+      <button slot="activate">
+        Connect & Install
+      </button>
+    </esp-web-install-button>
+  </div>
 </body>
 </html>
