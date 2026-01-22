@@ -1,0 +1,14 @@
+{
+  "name": "Horus by Wyntro",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "https://recaner35.github.io/HorusByWyntro/HorusByWyntro-factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

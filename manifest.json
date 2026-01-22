@@ -19,7 +19,7 @@
           "offset": 32768
         },
         {
-          "path": "firmware.bin",
+          "path": "factory.bin",
           "offset": 65536
         },
         {
