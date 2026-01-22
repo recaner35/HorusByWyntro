@@ -1039,17 +1039,40 @@ void initWebServer() {
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
+  
+  server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
 
-  server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (WiFi.scanComplete() == -2) {
-      shouldScanWifi = true;
-      request->send(200, "application/json", "[]"); 
-    } else if (WiFi.scanComplete() == -1) {
+    int n = WiFi.scanComplete();
+
+    if (n == -2) {
+      WiFi.scanNetworks(true);   // scan yok → başlat
       request->send(200, "application/json", "[]");
-    } else {
-      request->send(200, "application/json", scanJsonResult);
+      return;
     }
+
+    if (n == -1) {
+      request->send(200, "application/json", "[]"); // scan sürüyor
+      return;
+    }
+
+    DynamicJsonDocument doc(2048);
+    JsonArray arr = doc.to<JsonArray>();
+
+    for (int i = 0; i < n; i++) {
+      JsonObject net = arr.createNestedObject();
+      net["ssid"] = WiFi.SSID(i);
+      net["rssi"] = WiFi.RSSI(i);
+      net["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+    }
+
+    WiFi.scanDelete();        // ÇOK KRİTİK
+    WiFi.scanNetworks(true); // bir sonraki scan’i hazırla
+
+    String json;
+    serializeJson(arr, json);
+    request->send(200, "application/json", json);
   });
+
   server.on("/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
       StaticJsonDocument<200> doc;
       deserializeJson(doc, data);
@@ -1256,28 +1279,20 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 }
 
 void startSetupMode() {
-  setupMode = true; // Loop'ta DNS'i işlemek için bayrak
+  setupMode = true;
   Serial.println("SETUP MODE AKTIF");
-  
-  WiFi.disconnect(true); // STA'dan kalanları temizle
-  delay(100);            // Radyonun kapanmasına izin ver
-  WiFi.mode(WIFI_AP);    // AP modunu aç
-  delay(100);
-  WiFi.mode(WIFI_AP);
-  server.begin();
-  
-  // Standart Captive Portal IP'si
-  IPAddress apIP(192, 168, 4, 1);
-  IPAddress gateway(192, 168, 4, 1);
-  IPAddress subnet(255, 255, 255, 0);
 
-  WiFi.softAP(SETUP_AP_SSID);
+  WiFi.mode(WIFI_AP_STA);   // ← KRİTİK
+  WiFi.softAP("Horus");
+
+  IPAddress ip = WiFi.softAPIP();
   Serial.print("Setup IP: ");
-  Serial.println(WiFi.softAPIP());
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(53, "*", apIP);
-  WiFi.softAPConfig(apIP, gateway, subnet);
-  
+  Serial.println(ip);
+
+  WiFi.scanDelete();
+  WiFi.scanNetworks(true); // ilk scan’i başlat
+
+  server.begin();
 }
 
 
