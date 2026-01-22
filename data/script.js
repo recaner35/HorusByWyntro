@@ -17,55 +17,50 @@ function getTrans(key) {
 
 let isSetupMode = false;
 
-window.addEventListener("load", () => {
-  fetch("/api/device-state")
-    .then(r => r.json())
-    .then(data => {
-      isSetupMode = data.setup;
-      if (isSetupMode) {
-        document.getElementById("setupCard").classList.remove("hidden");
-        scanWifi(); // 🔥 BU ÇOK KRİTİK
-      }
-    });
-});
 
 window.onload = function () {
     initWebSocket();
 
-    // Varsayılan Dil Kontrolü
+    // Dil ayarları
     var userLang = navigator.language || navigator.userLanguage;
     var savedLang = localStorage.getItem('horus_lang');
 
     if (savedLang) {
         currentLang = savedLang;
     } else {
-        // Tarayıcı dili destekleniyorsa onu seç, yoksa TR yap
         var langCode = userLang.split('-')[0];
-        if (translations[langCode]) {
-            currentLang = langCode;
-        } else {
-            currentLang = 'tr';
-        }
+        currentLang = translations[langCode] ? langCode : 'tr';
     }
     document.getElementById('languageSelect').value = currentLang;
     applyLanguage(currentLang);
 
-    // Tema Yükleme
+    // Tema
     var savedTheme = localStorage.getItem('horus_theme') || 'auto';
     setTheme(savedTheme);
 
-    // Renk Yükleme
+    // Renk
     var savedColor = localStorage.getItem('horus_accent_color') || '#fdcb6e';
     setAccentColor(savedColor);
 
-    // Check Version
+    // Versiyon
     fetch('/api/version')
-        .then(response => response.json())
-        .then(data => {
-            if (data.version) {
-                document.getElementById('fwVersion').innerText = data.version;
+        .then(r => r.json())
+        .then(d => {
+            if (d.version) {
+                document.getElementById('fwVersion').innerText = d.version;
             }
-        }).catch(e => console.log(e));
+        });
+
+    // 🔥 SETUP MODE + WIFI SCAN (ASIL EKSİK PARÇA)
+    fetch("/api/device-state")
+        .then(r => r.json())
+        .then(data => {
+            isSetupMode = data.setup;
+            if (isSetupMode) {
+                document.getElementById("setupCard")?.classList.remove("hidden");
+                scanWifi(); // <-- ARTIK GERÇEKTEN ÇALIŞACAK
+            }
+        });
 };
 
 function initWebSocket() {
@@ -127,14 +122,6 @@ function initWebSocket() {
 
         if (data.type === "error") {
             showToast(data.message);
-        }
-
-        if (data.type === "wifi_scan_error") {
-            if (wifiScanInterval) {
-                clearTimeout(wifiScanInterval);
-                wifiScanInterval = null;
-            }
-            document.getElementById('wifiList').innerHTML = '<div class="list-item placeholder" style="color:#f66;">WiFi taraması zaman aşımına uğradı.</div>';
         }
     };
 
@@ -438,71 +425,42 @@ window.deletePeer = function (mac) {
 
 // ================= WIFI LOGIC =================
 let isScanning = false;
+let isScanning = false;
+
 function scanWifi() {
     const list = document.getElementById('wifiList');
-    const btn = document.getElementById('scanBtn'); // Eğer butonun ID'si farklıysa güncelle
-    
-    if (isScanning) return;
-    
-    // UI Güncelleme: Tarama başladığını göster
+    const btn = document.getElementById('scanBtn');
+
+    if (!list || isScanning) return;
+
     isScanning = true;
-    list.innerHTML = '<div class="scanning">Ağlar taranıyor, lütfen bekleyin...</div>';
-    if(btn) btn.disabled = true;
+    list.innerHTML = '<div class="scanning">Ağlar taranıyor...</div>';
+    if (btn) btn.disabled = true;
 
-    // 1. İstek: Taramayı Tetikle
+    // 1️⃣ Tarama tetiklenir
     fetch('/api/scan-networks')
-        .then(response => response.json())
-        .then(data => {
-            // Eğer ilk cevap boşsa (ki async olduğu için boş gelecek), bekle ve tekrar sor
-            if (data.length === 0) {
-                console.log("Tarama başlatıldı, sonuç bekleniyor...");
-                setTimeout(() => {
-                    // 2. İstek: Sonuçları Çek (2.5 saniye sonra)
-                    fetch('/api/scan-networks')
-                        .then(r => r.json())
-                        .then(networks => {
-                            renderWifiList(networks);
-                            isScanning = false;
-                            if(btn) btn.disabled = false;
-                        })
-                        .catch(err => {
-                            list.innerHTML = '<div class="error">Tarama hatası!</div>';
-                            isScanning = false;
-                            if(btn) btn.disabled = false;
-                        });
-                }, 2500); // ESP32 tarama süresi genelde 2-3sn sürer
-            } else {
-                // Eğer şans eseri hemen geldiyse (cache varsa)
-                renderWifiList(data);
-                isScanning = false;
-                if(btn) btn.disabled = false;
-            }
+        .then(r => r.json())
+        .then(() => {
+            // 2️⃣ ESP32 scan süresi
+            setTimeout(() => {
+                fetch('/api/scan-networks')
+                    .then(r => r.json())
+                    .then(networks => {
+                        renderWifiList(networks);
+                        isScanning = false;
+                        if (btn) btn.disabled = false;
+                    })
+                    .catch(() => {
+                        list.innerHTML = '<div class="error">Tarama hatası</div>';
+                        isScanning = false;
+                        if (btn) btn.disabled = false;
+                    });
+            }, 2500);
         })
-        .catch(error => {
-            console.error('Tarama hatası:', error);
-            list.innerHTML = '<div class="error">Bağlantı hatası.</div>';
+        .catch(() => {
+            list.innerHTML = '<div class="error">ESP32 bağlantı hatası</div>';
             isScanning = false;
-            if(btn) btn.disabled = false;
-        });
-}
-
-
-function checkWifiScanResult() {
-    fetch('/api/wifi-list')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "scanning") {
-                // Still scanning, wait and try again
-                wifiScanInterval = setTimeout(checkWifiScanResult, 2000);
-            } else if (Array.isArray(data)) {
-                // Scan finished (results might be empty but scan is done)
-                renderWifiList(data);
-                wifiScanInterval = null;
-            }
-        }).catch(err => {
-            console.error("WiFi list fetch error:", err);
-            // Retry once more on network error
-            wifiScanInterval = setTimeout(checkWifiScanResult, 4000);
+            if (btn) btn.disabled = false;
         });
 }
 
@@ -767,6 +725,7 @@ function handleInstallClick() {
 function closeIosModal() {
     if(iosModal) iosModal.classList.add('hidden');
 }
+
 
 
 
