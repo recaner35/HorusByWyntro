@@ -210,6 +210,7 @@ jobs:
         git add website/firmware.bin
         git add website/spiffs.bin
         git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No new changes to commit"
+        git reset --hard
         git pull --rebase origin main
         git push origin HEAD:main
       env:
