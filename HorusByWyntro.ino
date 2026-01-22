@@ -372,6 +372,14 @@ void setup() {
 
   // 6. Web Sunucuyu Başlat
   initWebServer();
+  Serial.println(">>> HTTP TEST ROUTE EKLENIYOR");
+
+  server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Horus HTTP OK");
+  });
+
+  server.begin();
+  Serial.println(">>> SERVER BEGIN CAGIRILDI");
 }
 
 // ===============================
@@ -1025,6 +1033,9 @@ void initWiFi() {
 void initWebServer() {
   server.serveStatic("/", LittleFS, "/")
       .setDefaultFile("index.html");
+  server.onNotFound([](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Horus: route not found");
+  });
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -1253,6 +1264,7 @@ void startSetupMode() {
   WiFi.mode(WIFI_AP);    // AP modunu aç
   delay(100);
   WiFi.mode(WIFI_AP);
+  server.begin();
   
   // Standart Captive Portal IP'si
   IPAddress apIP(192, 168, 4, 1);
@@ -1266,7 +1278,6 @@ void startSetupMode() {
   dnsServer.start(53, "*", apIP);
   WiFi.softAPConfig(apIP, gateway, subnet);
   
-  WiFi.softAP(SETUP_AP_SSID);
 }
 
 
