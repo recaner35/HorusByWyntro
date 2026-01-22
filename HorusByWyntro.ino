@@ -28,6 +28,7 @@
 bool connectToSavedWiFi();
 bool shouldScanWifi = false;
 String scanJsonResult = "[]";
+unsigned long lastScanTime = 0;
 void startSetupMode();
 void initWebServer();
 void initWiFi();
@@ -386,6 +387,9 @@ void setup() {
 // Ana Döngü (Loop)
 // ===============================
 void loop() {
+  if (setupMode) {
+    handleWifiScan();
+  }
   // 1. DNS Server (Sadece Setup modundaysa işle)
   if (setupMode) {
     dnsServer.processNextRequest();
@@ -525,49 +529,31 @@ void saveConfig() {
 }
 
 void handleWifiScan() {
-  Serial.println("WiFi Taraması Başlatılıyor (Senkron)...");
+  if (!setupMode) return;
 
-  isScanning = true;
-  cachedWifiList = "[]";
-
-  if (isEspNowActive) {
-    esp_now_deinit();
-    isEspNowActive = false;
+  if (shouldScanWifi && WiFi.scanComplete() == -2) {
+    Serial.println("Wifi Tarama Baslatiliyor (Async)...");
+    WiFi.scanNetworks(true);
+    shouldScanWifi = false;
   }
 
-  delay(200);
+  int n = WiFi.scanComplete();
+  if (n >= 0) {
+    Serial.printf("Tarama Tamamlandi. Bulunan Ag Sayisi: %d\n", n);
 
-  WiFi.mode(WIFI_AP_STA);
+    scanJsonResult = "[";
+    for (int i = 0; i < n; i++) {
+      scanJsonResult += "{";
+      scanJsonResult += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
+      scanJsonResult += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+      scanJsonResult += "\"enc\":" + String(WiFi.encryptionType(i));
+      scanJsonResult += "}";
+      if (i < n - 1) scanJsonResult += ",";
+    }
+    scanJsonResult += "]";
 
-  int n = WiFi.scanNetworks(false, true);
-  Serial.printf("WiFi tarama tamamlandı: %d ağ bulundu\n", n);
-
-  String json = "[";
-  for (int i = 0; i < n; i++) {
-    if (i > 0) json += ",";
-    json += "{";
-    json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-    json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-    json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
-    json += "}";
-  }
-  json += "]";
-
-  cachedWifiList = json;
-  lastScanTime = millis();
-
-  WiFi.scanDelete();
-  isScanning = false;
-
-  if (setupMode) {
-    WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1);
-    Serial.println("Setup AP yeniden aktif edildi.");
-  } else {
-    String apBase = "horus";
-    if (config.hostname != "") apBase = slugify(config.hostname);
-    String apName = apBase + "-" + deviceSuffix;
-    WiFi.softAP(apName.c_str(), "", 1);
-    Serial.println("Normal AP geri yüklendi.");
+    WiFi.scanDelete();
+    shouldScanWifi = true;
   }
 }
 
@@ -1031,95 +1017,81 @@ void initWiFi() {
 // Web Server Initialization
 // ===============================
 void initWebServer() {
-  server.serveStatic("/", LittleFS, "/")
-      .setDefaultFile("index.html");
-  server.onNotFound([](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "Horus: route not found");
-  });
+
+  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
-  
+
+  /* -------------------- WIFI SCAN (DÜZELTİLEN KISIM) -------------------- */
+
   server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
 
-    int n = WiFi.scanComplete();
+    int scanStatus = WiFi.scanComplete();
 
-    if (n == -2) {
-      WiFi.scanNetworks(true);   // scan yok → başlat
+    if (scanStatus == WIFI_SCAN_FAILED) {
+      WiFi.scanDelete();
+      WiFi.scanNetworks(true, true); // async + show hidden
       request->send(200, "application/json", "[]");
       return;
     }
 
-    if (n == -1) {
-      request->send(200, "application/json", "[]"); // scan sürüyor
+    if (scanStatus == WIFI_SCAN_RUNNING) {
+      request->send(200, "application/json", "[]");
       return;
     }
 
-    DynamicJsonDocument doc(2048);
+    // Scan tamamlandı
+    StaticJsonDocument<2048> doc;
     JsonArray arr = doc.to<JsonArray>();
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < scanStatus; i++) {
       JsonObject net = arr.createNestedObject();
       net["ssid"] = WiFi.SSID(i);
       net["rssi"] = WiFi.RSSI(i);
       net["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
     }
 
-    WiFi.scanDelete();        // ÇOK KRİTİK
-    WiFi.scanNetworks(true); // bir sonraki scan’i hazırla
+    WiFi.scanDelete();
 
     String json;
     serializeJson(arr, json);
     request->send(200, "application/json", json);
   });
 
-  server.on("/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+  /* -------------------- WIFI KAYIT -------------------- */
+
+  server.on("/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+
       StaticJsonDocument<200> doc;
       deserializeJson(doc, data);
-      String ssid = doc["ssid"];
-      String pass = doc["pass"];
-      
+
       prefs.begin("wifi", false);
-      prefs.putString("ssid", ssid);
-      prefs.putString("pass", pass);
+      prefs.putString("ssid", doc["ssid"]);
+      prefs.putString("pass", doc["pass"]);
       prefs.end();
-      
+
       request->send(200, "text/plain", "OK");
-      delay(1000);
+      delay(500);
       ESP.restart();
   });
-  // Android (çoğu sürüm)
-  server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(204, "text/plain", ""); // Boş 204 → No captive
-    // Alternatif: 200 + "No content" da olur ama 204 daha iyi
-  });
 
+  /* -------------------- CAPTIVE PORTAL -------------------- */
 
-  server.on("/gen_204", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(204, "text/plain", "");
-  });
-
-
-  // Eski Android / bazı Samsung
-  server.on("/connectivitycheck.gstatic.com/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(204, "text/plain", "");
-  });
-
-
-  // iOS / Apple
-  server.on("/hotspot-detect.html", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>");
-  });
-
-
-  // Windows 10/11 ekstra
+  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
+  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
+  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
+  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
   server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Microsoft Connect Test");
+  });
+  server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Microsoft NCSI");
   });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
     if (setupMode) {
-       // Android/iOS captive check url'leri
        String host = request->host();
        if (host != "192.168.4.1") {
          request->redirect("http://192.168.4.1");
@@ -1128,134 +1100,80 @@ void initWebServer() {
     }
     request->send(404);
   });
-  ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
-  });
-  server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", "Microsoft NCSI");
-  });
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/index.html", "text/html");
-  });
-  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  /* -------------------- STATİK DOSYALAR -------------------- */
+
+  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/manifest.json", "application/manifest+json");
   });
-  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/192x192.png", "image/png");
   });
-  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/512x512.png", "image/png");
   });
-  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/sw.js", "application/javascript");
   });
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/style.css", "text/css");
   });
-  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/script.js", "application/javascript");
   });
-  server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/languages.js", "application/javascript");
   });
 
-  server.on("/api/wifi-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (!isScanning && !shouldStartScan) {
-      shouldStartScan = true;
-      request->send(202, "application/json", "{\"status\":\"scanning\"}");
-    } else {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
-    }
-  });
-
-  server.on("/api/wifi-list", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", getWifiListJson());
-  });
-
-  server.on("/api/wifi-connect", HTTP_POST, [](AsyncWebServerRequest *request){
-    String ssid = request->arg("ssid");
-    String pass = request->arg("pass");
-
-    prefs.begin("wifi", false);
-    prefs.putString("ssid", ssid);
-    prefs.putString("pass", pass);
-    prefs.end();
-
-    request->send(200, "application/json", "{\"status\":\"started\"}");
-
-    delay(1000);
-    ESP.restart();
-  });
+  /* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
 
   server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
     StaticJsonDocument<200> doc;
     doc["setup"] = setupMode;
     doc["suffix"] = deviceSuffix;
-    serializeJson(doc, *response);
-    request->send(response);
+
+    String json;
+    serializeJson(doc, json);
+    request->send(200, "application/json", json);
   });
 
   server.on("/api/skip-setup", HTTP_POST, [](AsyncWebServerRequest *request){
     skipSetup = true;
     setupMode = false;
 
-    Preferences setupPrefs;
-    setupPrefs.begin("setup", false);
-    setupPrefs.putBool("skip", true);
-    setupPrefs.end();
-    
+    Preferences p;
+    p.begin("setup", false);
+    p.putBool("skip", true);
+    p.end();
+
     initWiFi();
-    
     request->send(200, "application/json", "{\"status\":\"skipped\"}");
   });
 
   server.on("/api/reset-setup", HTTP_POST, [](AsyncWebServerRequest *request){
-    skipSetup = false;
-
-    Preferences setupPrefs;
-    setupPrefs.begin("setup", false);
-    setupPrefs.remove("skip");
-    setupPrefs.end();
-
+    Preferences p;
+    p.begin("setup", false);
+    p.remove("skip");
+    p.end();
     request->send(200, "application/json", "{\"status\":\"reset\"}");
   });
 
-  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request){
-    request->redirect("/");
-  });
-
-  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){
-    request->redirect("/");
-  });
-
-  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request){
-    request->redirect("/");
-  });
-
-  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){
-    request->redirect("/");
-  });
-
-  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (otaStatus == "started" || otaStatus == "updating") {
-      request->send(200, "application/json", "{\"status\":\"busy\"}");
-      return;
-    }
+  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request){
     shouldUpdate = true;
     otaStatus = "started";
     request->send(200, "application/json", "{\"status\":\"started\"}");
   });
 
-  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"status\":\"" + otaStatus + "\"}";
-    request->send(200, "application/json", json);
+  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
-  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String json = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\"}";
-    request->send(200, "application/json", json);
+  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "application/json",
+      String("{\"version\":\"") + FIRMWARE_VERSION + "\"}");
   });
 
+  server.begin();
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -1282,18 +1200,22 @@ void startSetupMode() {
   setupMode = true;
   Serial.println("SETUP MODE AKTIF");
 
-  WiFi.mode(WIFI_AP_STA);   // ← KRİTİK
+  WiFi.disconnect(true);
+  delay(200);
+
+  WiFi.mode(WIFI_AP_STA);   // ⚠ KRİTİK
+  delay(200);
+
   WiFi.softAP("Horus");
-
   IPAddress ip = WiFi.softAPIP();
-  Serial.print("Setup IP: ");
-  Serial.println(ip);
+  Serial.println("Setup IP: 192.168.4.1");
 
-  WiFi.scanDelete();
-  WiFi.scanNetworks(true); // ilk scan’i başlat
+  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer.start(53, "*", ip);
 
-  server.begin();
+  shouldScanWifi = true;    // ⚠ Scan tetikleyici
 }
+
 
 
 bool connectToSavedWiFi() {
