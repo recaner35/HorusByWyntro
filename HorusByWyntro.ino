@@ -42,8 +42,6 @@ bool skipSetup = false;
 const char* SETUP_AP_SSID = "Horus";
 const char* SETUP_AP_PASS = "ByWyntro3545"; 
 
-String cachedWifiList = "[]";
-unsigned long lastScanTime = 0;
 
 // ===============================
 // Motor Pin Tanımlamaları
@@ -1068,8 +1066,9 @@ void initWebServer() {
       deserializeJson(doc, data);
 
       prefs.begin("wifi", false);
-      prefs.putString("ssid", doc["ssid"]);
-      prefs.putString("pass", doc["pass"]);
+      // HATA BURADAYDI. .as<String>() EKLENDİ:
+      prefs.putString("ssid", doc["ssid"].as<String>());
+      prefs.putString("pass", doc["pass"].as<String>());
       prefs.end();
 
       request->send(200, "text/plain", "OK");
