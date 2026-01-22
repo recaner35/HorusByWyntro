@@ -1,11 +1,17 @@
 {
-  "name": "Horus by Wyntro",
+  "name": "Horus Factory Firmware",
+  "version": "latest",
+  "new_install_prompt_erase": true,
+  "chipFamily": "ESP32",
+  "flashSize": "4MB",
+  "flashMode": "dio",
+  "flashFreq": "80m",
   "builds": [
     {
       "chipFamily": "ESP32",
       "parts": [
         {
-          "path": "https://recaner35.github.io/HorusByWyntro/HorusByWyntro-factory.bin",
+          "path": "HorusByWyntro-factory.bin",
           "offset": 0
         }
       ]
