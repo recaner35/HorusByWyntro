@@ -567,7 +567,7 @@ String getWifiListJson() {
   if (isScanning) {
     return "{\"status\":\"scanning\"}";
   }
-  return cachedWifiList;
+  return scanJsonResult;
 }
 
 
