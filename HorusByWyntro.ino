@@ -345,12 +345,11 @@ void setup() {
   // 2. Config ve Suffix'i EN BAŞTA Yükle
   loadConfig();
   
-  // MAC Adresini almak için geçici olarak Station modunu aç
-  WiFi.mode(WIFI_STA);
-  myMacAddress = WiFi.macAddress();
-  String macStr = myMacAddress;
-  macStr.replace(":", "");
-  deviceSuffix = macStr.substring(macStr.length() - 4);
+  uint64_t chipid = ESP.getEfuseMac();
+  char suffixBuf[5];
+  sprintf(suffixBuf, "%04X", (uint16_t)(chipid & 0xFFFF));
+  deviceSuffix = String(suffixBuf);
+
   Serial.println("Device Suffix: " + deviceSuffix);
 
   // 3. Pinleri Ayarla
@@ -1024,7 +1023,8 @@ void initWiFi() {
 // Web Server Initialization
 // ===============================
 void initWebServer() {
-  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+  server.serveStatic("/", LittleFS, "/")
+      .setDefaultFile("index.html");
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -1266,9 +1266,7 @@ void startSetupMode() {
   dnsServer.start(53, "*", apIP);
   WiFi.softAPConfig(apIP, gateway, subnet);
   
-  // Suffix'in dolu olduğundan eminiz çünkü setup başında yaptık
-  String ssidName = String(SETUP_AP_SSID) + "-" + deviceSuffix;
-  WiFi.softAP(ssidName.c_str(), SETUP_AP_PASS); // Şifresiz kurulum daha pratiktir, istersen SETUP_AP_PASS koy.
+  WiFi.softAP(SETUP_AP_SSID);
 }
 
 
