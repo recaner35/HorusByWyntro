@@ -29,6 +29,8 @@ bool connectToSavedWiFi();
 bool shouldScanWifi = false;
 String scanJsonResult = "[]";
 unsigned long lastScanTime = 0;
+String wifiScanResult = "[]";
+bool wifiScanRunning = false;
 void startSetupMode();
 void initWebServer();
 void initWiFi();
@@ -393,33 +395,6 @@ void loop() {
     dnsServer.processNextRequest();
   }
 
-  // 2. Wi-Fi Tarama Mantığı (Non-Blocking)
-  if (shouldScanWifi) {
-    shouldScanWifi = false;
-    Serial.println("Wifi Tarama Baslatiliyor (Async)...");
-    WiFi.scanNetworks(true); // true = Async Mode
-  }
-
-  // Tarama bitti mi kontrol et
-  int scanStatus = WiFi.scanComplete();
-  if (scanStatus >= 0) {
-    Serial.print("Tarama Tamamlandi. Bulunan Ag Sayisi: ");
-    Serial.println(scanStatus);
-    
-    // Sonuçları JSON formatına çevir ve cache'le
-    String json = "[";
-    for (int i = 0; i < scanStatus; ++i) {
-      if (i) json += ",";
-      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",";
-      json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-      json += "\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
-    }
-    json += "]";
-    scanJsonResult = json;
-    
-    WiFi.scanDelete(); // Hafızayı temizle
-  }
-
   // 3. OTA Update Kontrolü
   if (shouldUpdate) {
      checkAndPerformUpdate();
@@ -528,12 +503,6 @@ void saveConfig() {
 
 void handleWifiScan() {
   if (!setupMode) return;
-
-  if (shouldScanWifi && WiFi.scanComplete() == -2) {
-    Serial.println("Wifi Tarama Baslatiliyor (Async)...");
-    WiFi.scanNetworks(true);
-    shouldScanWifi = false;
-  }
 
   int n = WiFi.scanComplete();
   if (n >= 0) {
@@ -1025,37 +994,41 @@ void initWebServer() {
 
   server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
 
-    int scanStatus = WiFi.scanComplete();
+    int status = WiFi.scanComplete();
 
-    if (scanStatus == WIFI_SCAN_FAILED) {
+    // Scan hiç başlamamışsa → başlat
+    if (status == WIFI_SCAN_FAILED || status == -2) {
       WiFi.scanDelete();
-      WiFi.scanNetworks(true, true); // async + show hidden
+      WiFi.scanNetworks(true, true); // async
+      wifiScanRunning = true;
       request->send(200, "application/json", "[]");
       return;
     }
 
-    if (scanStatus == WIFI_SCAN_RUNNING) {
+    // Scan devam ediyorsa → bekle
+    if (status == WIFI_SCAN_RUNNING) {
       request->send(200, "application/json", "[]");
       return;
     }
 
-    // Scan tamamlandı
+    // Scan bitti → JSON üret
     StaticJsonDocument<2048> doc;
     JsonArray arr = doc.to<JsonArray>();
 
-    for (int i = 0; i < scanStatus; i++) {
-      JsonObject net = arr.createNestedObject();
-      net["ssid"] = WiFi.SSID(i);
-      net["rssi"] = WiFi.RSSI(i);
-      net["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+    for (int i = 0; i < status; i++) {
+      JsonObject n = arr.createNestedObject();
+      n["ssid"] = WiFi.SSID(i);
+      n["rssi"] = WiFi.RSSI(i);
+      n["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
     }
 
+    serializeJson(arr, wifiScanResult);
     WiFi.scanDelete();
+    wifiScanRunning = false;
 
-    String json;
-    serializeJson(arr, json);
-    request->send(200, "application/json", json);
+    request->send(200, "application/json", wifiScanResult);
   });
+
 
   /* -------------------- WIFI KAYIT -------------------- */
 
