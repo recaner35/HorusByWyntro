@@ -116,6 +116,7 @@ jobs:
         arduino-cli compile \
           --fqbn esp32:esp32:esp32 \
           --build-path build \
+          --build-property build.custom_partitions=partitions.csv \
           HorusByWyntro.ino
 
     - name: Compress Web Assets (Gzip)
@@ -148,7 +149,7 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 180224 ./build/spiffs.bin
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 196608 ./build/spiffs.bin
 
     - name: Generate Factory Bin
       run: |
@@ -251,7 +252,7 @@ jobs:
             "chipFamily": "ESP32",
             "flashSize": "4MB",
             "flashMode": "dio",
-            "flashFreq": "40m",
+            "flashFreq": "80m",
             "builds": [
               {
                 "chipFamily": "ESP32",
