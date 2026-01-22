@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Horus by Wyntro – Firmware Yükleyici</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- ESP Web Tools -->
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@9.0.3/dist/web/install-button.js">
+  </script>
+
+  <style>
+    body {
+      background: #0e0e11;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background: #1a1a22;
+      border-radius: 14px;
+      padding: 32px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    p {
+      opacity: 0.85;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    esp-web-install-button {
+      margin-top: 24px;
+    }
+
+    footer {
+      margin-top: 24px;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Horus by Wyntro</h1>
+    <p>
+      Saat kurma makineniz için resmi firmware yükleyici.<br>
+      USB kabloyu takın ve yüklemeyi başlatın.
+    </p>
+
+    <!-- SADECE FACTORY BIN -->
+    <esp-web-install-button
+      manifest="manifest.json">
+    </esp-web-install-button>
+
+    <footer>
+      Caner Kocacık • Factory Firmware<br>
+      © Wyntro
+    </footer>
+  </div>
+</body>
+</html>
