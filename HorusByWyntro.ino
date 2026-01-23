@@ -41,7 +41,7 @@ Preferences prefs;
 
 bool setupMode = false;
 bool skipSetup = false;
-
+bool captiveMode = true;
 const char* SETUP_AP_SSID = "Horus";
 const char* SETUP_AP_PASS = "ByWyntro3545"; 
 
@@ -1030,6 +1030,9 @@ void initWebServer() {
   });
 
   /* -------------------- CAPTIVE PORTAL -------------------- */
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
 
   server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
         request->redirect("http://192.168.4.1/");
@@ -1044,6 +1047,13 @@ void initWebServer() {
   });
   server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Microsoft NCSI");
+  });
+  server.onNotFound([](AsyncWebServerRequest *request) {
+    if (captiveMode) {
+      request->redirect("/");
+    } else {
+      request->send(404);
+    }
   });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
