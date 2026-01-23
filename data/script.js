@@ -425,7 +425,6 @@ window.deletePeer = function (mac) {
 
 // ================= WIFI LOGIC =================
 let isScanning = false;
-let isScanning = false;
 
 function scanWifi() {
     const list = document.getElementById('wifiList');
@@ -725,6 +724,7 @@ function handleInstallClick() {
 function closeIosModal() {
     if(iosModal) iosModal.classList.add('hidden');
 }
+
 
 
 
