@@ -429,21 +429,6 @@ void startMotorTurn() {
   turnInProgress = true;
 }
 
-void startMotorTurn() {
-  float speed = (float)STEPS_PER_REVOLUTION / (float)config.duration;
-  stepper.setMaxSpeed(speed);
-  long targetPos = STEPS_PER_REVOLUTION;
-  if (config.direction == 1)
-    targetPos = -STEPS_PER_REVOLUTION;
-  else if (config.direction == 2 && turnsThisHour % 2 != 0)
-    targetPos = -STEPS_PER_REVOLUTION;
-  if (stepper.distanceToGo() == 0) {
-    stepper.moveTo(stepper.currentPosition() + targetPos);
-  }
-  stepper.enableOutputs();
-  isMotorMoving = true;
-}
-
 void updateSchedule() {
   targetTurnsPerHour = config.tpd / 24;
   if (targetTurnsPerHour < 1)
@@ -510,13 +495,6 @@ void handleWifiConnection() {
     wifiStatusStr = "connected";
   else if (WiFi.status() != WL_CONNECTED && !tryConnect)
     wifiStatusStr = "disconnected";
-}
-
-String getWifiListJson() {
-  if (isScanning) {
-    return "{\"status\":\"scanning\"}";
-  }
-  return scanJsonResult;
 }
 
 
@@ -830,7 +808,7 @@ void processCommand(String jsonStr) {
       } else {
         config.espNowEnabled = targetState;
         if (config.espNowEnabled) {
-          if (!isEspNowActive && !isScanning) {
+          if (!isEspNowActive) {
             initESPNow();
             restorePeers();
           }
@@ -869,9 +847,6 @@ void processCommand(String jsonStr) {
                   ",\"name\":\"" + config.hostname + "\"}";
     ws.textAll(resp);
   } else if (type == "check_peers") {
-    if (isScanning) {
-      return;
-    }
     if (!isEspNowActive) {
       return;
     }
