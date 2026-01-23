@@ -337,7 +337,7 @@ void setup() {
     Serial.println("SPIFFS Mount Failed");
     return;
   }
-  Serial.println("SPIFFS OK")
+  Serial.println("SPIFFS OK");
 
   // 2. Config ve Suffix'i EN BAŞTA Yükle
   loadConfig();
