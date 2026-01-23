@@ -35,6 +35,7 @@ void startSetupMode();
 void initWebServer();
 void initWiFi();
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+bool turnInProgress = false;
 
 Preferences prefs;
 
@@ -344,7 +345,7 @@ void setup() {
 
   // 2. Config ve Suffix'i EN BAŞTA Yükle
   loadConfig();
-  
+  updateSchedule();
   uint64_t chipid = ESP.getEfuseMac();
   char suffixBuf[5];
   sprintf(suffixBuf, "%04X", (uint16_t)(chipid & 0xFFFF));
@@ -389,24 +390,16 @@ void loop() {
      shouldUpdate = false;
   }
 
-  // 4. WebSocket Temizliği
   ws.cleanupClients();
-
-  // 5. Motor Hareketi
-  if (isRunning && stepper.distanceToGo() == 0) {
-    startMotorTurn();
+  if (turnInProgress && stepper.distanceToGo() == 0) {
+    stepper.disableOutputs();
+    isMotorMoving = false;
+    turnInProgress = false;
+    turnsThisHour++;
   }
-  // 6. Zamanlanmış Görevler (schedule, touch, wifi check vb.)
-  // Mevcut checkSchedule() ve handlePhysicalControl() fonksiyonlarını çağır
   checkSchedule();
   handlePhysicalControl();
   stepper.run();
-
-    if (isMotorMoving && stepper.distanceToGo() == 0) {
-        stepper.disableOutputs();   // bobinleri SAL
-        isMotorMoving = false;
-        turnsThisHour++;
-    }
   
   // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
   delay(2); 
@@ -419,6 +412,25 @@ void loop() {
 void initMotor() {
   stepper.setMaxSpeed(1000);
   stepper.setAcceleration(500);
+}
+
+void startMotorTurn() {
+  if (turnInProgress) return;
+
+  float speed = (float)STEPS_PER_REVOLUTION / config.duration;
+  stepper.setMaxSpeed(speed);
+
+  long targetPos = STEPS_PER_REVOLUTION;
+  if (config.direction == 1)
+    targetPos = -STEPS_PER_REVOLUTION;
+  else if (config.direction == 2 && turnsThisHour % 2 != 0)
+    targetPos = -STEPS_PER_REVOLUTION;
+
+  stepper.moveTo(stepper.currentPosition() + targetPos);
+  stepper.enableOutputs();
+
+  isMotorMoving = true;
+  turnInProgress = true;
 }
 
 void startMotorTurn() {
@@ -443,12 +455,19 @@ void updateSchedule() {
 }
 
 void checkSchedule() {
+  if (!isRunning) return;
+
   unsigned long now = millis();
-  if (now - lastHourCheck > hourDuration) {
+
+  // Saat reseti
+  if (now - lastHourCheck >= hourDuration) {
     lastHourCheck = now;
     turnsThisHour = 0;
   }
+
+  // Saatlik hedef dolmadıysa ve motor boşsa → bir tur başlat
   if (turnsThisHour < targetTurnsPerHour && !isMotorMoving) {
+    startMotorTurn();
   }
 }
 
@@ -609,7 +628,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingDataPtr, int len) {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0; 
+    peerInfo.channel = WiFi.channel(); 
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       esp_now_add_peer(&peerInfo);
@@ -686,7 +705,7 @@ void initESPNow() {
 
   esp_now_peer_info_t peerInfo = {};
   memset(peerInfo.peer_addr, 0xFF, 6);
-  peerInfo.channel = 0; 
+  peerInfo.channel = WiFi.channel(); 
   peerInfo.encrypt = false;
 
   esp_now_add_peer(&peerInfo);
@@ -699,7 +718,7 @@ void restorePeers() {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac, 6);
-    peerInfo.channel = 0; 
+    peerInfo.channel = WiFi.channel(); 
     peerInfo.encrypt = false;
     if (!esp_now_is_peer_exist(mac)) {
       esp_now_add_peer(&peerInfo);
