@@ -370,11 +370,6 @@ void setup() {
 
   // 6. Web Sunucuyu Başlat
   initWebServer();
-  Serial.println(">>> HTTP TEST ROUTE EKLENIYOR");
-
-  server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "Horus HTTP OK");
-  });
 
   server.begin();
   Serial.println(">>> SERVER BEGIN CAGIRILDI");
@@ -1170,9 +1165,6 @@ void startSetupMode() {
     Serial.println("Setup Mode: ON");
     Serial.print("AP IP: ");
     Serial.println(WiFi.softAPIP());
-    initWebServer();
-    server.begin();
-    Serial.println(">>> SERVER BEGIN CAGIRILDI");
 }
 
 
