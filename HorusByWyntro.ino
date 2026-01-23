@@ -1076,29 +1076,6 @@ void initWebServer() {
         }
   });
 
-  /* -------------------- STATİK DOSYALAR -------------------- */
-
-  server.on("/manifest.json", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/manifest.json", "application/manifest+json");
-  });
-  server.on("/192x192.png", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/192x192.png", "image/png");
-  });
-  server.on("/512x512.png", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/512x512.png", "image/png");
-  });
-  server.on("/sw.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/sw.js", "application/javascript");
-  });
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/style.css", "text/css");
-  });
-  server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/script.js", "application/javascript");
-  });
-  server.on("/languages.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "/languages.js", "application/javascript");
-  });
 
   /* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
 
@@ -1179,27 +1156,23 @@ void startSetupMode() {
     IPAddress gateway(192, 168, 4, 1);
     IPAddress subnet(255, 255, 255, 0);
     
-    WiFi.mode(WIFI_AP);
+    WiFi.mode(WIFI_AP_STA);
     WiFi.softAPConfig(apIP, gateway, subnet);
 
     // 2. AP İsmini oluştur (Senin mevcut mantığın)
-    String apBase = "horus";
-    if (config.hostname != "") {
-        apBase = slugify(config.hostname);
-    }
-    String apName = apBase + "-" + deviceSuffix;
-
-    // 3. AP Başlat
-    WiFi.softAP(apName.c_str(), SETUP_AP_PASS); 
+    WiFi.softAP("Horus", NULL);
 
     // 4. DNS Sunucusunu Başlat (KRİTİK KISIM)
     // Bu satır, telefondan gelen tüm internet isteklerini ESP32'ye çeker
-    // ve Android'in "Oturum açmak gerekir" uyarısını tetikler.
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.start(53, "*", apIP);
 
     Serial.println("Setup Mode: ON");
     Serial.print("AP IP: ");
     Serial.println(WiFi.softAPIP());
+    initWebServer();
+    server.begin();
+    Serial.println(">>> SERVER BEGIN CAGIRILDI");
 }
 
 
