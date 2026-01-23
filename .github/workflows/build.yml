@@ -215,6 +215,8 @@ jobs:
 
         git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No changes"
 
+        git stash
+
         git pull --rebase origin main
 
         git push
