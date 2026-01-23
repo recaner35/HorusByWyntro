@@ -205,9 +205,8 @@ jobs:
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
 
-        git pull --rebase origin main
-
         git add website/HorusByWyntro-factory.bin
+        git add website/factory/HorusByWyntro-factory.bin
         git add website/bootloader.bin
         git add website/partitions.bin
         git add website/boot_app0.bin
@@ -216,10 +215,11 @@ jobs:
 
         git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No changes"
 
+        git pull --rebase origin main
+
         git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
