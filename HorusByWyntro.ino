@@ -57,7 +57,6 @@ const char* SETUP_AP_PASS = "ByWyntro3545";
 // Sensör ve Buton Tanımlamaları
 // ===============================
 #define TOUCH_PIN 23 
-#define LED_PIN 2    
 
 // ===============================
 // Sabitler ve Ayarlar
@@ -388,12 +387,13 @@ void setup() {
 // ===============================
 void loop() {
   if (setupMode) {
+    dnsServer.processNextRequest();
+  }
+  if (setupMode) {
     handleWifiScan();
   }
   // 1. DNS Server (Sadece Setup modundaysa işle)
-  if (setupMode) {
-    dnsServer.processNextRequest();
-  }
+
 
   // 3. OTA Update Kontrolü
   if (shouldUpdate) {
@@ -505,6 +505,8 @@ void handleWifiScan() {
   if (!setupMode) return;
 
   int n = WiFi.scanComplete();
+
+  // 1. Tarama BİTTİYSE sonuçları işle
   if (n >= 0) {
     Serial.printf("Tarama Tamamlandi. Bulunan Ag Sayisi: %d\n", n);
 
@@ -520,7 +522,14 @@ void handleWifiScan() {
     scanJsonResult += "]";
 
     WiFi.scanDelete();
-    shouldScanWifi = true;
+    shouldScanWifi = true; // Bayrağı kaldır, birazdan aşağıda yeniden başlatacak
+  }
+
+  // 2. EKSİK OLAN KISIM: Tarama emri varsa ve şu an tarama YAPILMIYORSA başlat
+  // n == -2 (Başlamadı) veya n == -1 (Sürüyor). Sadece başlamadıysa tetikle.
+  if (shouldScanWifi && n == -2) {
+    WiFi.scanNetworks(true); // Asenkron taramayı BAŞLAT
+    shouldScanWifi = false;  // Emri aldık, false yapıyoruz
   }
 }
 
@@ -1051,7 +1060,9 @@ void initWebServer() {
 
   /* -------------------- CAPTIVE PORTAL -------------------- */
 
-  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
+  server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/plain", "");
+  });
   server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
   server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
   server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
@@ -1063,14 +1074,11 @@ void initWebServer() {
   });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
-    if (setupMode) {
-       String host = request->host();
-       if (host != "192.168.4.1") {
-         request->redirect("http://192.168.4.1");
-         return;
-       }
-    }
-    request->send(404);
+        if (setupMode) {
+            request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        } else {
+            request->send(404, "text/plain", "Not Found");
+        }
   });
 
   /* -------------------- STATİK DOSYALAR -------------------- */
@@ -1175,17 +1183,26 @@ void startSetupMode() {
   WiFi.disconnect(true);
   delay(200);
 
-  WiFi.mode(WIFI_AP_STA);   // ⚠ KRİTİK
+  WiFi.mode(WIFI_AP_STA);   
   delay(200);
 
-  WiFi.softAP("Horus");
+  // 1. Önce AP ağını başlat
+  WiFi.softAP("Horus"); 
+
+  // 2. Sonra IP adresini al (Değişkeni burada oluşturuyoruz)
   IPAddress ip = WiFi.softAPIP();
-  Serial.println("Setup IP: 192.168.4.1");
-
+  
+  // 3. En son DNS sunucusunu bu IP ile başlat
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(53, "*", ip);
+  dnsServer.start(53, "*", ip); // Artık 'ip' değişkeni tanımlı, hata vermez.
+  
+  Serial.print("Setup IP: ");
+  Serial.println(ip);
+  
+  initWebServer();
+  server.begin();
 
-  shouldScanWifi = true;    // ⚠ Scan tetikleyici
+  shouldScanWifi = true;    
 }
 
 
