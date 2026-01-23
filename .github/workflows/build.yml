@@ -180,9 +180,11 @@ jobs:
 
     - name: Copy factory.bin to website folder for web installer
       run: |
-        mkdir -p website
-        cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin || echo "Copy failed - check if build file exists"
-        ls -la website/  # Debug: kopyalanan dosyayı logla
+        mkdir -p website/factory
+        cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin || echo "Copy failed - website root"
+        cp ./build/HorusByWyntro-factory.bin website/factory/HorusByWyntro-factory.bin || echo "Copy failed - factory folder"
+        ls -la website/        # Debug: Ana klasör kontrol
+        ls -la website/factory/ # Debug: Factory klasörü kontrol
     
     - name: Copy separate files for partitioned web installer
       run: |
