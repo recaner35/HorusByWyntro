@@ -354,8 +354,6 @@ void setup() {
 
   // 3. Pinleri Ayarla
   pinMode(TOUCH_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
 
   // 4. Motor Kurulumu
   initMotor();
