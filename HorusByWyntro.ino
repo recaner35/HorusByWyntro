@@ -8,6 +8,7 @@
  * Web arayüzü ile kontrol edilir, ESP-NOW ile diğer cihazları görür,
  * TTP223 sensörü ile fiziksel kontrol sağlar.
  */
+#include <SPIFFS.h>
 #include <DNSServer.h>
 #include <AccelStepper.h>
 #include <Arduino.h>
@@ -16,7 +17,6 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
-#include <LittleFS.h>
 #include <NetworkClientSecure.h>
 #include <Update.h>
 #include <WiFi.h>
@@ -295,11 +295,11 @@ void checkAndPerformUpdate() {
       otaStatus = "updating";
 
       String baseUrl = "https://github.com/recaner35/HorusByWyntro/releases/download/" + newVersion + "/";
-      String fsUrl = baseUrl + "HorusByWyntro.littlefs.bin";
+      String fsUrl = baseUrl + "HorusByWyntro.spiffs.bin";
       String fwUrl = baseUrl + "HorusByWyntro.ino.bin";
 
       Serial.println("LittleFS indiriliyor: " + fsUrl);
-      if (execOTA(fsUrl, U_LITTLEFS)) {
+      if (execOTA(fsUrl, U_SPIFFS)) {
         Serial.println("LittleFS guncellendi.");
       } else {
         Serial.println("LittleFS guncelleme hatasi!");
@@ -333,11 +333,11 @@ void setup() {
   Serial.begin(115200);
   
   // 1. Dosya Sistemini Başlat (Config için şart)
-  if (!LittleFS.begin(true)) {
-    Serial.println("LittleFS Mount Failed");
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS Mount Failed");
     return;
   }
-  Serial.println("LittleFS OK");
+  Serial.println("SPIFFS OK")
 
   // 2. Config ve Suffix'i EN BAŞTA Yükle
   loadConfig();
@@ -464,8 +464,8 @@ void handlePhysicalControl() {
 }
 
 void loadConfig() {
-  if (LittleFS.exists(JSON_CONFIG_FILE)) {
-    File file = LittleFS.open(JSON_CONFIG_FILE, "r");
+  if (SPIFFS.exists(JSON_CONFIG_FILE)) {
+    File file = SPIFFS.open(JSON_CONFIG_FILE, "r");
     StaticJsonDocument<512> doc;
     deserializeJson(doc, file);
     config.tpd = doc["tpd"] | 900;
@@ -478,7 +478,7 @@ void loadConfig() {
 }
 
 void saveConfig() {
-  File file = LittleFS.open(JSON_CONFIG_FILE, "w");
+  File file = SPIFFS.open(JSON_CONFIG_FILE, "w");
   StaticJsonDocument<512> doc;
   doc["tpd"] = config.tpd;
   doc["dur"] = config.duration;
@@ -670,8 +670,8 @@ void restorePeers() {
 }
 
 void loadPeers() {
-  if (LittleFS.exists(PEER_FILE)) {
-    File file = LittleFS.open(PEER_FILE, "r");
+  if (SPIFFS.exists(PEER_FILE)) {
+    File file = SPIFFS.open(PEER_FILE, "r");
     if (file) {
       StaticJsonDocument<2048> doc;
       DeserializationError error = deserializeJson(doc, file);
@@ -696,7 +696,7 @@ void loadPeers() {
 }
 
 void savePeers() {
-  File file = LittleFS.open(PEER_FILE, "w");
+  File file = SPIFFS.open(PEER_FILE, "w");
   if (file) {
     StaticJsonDocument<2048> doc;
     JsonArray arr = doc.to<JsonArray>();
@@ -940,7 +940,7 @@ void initWiFi() {
 // ===============================
 void initWebServer() {
 
-  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -1024,19 +1024,11 @@ void initWebServer() {
     request->send(200, "text/plain", "Microsoft NCSI");
   });
   server.onNotFound([](AsyncWebServerRequest *request) {
-    if (captiveMode) {
-      request->redirect("/");
+    if (setupMode || captiveMode) {
+      request->redirect("http://192.168.4.1/");
     } else {
-      request->send(404);
+      request->send(404, "text/plain", "Not Found");
     }
-  });
-
-  server.onNotFound([](AsyncWebServerRequest *request) {
-        if (setupMode) {
-            request->redirect("http://192.168.4.1/");
-        } else {
-            request->send(404, "text/plain", "Not Found");
-        }
   });
 
 
