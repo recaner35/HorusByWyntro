@@ -387,11 +387,6 @@ void loop() {
   if (setupMode) {
     dnsServer.processNextRequest();
   }
-  if (setupMode) {
-    handleWifiScan();
-  }
-  // 1. DNS Server (Sadece Setup modundaysa işle)
-
 
   // 3. OTA Update Kontrolü
   if (shouldUpdate) {
@@ -520,7 +515,7 @@ void handleWifiScan() {
     scanJsonResult += "]";
 
     WiFi.scanDelete();
-    shouldScanWifi = true; // Bayrağı kaldır, birazdan aşağıda yeniden başlatacak
+    shouldScanWifi = false; // Bayrağı kaldır, birazdan aşağıda yeniden başlatacak
   }
 
   // 2. EKSİK OLAN KISIM: Tarama emri varsa ve şu an tarama YAPILMIYORSA başlat
@@ -1058,12 +1053,14 @@ void initWebServer() {
 
   /* -------------------- CAPTIVE PORTAL -------------------- */
 
-  server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/plain", "");
-  });
-  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
-  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
-  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("/"); });
+  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
+        request->redirect("http://192.168.4.1/");
+    });
+  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("http://192.168.4.1/"); });
+  server.on("/hotspot-detect.html", HTTP_ANY, [](AsyncWebServerRequest *request) {
+        request->redirect("http://192.168.4.1/");
+    });
+  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, [](AsyncWebServerRequest *request){ request->redirect("http://192.168.4.1/"); });
   server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Microsoft Connect Test");
   });
@@ -1073,7 +1070,7 @@ void initWebServer() {
 
   server.onNotFound([](AsyncWebServerRequest *request) {
         if (setupMode) {
-            request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+            request->redirect("http://192.168.4.1/");
         } else {
             request->send(404, "text/plain", "Not Found");
         }
@@ -1175,32 +1172,34 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 }
 
 void startSetupMode() {
-  setupMode = true;
-  Serial.println("SETUP MODE AKTIF");
+    setupMode = true;
 
-  WiFi.disconnect(true);
-  delay(200);
+    // 1. IP Yapılandırması: Captive Portal'ın kararlı çalışması için şarttır
+    IPAddress apIP(192, 168, 4, 1);
+    IPAddress gateway(192, 168, 4, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, gateway, subnet);
 
-  WiFi.mode(WIFI_AP_STA);   
-  delay(200);
+    // 2. AP İsmini oluştur (Senin mevcut mantığın)
+    String apBase = "horus";
+    if (config.hostname != "") {
+        apBase = slugify(config.hostname);
+    }
+    String apName = apBase + "-" + deviceSuffix;
 
-  // 1. Önce AP ağını başlat
-  WiFi.softAP("Horus"); 
+    // 3. AP Başlat
+    WiFi.softAP(apName.c_str(), SETUP_AP_PASS); 
 
-  // 2. Sonra IP adresini al (Değişkeni burada oluşturuyoruz)
-  IPAddress ip = WiFi.softAPIP();
-  
-  // 3. En son DNS sunucusunu bu IP ile başlat
-  dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  dnsServer.start(53, "*", ip); // Artık 'ip' değişkeni tanımlı, hata vermez.
-  
-  Serial.print("Setup IP: ");
-  Serial.println(ip);
-  
-  initWebServer();
-  server.begin();
+    // 4. DNS Sunucusunu Başlat (KRİTİK KISIM)
+    // Bu satır, telefondan gelen tüm internet isteklerini ESP32'ye çeker
+    // ve Android'in "Oturum açmak gerekir" uyarısını tetikler.
+    dnsServer.start(53, "*", apIP);
 
-  shouldScanWifi = true;    
+    Serial.println("Setup Mode: ON");
+    Serial.print("AP IP: ");
+    Serial.println(WiFi.softAPIP());
 }
 
 
