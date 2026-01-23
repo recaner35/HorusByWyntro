@@ -26,11 +26,11 @@
 
 // ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
-bool shouldScanWifi = false;
-String scanJsonResult = "[]";
-unsigned long lastScanTime = 0;
+
+
+
 String wifiScanResult = "[]";
-bool wifiScanRunning = false;
+
 void startSetupMode();
 void initWebServer();
 void initWiFi();
@@ -124,9 +124,6 @@ typedef struct struct_message {
 struct_message myData;
 struct_message incomingData;
 
-bool isScanning = false;
-bool shouldStartScan = false; 
-long lastWifiCheck = 0;
 String wifiStatusStr = "disconnected";
 bool tryConnect = false;
 unsigned long connectStartTime = 0;
@@ -146,7 +143,6 @@ void updateSchedule();
 void handlePhysicalControl();
 void checkSchedule();
 void startMotorTurn();
-void handleWifiScan();
 void handleWifiConnection();
 String getWifiListJson();
 void initESPNow();
@@ -506,38 +502,6 @@ void saveConfig() {
   doc["espnow"] = config.espNowEnabled;
   serializeJson(doc, file);
   file.close();
-}
-
-void handleWifiScan() {
-  if (!setupMode) return;
-
-  int n = WiFi.scanComplete();
-
-  // 1. Tarama BİTTİYSE sonuçları işle
-  if (n >= 0) {
-    Serial.printf("Tarama Tamamlandi. Bulunan Ag Sayisi: %d\n", n);
-
-    scanJsonResult = "[";
-    for (int i = 0; i < n; i++) {
-      scanJsonResult += "{";
-      scanJsonResult += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-      scanJsonResult += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-      scanJsonResult += "\"enc\":" + String(WiFi.encryptionType(i));
-      scanJsonResult += "}";
-      if (i < n - 1) scanJsonResult += ",";
-    }
-    scanJsonResult += "]";
-
-    WiFi.scanDelete();
-    shouldScanWifi = false; // Bayrağı kaldır, birazdan aşağıda yeniden başlatacak
-  }
-
-  // 2. EKSİK OLAN KISIM: Tarama emri varsa ve şu an tarama YAPILMIYORSA başlat
-  // n == -2 (Başlamadı) veya n == -1 (Sürüyor). Sadece başlamadıysa tetikle.
-  if (shouldScanWifi && n == -2) {
-    WiFi.scanNetworks(true); // Asenkron taramayı BAŞLAT
-    shouldScanWifi = false;  // Emri aldık, false yapıyoruz
-  }
 }
 
 
@@ -1012,22 +976,21 @@ void initWebServer() {
 
     int status = WiFi.scanComplete();
 
-    // Scan hiç başlamamışsa → başlat
+    // Scan hiç başlamamış → başlat
     if (status == WIFI_SCAN_FAILED || status == -2) {
       WiFi.scanDelete();
-      WiFi.scanNetworks(true, true); // async
-      wifiScanRunning = true;
+      WiFi.scanNetworks(true); // async
       request->send(200, "application/json", "[]");
       return;
     }
 
-    // Scan devam ediyorsa → bekle
+    // Scan devam ediyor
     if (status == WIFI_SCAN_RUNNING) {
       request->send(200, "application/json", "[]");
       return;
     }
 
-    // Scan bitti → JSON üret
+    // Scan bitti
     StaticJsonDocument<2048> doc;
     JsonArray arr = doc.to<JsonArray>();
 
@@ -1038,12 +1001,13 @@ void initWebServer() {
       n["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
     }
 
-    serializeJson(arr, wifiScanResult);
+    String out;
+    serializeJson(arr, out);
     WiFi.scanDelete();
-    wifiScanRunning = false;
 
-    request->send(200, "application/json", wifiScanResult);
+    request->send(200, "application/json", out);
   });
+
 
 
   /* -------------------- WIFI KAYIT -------------------- */
