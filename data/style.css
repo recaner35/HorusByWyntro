@@ -1291,42 +1291,149 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
 }
 
-/* MEVCUT KODLARININ EN ALTINA EKLE VEYA İLGİLİ YERLERİ GÜNCELLE */
+/* --- 1. WIFI LISTESİ (SCROLL VE GÖRÜNÜM) --- */
+#wifiList {
+    max-height: 220px;       /* Listenin boyu sabit kalsın */
+    overflow-y: auto;        /* İçerik taşarsa kaydırma çubuğu çıksın */
+    overflow-x: hidden;      /* Yanlara taşmayı engelle */
+    background: rgba(0, 0, 0, 0.2); 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-bottom: 20px;     /* Alttaki butonlarla mesafe */
+    padding: 5px;
 
-/* 1. SORUN ÇÖZÜMÜ: Wi-Fi Listesi Kaydırma (Scroll) */
-#wifi-list {
-    max-height: 300px;       /* Listenin maksimum boyunu sınırla */
-    overflow-y: auto;        /* İçerik taşarsa aşağı kaydırma çubuğu çıkar */
-    background: rgba(0, 0, 0, 0.2);
+    /* Kaydırma Çubuğu Tasarımı (Chrome/Safari) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color, #fdcb6e) transparent;
+}
+
+#wifiList::-webkit-scrollbar {
+    width: 6px;
+}
+#wifiList::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color, #fdcb6e);
     border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 15px;
 }
 
-/* Wi-Fi Liste Elemanları */
-#wifi-list li {
-    padding: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+/* Liste Elemanları */
+.wifi-item {
+    display: flex;
+    justify-content: space-between; /* İsim solda, ikon sağda */
+    align-items: center;
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.2s;
+    color: #fff;
 }
 
-#wifi-list li:hover {
-    background: rgba(255, 255, 255, 0.1);
+.wifi-item:hover {
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Şifre Alanı (Gizli/Açık) */
-.wifi-password-box {
-    display: none; /* Varsayılan olarak gizli */
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,0.1);
+.wifi-item:last-child {
+    border-bottom: none;
 }
 
-/* Aktif sınıfa sahip li içindeki şifre kutusunu göster */
-#wifi-list li.active .wifi-password-box {
-    display: block;
-    animation: fadeIn 0.3s;
+/* Wi-Fi İsim ve İkonlar */
+.ssid {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.wifi-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px; 
+}
+
+/* Sinyal İkonu (SVG) Rengi ve Boyutu */
+.signal-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor; /* Metin rengiyle aynı olsun */
+}
+
+
+/* --- 2. WIFI MODAL (ŞİFRE PENCERESİ - EN ÖNEMLİ KISIM) --- */
+#wifiModal {
+    display: none;             /* Varsayılan gizli */
+    position: fixed;           /* Ekrana sabitle */
+    z-index: 10000;            /* LİSTENİN ÖNÜNE GEÇMESİ İÇİN ÇOK YÜKSEK SAYI */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.85); /* Arka planı iyice karart */
+    backdrop-filter: blur(4px); /* Arka planı buzla */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #2d3436; 
+    color: #fff;
+    margin: 15% auto; /* Mobilde ortalamak için */
+    padding: 25px;
+    border: 1px solid #555;
+    width: 85%;
+    max-width: 320px; 
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7); 
+    text-align: center;
+    position: relative;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--accent-color, #fdcb6e);
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px 0;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #111;
+    color: #fff;
+    font-size: 16px;
+    box-sizing: border-box; /* Padding taşmasın */
+}
+
+.modal-content input:focus {
+    border-color: var(--accent-color, #fdcb6e);
+    outline: none;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.btn-cancel {
+    background-color: #636e72;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: 1;
+    font-weight: bold;
+}
+
+.btn-connect {
+    background-color: #00b894; /* Yeşil */
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: 1;
+    font-weight: bold;
 }
 
 /* 2. SORUN ÇÖZÜMÜ: Setup Modunda Menüyü Kilitleme */
@@ -1352,6 +1459,77 @@ body.setup-active section#setup {
     display: block !important;
     width: 100%;
     max-width: 400px;
+}
+
+/* --- WIFI MODAL (ŞİFRE PENCERESİ) DÜZELTMESİ --- */
+
+/* Modalın Kendisi (Arka Plan) */
+#wifiModal {
+    display: none;             /* Varsayılan gizli */
+    position: fixed;           /* Ekrana sabitle */
+    z-index: 99999;            /* EN ÖNEMLİ KISIM: Diğer her şeyin önüne al */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;            /* İçerik taşarsa kaydır */
+    background-color: rgba(0,0,0,0.8); /* Arka planı karart */
+    backdrop-filter: blur(5px); /* Arka planı hafif buzla (Modern görünüm) */
+}
+
+/* Modal İçeriği (Beyaz Kutu) */
+.modal-content {
+    background-color: #2d3436; /* Koyu tema uyumlu renk (veya var(--card-bg)) */
+    color: #fff;
+    margin: 15% auto;          /* Üstten %15 boşluk ve ortala */
+    padding: 20px;
+    border: 1px solid #444;
+    width: 80%;
+    max-width: 350px;          /* Çok geniş olmasın */
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); /* Gölge ver ki önde dursun */
+    position: relative;
+    text-align: center;
+}
+
+/* Şifre Input Alanı */
+.modal-content input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background: #111;
+    color: #fff;
+    font-size: 16px;
+}
+
+/* Buton Grubu */
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-cancel {
+    background-color: #d63031;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-connect {
+    background-color: #00b894;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    flex: 1;
 }
 
 
