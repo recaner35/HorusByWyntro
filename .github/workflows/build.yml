@@ -27,6 +27,20 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Cache Arduino Core & Libraries
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.arduino15
+          ~/Arduino/libraries
+        key: arduino-${{ runner.os }}-esp32
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ runner.os }}
+
     - name: Auto Bump Version
       id: bump_version
       run: |
@@ -257,7 +271,7 @@ jobs:
           cat <<EOF > website/manifest.json
           {
             "name": "Horus Factory Firmware",
-            "version": "otomatik",
+            "version": "${{ env.NEW_VERSION }}",
             "new_install_prompt_erase": true,
             "chipFamily": "ESP32",
             "flashSize": "4MB",
