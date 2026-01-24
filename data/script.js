@@ -433,15 +433,40 @@ window.deletePeer = function (mac) {
 // ================= WIFI LOGIC (GÜNCELLENDİ) =================
 let isScanning = false;
 
-function scanWifi() {
-    const list = document.getElementById('wifiList');
-    const btn = document.getElementById('scanBtn');
+// ================= WIFI LOGIC (TEK VE ORTAK FONKSİYON) =================
+let isScanning = false;
 
-    if (!list || isScanning) return;
+function scanWifi() {
+    // Hem Setup modundaki hem de Ana ekrandaki listeyi ve butonları seç
+    // Setup Modu ID'leri: wifiList, scanBtn
+    // Ana Ekran ID'leri: wifi-list, btn-scan (HTML'deki ID'lerine göre burayı kontrol et)
+    
+    // Hangi liste görünürse onu kullan
+    let list = document.getElementById('wifiList'); 
+    if (!list || list.offsetParent === null) {
+        list = document.getElementById('wifi-list'); // Ana ekrandaki listenin ID'si bu olabilir
+    }
+
+    // Hangi buton görünürse onu kullan
+    let btn = document.getElementById('scanBtn');
+    if (!btn || btn.offsetParent === null) {
+        btn = document.getElementById('btn-scan'); // Ana ekrandaki butonun ID'si
+    }
+
+    if (!list) {
+        console.error("Wifi listesi elemanı bulunamadı!"); 
+        return;
+    }
+    
+    if (isScanning) return;
 
     isScanning = true;
     list.innerHTML = '<div class="scanning">Ağlar taranıyor...</div>';
-    if (btn) btn.disabled = true;
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = (typeof getTrans === 'function' && getTrans('scanning')) ? getTrans('scanning') : "Taranıyor...";
+    }
 
     // 1️⃣ Tarama isteği gönder
     fetch('/api/scan-networks')
@@ -454,17 +479,16 @@ function scanWifi() {
         })
         .catch(() => {
             list.innerHTML = '<div class="error">ESP32 bağlantı hatası</div>';
-            isScanning = false;
-            if (btn) btn.disabled = false;
+            resetScanState(btn);
         });
 }
 
-// Sonuçları getiren ve BOŞSA tekrar deneyen yardımcı fonksiyon
+// Sonuçları getiren yardımcı fonksiyon
 function fetchResults(list, btn) {
     fetch('/api/scan-networks')
         .then(r => r.json())
         .then(networks => {
-            // Eğer liste boşsa, 2 saniye sonra tekrar dene (Retry Logic)
+            // Liste boşsa tekrar dene (Retry)
             if (networks.length === 0) {
                 list.innerHTML = '<div class="scanning">Ağlar aranıyor... (Tekrar deneniyor)</div>';
                 setTimeout(() => {
@@ -473,19 +497,29 @@ function fetchResults(list, btn) {
                 return;
             }
 
-            renderWifiList(networks);
-            isScanning = false;
-            if (btn) btn.disabled = false;
+            renderWifiList(networks, list); // Listeyi parametre olarak gönder
+            resetScanState(btn);
         })
         .catch(() => {
             list.innerHTML = '<div class="error">Tarama hatası</div>';
-            isScanning = false;
-            if (btn) btn.disabled = false;
+            resetScanState(btn);
         });
 }
 
-function renderWifiList(networks) {
-    const list = document.getElementById('wifiList');
+function resetScanState(btn) {
+    isScanning = false;
+    if (btn) {
+        btn.disabled = false;
+        // Buton metnini eski haline getir (İkonlu haline veya sadece yazıya)
+        btn.innerHTML = (typeof getTrans === 'function' && getTrans('scan')) ? getTrans('scan') : "Ağları Tara";
+    }
+}
+
+// Listeyi ekrana basan fonksiyon (Güncellendi)
+function renderWifiList(networks, listElement) {
+    // Eğer parametre olarak liste gelmediyse bulmaya çalış
+    const list = listElement || document.getElementById('wifiList') || document.getElementById('wifi-list');
+    
     list.innerHTML = '';
     
     if (networks.length === 0) {
@@ -500,14 +534,13 @@ function renderWifiList(networks) {
         div.className = 'wifi-item';
         
         const lockIcon = net.secure ? '🔒' : '';
-        // Sinyal İkonu (Yeni Fonksiyon)
-        const signalSvg = getSignalSvg(net.rssi);
+        const signalDisplay = (typeof getSignalSvg === 'function') ? getSignalSvg(net.rssi) : net.rssi + " dBm";
 
         div.innerHTML = `
             <span class="ssid">${net.ssid}</span>
             <div class="wifi-meta">
                 ${lockIcon}
-                ${signalSvg}
+                ${signalDisplay}
             </div>
         `;
         
@@ -726,4 +759,5 @@ function handleInstallClick() {
 function closeIosModal() {
     if(iosModal) iosModal.classList.add('hidden');
 }
+
 
