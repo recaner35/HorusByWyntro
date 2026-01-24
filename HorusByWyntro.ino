@@ -3,12 +3,11 @@
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
  * TASARIM: Caner Kocacık
- * AÇIKLAMA:
- * Bu kod, Horus IoT Saat Kurma Makinesi'nin (Watch Winder) ana yazılımıdır.
- * Web arayüzü ile kontrol edilir, ESP-NOW ile diğer cihazları görür,
- * TTP223 sensörü ile fiziksel kontrol sağlar.
+ * DÜZELTME: LittleFS Entegrasyonu ve Version Log
  */
-#include <SPIFFS.h>
+
+// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
+#include <LittleFS.h> 
 #include <DNSServer.h>
 #include <AccelStepper.h>
 #include <Arduino.h>
@@ -27,8 +26,6 @@
 // ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
 
-
-
 String wifiScanResult = "[]";
 
 void startSetupMode();
@@ -43,8 +40,7 @@ bool setupMode = false;
 bool skipSetup = false;
 bool captiveMode = true;
 const char* SETUP_AP_SSID = "Horus";
-const char* SETUP_AP_PASS = "ByWyntro3545"; 
-
+// const char* SETUP_AP_PASS = "ByWyntro3545"; // Setup modu şifresiz daha stabil çalışır
 
 // ===============================
 // Motor Pin Tanımlamaları
@@ -128,8 +124,8 @@ String wifiStatusStr = "disconnected";
 bool tryConnect = false;
 unsigned long connectStartTime = 0;
 String myMacAddress;
-bool shouldUpdate = false;       
-String otaStatus = "idle";       
+bool shouldUpdate = false;        
+String otaStatus = "idle";        
 unsigned long scanStartTime = 0; 
 
 // ===============================
@@ -179,18 +175,13 @@ String slugify(String text) {
     }
   }
 
-  text.replace("ş", "s");
-  text.replace("Ş", "s");
-  text.replace("ı", "i");
-  text.replace("İ", "i");
-  text.replace("ğ", "g");
-  text.replace("Ğ", "g");
-  text.replace("ü", "u");
-  text.replace("Ü", "u");
-  text.replace("ö", "o");
-  text.replace("Ö", "o");
-  text.replace("ç", "c");
-  text.replace("Ç", "c");
+  // Türkçe karakter dönüşümleri
+  text.replace("ş", "s"); text.replace("Ş", "s");
+  text.replace("ı", "i"); text.replace("İ", "i");
+  text.replace("ğ", "g"); text.replace("Ğ", "g");
+  text.replace("ü", "u"); text.replace("Ü", "u");
+  text.replace("ö", "o"); text.replace("Ö", "o");
+  text.replace("ç", "c"); text.replace("Ç", "c");
 
   out = "";
   for (int i = 0; i < text.length(); i++) {
@@ -295,11 +286,11 @@ void checkAndPerformUpdate() {
       otaStatus = "updating";
 
       String baseUrl = "https://github.com/recaner35/HorusByWyntro/releases/download/" + newVersion + "/";
-      String fsUrl = baseUrl + "HorusByWyntro.spiffs.bin";
+      String fsUrl = baseUrl + "HorusByWyntro.littlefs.bin"; // İsim düzeltildi
       String fwUrl = baseUrl + "HorusByWyntro.ino.bin";
 
       Serial.println("LittleFS indiriliyor: " + fsUrl);
-      if (execOTA(fsUrl, U_SPIFFS)) {
+      if (execOTA(fsUrl, U_SPIFFS)) { // LittleFS olsa bile komut U_SPIFFS kalabilir
         Serial.println("LittleFS guncellendi.");
       } else {
         Serial.println("LittleFS guncelleme hatasi!");
@@ -331,15 +322,22 @@ void checkAndPerformUpdate() {
 // ===============================
 void setup() {
   Serial.begin(115200);
+
+  // 2. ISTEK: Seri Monitörde Versiyon Gösterimi
+  Serial.println("\n\n==================================");
+  Serial.println("HORUS FIRMWARE STARTING");
+  Serial.print("VERSION: ");
+  Serial.println(FIRMWARE_VERSION);
+  Serial.println("==================================\n");
   
-  // 1. Dosya Sistemini Başlat (Config için şart)
-  if (!SPIFFS.begin(true)) {
-    Serial.println("SPIFFS Mount Failed");
+  // 3. DUZELTME: LittleFS Başlatılıyor (SPIFFS yerine)
+  if (!LittleFS.begin(true)) {
+    Serial.println("LittleFS Mount Failed");
     return;
   }
-  Serial.println("SPIFFS OK");
+  Serial.println("LittleFS OK");
 
-  // 2. Config ve Suffix'i EN BAŞTA Yükle
+  // Config ve Suffix Yükle
   loadConfig();
   updateSchedule();
   uint64_t chipid = ESP.getEfuseMac();
@@ -349,23 +347,22 @@ void setup() {
 
   Serial.println("Device Suffix: " + deviceSuffix);
 
-  // 3. Pinleri Ayarla
+  // Pinleri Ayarla
   pinMode(TOUCH_PIN, INPUT);
 
-  // 4. Motor Kurulumu
+  // Motor Kurulumu
   initMotor();
   stepper.setMaxSpeed(600);
   stepper.setAcceleration(200);
 
-  // 5. Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
-  // Eğer kayıtlı ağa bağlanamazsa startSetupMode() içinde çağrılacak
+  // Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
   if (!connectToSavedWiFi()) {
     startSetupMode();
   } else {
     initESPNow();
   }
 
-  // 6. Web Sunucuyu Başlat
+  // Web Sunucuyu Başlat
   initWebServer();
 
   server.begin();
@@ -380,7 +377,7 @@ void loop() {
     dnsServer.processNextRequest();
   }
 
-  // 3. OTA Update Kontrolü
+  // OTA Update Kontrolü
   if (shouldUpdate) {
      checkAndPerformUpdate();
      shouldUpdate = false;
@@ -464,8 +461,9 @@ void handlePhysicalControl() {
 }
 
 void loadConfig() {
-  if (SPIFFS.exists(JSON_CONFIG_FILE)) {
-    File file = SPIFFS.open(JSON_CONFIG_FILE, "r");
+  // 4. DUZELTME: LittleFS kullanılıyor
+  if (LittleFS.exists(JSON_CONFIG_FILE)) {
+    File file = LittleFS.open(JSON_CONFIG_FILE, "r");
     StaticJsonDocument<512> doc;
     deserializeJson(doc, file);
     config.tpd = doc["tpd"] | 900;
@@ -478,7 +476,7 @@ void loadConfig() {
 }
 
 void saveConfig() {
-  File file = SPIFFS.open(JSON_CONFIG_FILE, "w");
+  File file = LittleFS.open(JSON_CONFIG_FILE, "w");
   StaticJsonDocument<512> doc;
   doc["tpd"] = config.tpd;
   doc["dur"] = config.duration;
@@ -670,8 +668,8 @@ void restorePeers() {
 }
 
 void loadPeers() {
-  if (SPIFFS.exists(PEER_FILE)) {
-    File file = SPIFFS.open(PEER_FILE, "r");
+  if (LittleFS.exists(PEER_FILE)) {
+    File file = LittleFS.open(PEER_FILE, "r");
     if (file) {
       StaticJsonDocument<2048> doc;
       DeserializationError error = deserializeJson(doc, file);
@@ -696,7 +694,7 @@ void loadPeers() {
 }
 
 void savePeers() {
-  File file = SPIFFS.open(PEER_FILE, "w");
+  File file = LittleFS.open(PEER_FILE, "w");
   if (file) {
     StaticJsonDocument<2048> doc;
     JsonArray arr = doc.to<JsonArray>();
@@ -926,7 +924,7 @@ void initWiFi() {
   }
   String apName = apBase + "-" + deviceSuffix;
 
-  WiFi.softAP(apName.c_str(), "");
+  WiFi.softAP(apName.c_str(), NULL); // Sifresiz
   WiFi.setHostname(apName.c_str());
 
   Serial.println("WiFi AP Başlatıldı: " + apName);
@@ -940,7 +938,9 @@ void initWiFi() {
 // ===============================
 void initWebServer() {
 
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+  // 5. DUZELTME: LittleFS olarak değiştirildi ve serveStatic tek başına yeterli.
+  // Eski server.on("/", ...) satırı KALDIRILDI çünkü serveStatic ile çakışır.
+  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -994,7 +994,6 @@ void initWebServer() {
       deserializeJson(doc, data);
 
       prefs.begin("wifi", false);
-      // HATA BURADAYDI. .as<String>() EKLENDİ:
       prefs.putString("ssid", doc["ssid"].as<String>());
       prefs.putString("pass", doc["pass"].as<String>());
       prefs.end();
@@ -1005,10 +1004,8 @@ void initWebServer() {
   });
 
   /* -------------------- CAPTIVE PORTAL -------------------- */
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", "text/html");
-  });
-
+  // 6. DUZELTME: Buradaki SPIFFS yönlendirmesi silindi, serveStatic yeterlidir.
+  
   server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
         request->redirect("http://192.168.4.1/");
     });
@@ -1023,6 +1020,7 @@ void initWebServer() {
   server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", "Microsoft NCSI");
   });
+  
   server.onNotFound([](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
       request->redirect("http://192.168.4.1/");
@@ -1114,11 +1112,10 @@ void startSetupMode() {
     WiFi.mode(WIFI_AP_STA);
     WiFi.softAPConfig(apIP, gateway, subnet);
 
-    // 2. AP İsmini oluştur (Senin mevcut mantığın)
+    // 2. AP İsmini oluştur 
     WiFi.softAP("Horus", NULL);
 
-    // 4. DNS Sunucusunu Başlat (KRİTİK KISIM)
-    // Bu satır, telefondan gelen tüm internet isteklerini ESP32'ye çeker
+    // 4. DNS Sunucusunu Başlat 
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer.start(53, "*", apIP);
 
