@@ -1291,5 +1291,67 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
 }
 
+/* MEVCUT KODLARININ EN ALTINA EKLE VEYA İLGİLİ YERLERİ GÜNCELLE */
+
+/* 1. SORUN ÇÖZÜMÜ: Wi-Fi Listesi Kaydırma (Scroll) */
+#wifi-list {
+    max-height: 300px;       /* Listenin maksimum boyunu sınırla */
+    overflow-y: auto;        /* İçerik taşarsa aşağı kaydırma çubuğu çıkar */
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+/* Wi-Fi Liste Elemanları */
+#wifi-list li {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#wifi-list li:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Şifre Alanı (Gizli/Açık) */
+.wifi-password-box {
+    display: none; /* Varsayılan olarak gizli */
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Aktif sınıfa sahip li içindeki şifre kutusunu göster */
+#wifi-list li.active .wifi-password-box {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+/* 2. SORUN ÇÖZÜMÜ: Setup Modunda Menüyü Kilitleme */
+/* Eğer body etiketinde 'setup-active' sınıfı varsa navigasyonu gizle */
+body.setup-active nav {
+    display: none !important; /* Alt menüyü tamamen yok et */
+}
+
+body.setup-active .container {
+    padding-bottom: 0; /* Alt boşluğu sıfırla */
+    height: 100vh;     /* Tam ekran yap */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Sadece Setup bölümünü göster, diğerlerini gizle */
+body.setup-active section {
+    display: none !important;
+}
+
+body.setup-active section#setup {
+    display: block !important;
+    width: 100%;
+    max-width: 400px;
+}
 
 
