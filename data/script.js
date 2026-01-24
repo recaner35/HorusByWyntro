@@ -82,6 +82,23 @@ window.onload = function () {
         });
 };
 
+function getSignalSvg(rssi) {
+    // RSSI Değerleri: -50 (Mükemmel), -60 (İyi), -70 (Orta), Daha düşük (Zayıf)
+    if (rssi >= -55) {
+        // 4 Diş (Mükemmel)
+        return `<svg class="signal-icon" viewBox="0 0 24 24"><path d="M12 3C7.79 3 3.7 4.41 0.38 7H0L12 21L24 7H23.62C20.3 4.41 16.21 3 12 3Z" /></svg>`;
+    } else if (rssi >= -65) {
+        // 3 Diş (İyi)
+        return `<svg class="signal-icon" viewBox="0 0 24 24"><path d="M12 3C7.79 3 3.7 4.41 0.38 7H0L12 21L24 7H23.62C20.3 4.41 16.21 3 12 3Z" fill-opacity="0.3"/><path d="M12 9C9.3 9 6.68 9.89 4.63 11.5L12 21L19.37 11.5C17.32 9.89 14.7 9 12 9Z" /></svg>`;
+    } else if (rssi >= -75) {
+        // 2 Diş (Orta)
+        return `<svg class="signal-icon" viewBox="0 0 24 24"><path d="M12 3C7.79 3 3.7 4.41 0.38 7H0L12 21L24 7H23.62C20.3 4.41 16.21 3 12 3Z" fill-opacity="0.3"/><path d="M12 14C10.65 14 9.4 14.45 8.35 15.2L12 21L15.65 15.2C14.6 14.45 13.35 14 12 14Z" /></svg>`;
+    } else {
+        // 1 Diş (Zayıf)
+        return `<svg class="signal-icon" viewBox="0 0 24 24"><path d="M12 3C7.79 3 3.7 4.41 0.38 7H0L12 21L24 7H23.62C20.3 4.41 16.21 3 12 3Z" fill-opacity="0.3"/><path d="M12 18C11.5 18 11 18.2 10.6 18.5L12 21L13.4 18.5C13 18.2 12.5 18 12 18Z" /></svg>`;
+    }
+}
+
 function initWebSocket() {
     var protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
     socket = new WebSocket(protocol + location.host + '/ws');
@@ -481,13 +498,19 @@ function renderWifiList(networks) {
     uniqueNetworks.forEach(net => {
         const div = document.createElement('div');
         div.className = 'wifi-item';
-        const lockIcon = net.secure ? '🔒' : 'OPEN';
+        
+        const lockIcon = net.secure ? '🔒' : '';
+        // Sinyal İkonu (Yeni Fonksiyon)
+        const signalSvg = getSignalSvg(net.rssi);
+
         div.innerHTML = `
             <span class="ssid">${net.ssid}</span>
-            <span class="signal">${net.rssi} dBm ${lockIcon}</span>
+            <div class="wifi-meta">
+                ${lockIcon}
+                ${signalSvg}
+            </div>
         `;
         
-        // DÜZELTME: Tıklayınca Modal Açılması Sağlandı
         div.onclick = () => {
             openWifiModal(net.ssid);
         };
@@ -703,3 +726,4 @@ function handleInstallClick() {
 function closeIosModal() {
     if(iosModal) iosModal.classList.add('hidden');
 }
+
