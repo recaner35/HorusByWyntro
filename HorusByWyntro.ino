@@ -65,7 +65,7 @@ const char *SETUP_AP_SSID = "Horus";
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.335"
+#define FIRMWARE_VERSION "1.0.334"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1075,6 +1075,14 @@ void initWebServer() {
               request->redirect("http://192.168.4.1/");
             });
   server.on("/connectivitycheck.gstatic.com", HTTP_ANY,
+            [](AsyncWebServerRequest *request) {
+              request->redirect("http://192.168.4.1/");
+            });
+  server.on("/connectivitycheck.android.com", HTTP_ANY,
+            [](AsyncWebServerRequest *request) {
+              request->redirect("http://192.168.4.1/");
+            });
+  server.on("/clients3.google.com", HTTP_ANY,
             [](AsyncWebServerRequest *request) {
               request->redirect("http://192.168.4.1/");
             });
