@@ -33,7 +33,7 @@
     --text-primary: #ffffff;
     --text-secondary: rgba(255, 255, 255, 0.6);
     --accent-color: #fdcb6e;
-    --accent-gradient: linear-gradient(135deg, #FFD700, #B8860B);
+    --accent-gradient: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color), #000 30%));
     --success-color: #00ff88;
     --danger-color: #ff4444;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -1593,4 +1593,39 @@ body.setup-active section#setup {
     border-radius: 5px;
     cursor: pointer;
     flex: 1;
+}
+
+/* --- LIVE LOG CONSOLE --- */
+.console-box {
+    background: #000;
+    color: #0f0;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 10px;
+    border-radius: 8px;
+    height: 150px;
+    overflow-y: auto;
+    font-size: 11px;
+    border: 1px solid #333;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 1);
+    margin-top: 10px;
+}
+
+.log-line {
+    margin-bottom: 4px;
+    border-bottom: 1px solid #111;
+    padding-bottom: 2px;
+}
+
+.log-tag {
+    color: #ffd700;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.log-time {
+    color: #888;
+    margin-right: 5px;
 }
