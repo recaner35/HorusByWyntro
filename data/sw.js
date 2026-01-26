@@ -19,11 +19,11 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Strateji: Önce Önbellek, sonra Ağ (Hız için)
+// Strateji: Önce Ağ, sonra Önbellek (Güncel kod için)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
