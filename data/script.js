@@ -5,7 +5,17 @@ var currentDirection = 2; // 0: CW, 1: CCW, 2: Bi-Directional
 var wifiScanInterval;
 var otaStatusInterval;
 var statusInterval;
-var deviceSuffix = ""; 
+var deviceSuffix = "";
+
+// --- CONFIG & URLS ---
+const API_VERSION_URL = '/api/version';
+const API_DEVICE_STATE_URL = '/api/device-state';
+const API_SCAN_NETWORKS_URL = '/api/scan-networks';
+const API_SAVE_WIFI_URL = '/api/save-wifi';
+const API_SKIP_SETUP_URL = '/api/skip-setup';
+const API_OTA_AUTO_URL = '/api/ota-auto';
+const API_OTA_STATUS_URL = '/api/ota-status';
+// ---------------------
 
 // Dil dosyasından çeviri al
 function getTrans(key) {
@@ -31,7 +41,7 @@ window.onload = function () {
         currentLang = translations[langCode] ? langCode : 'tr';
     }
     var langSelect = document.getElementById('languageSelect');
-    if(langSelect) langSelect.value = currentLang;
+    if (langSelect) langSelect.value = currentLang;
     applyLanguage(currentLang);
 
     // Tema
@@ -43,17 +53,17 @@ window.onload = function () {
     setAccentColor(savedColor);
 
     // Versiyon
-    fetch('/api/version')
+    fetch(API_VERSION_URL)
         .then(r => r.json())
         .then(d => {
             if (d.version) {
                 var vEl = document.getElementById('fwVersion');
-                if(vEl) vEl.innerText = d.version;
+                if (vEl) vEl.innerText = d.version;
             }
         });
 
     // 🔥 SETUP MODE + UI KİLİTLEME DÜZELTMESİ
-    fetch("/api/device-state")
+    fetch(API_DEVICE_STATE_URL)
         .then(r => r.json())
         .then(data => {
             isSetupMode = data.setup;
@@ -63,21 +73,21 @@ window.onload = function () {
 
                 // 2. Navigasyon menüsünü JS ile zorla gizle
                 var navBar = document.querySelector('nav');
-                if(navBar) navBar.style.display = 'none';
+                if (navBar) navBar.style.display = 'none';
 
                 // 3. Sadece Setup kartını göster
                 var setupCard = document.getElementById("setupCard");
-                if(setupCard) {
+                if (setupCard) {
                     setupCard.classList.remove("hidden");
                     // Diğer her şeyi gizle
                     var otherTabs = document.querySelectorAll('.tab-content');
                     otherTabs.forEach(t => {
-                        if(t.id !== 'setupCard') t.style.display = 'none';
+                        if (t.id !== 'setupCard') t.style.display = 'none';
                     });
                 }
-                
+
                 // 4. Taramayı başlat
-                scanWifi(); 
+                scanWifi();
             }
         });
 };
@@ -114,7 +124,7 @@ function initWebSocket() {
     socket.onopen = function () {
         console.log('WebSocket Connected');
         var statusEl = document.getElementById('connectionStatus');
-        if(statusEl) statusEl.style.backgroundColor = '#0f0';
+        if (statusEl) statusEl.style.backgroundColor = '#0f0';
     };
 
     socket.onmessage = function (event) {
@@ -125,31 +135,31 @@ function initWebSocket() {
             console.error("Bozuk WS verisi:", event.data);
             return;
         }
-        
+
         if (data.running !== undefined) {
             isRunning = data.running;
             updateStatusUI();
         }
         if (data.tpd !== undefined) {
-            if(document.getElementById('tpdPayload')) document.getElementById('tpdPayload').value = data.tpd;
-            if(document.getElementById('tpdValue')) document.getElementById('tpdValue').innerText = data.tpd;
+            if (document.getElementById('tpdPayload')) document.getElementById('tpdPayload').value = data.tpd;
+            if (document.getElementById('tpdValue')) document.getElementById('tpdValue').innerText = data.tpd;
         }
         if (data.dur !== undefined) {
-            if(document.getElementById('durPayload')) document.getElementById('durPayload').value = data.dur;
-            if(document.getElementById('durValue')) document.getElementById('durValue').innerText = data.dur;
+            if (document.getElementById('durPayload')) document.getElementById('durPayload').value = data.dur;
+            if (document.getElementById('durValue')) document.getElementById('durValue').innerText = data.dur;
         }
         if (data.dir !== undefined) {
             setDirectionUI(data.dir);
         }
         if (data.name !== undefined) {
-            if(document.getElementById('deviceName')) document.getElementById('deviceName').value = data.name;
+            if (document.getElementById('deviceName')) document.getElementById('deviceName').value = data.name;
         }
         if (data.suffix !== undefined) {
             deviceSuffix = data.suffix;
         }
 
         if (data.espnow !== undefined) {
-            if(document.getElementById('espNowToggle')) document.getElementById('espNowToggle').checked = data.espnow;
+            if (document.getElementById('espNowToggle')) document.getElementById('espNowToggle').checked = data.espnow;
         }
 
         if (data.peers) {
@@ -164,7 +174,7 @@ function initWebSocket() {
     socket.onclose = function () {
         console.log('WebSocket Disconnected');
         var statusEl = document.getElementById('connectionStatus');
-        if(statusEl) statusEl.style.backgroundColor = '#f00';
+        if (statusEl) statusEl.style.backgroundColor = '#f00';
         setTimeout(initWebSocket, 2000);
     };
 }
@@ -173,7 +183,7 @@ function updateStatusUI() {
     var statusText = document.getElementById('statusText');
     var toggleBtn = document.getElementById('toggleBtn');
 
-    if(!statusText || !toggleBtn) return;
+    if (!statusText || !toggleBtn) return;
 
     if (isRunning) {
         statusText.innerText = getTrans('running');
@@ -222,10 +232,10 @@ function setDirectionUI(dir) {
     var cw = document.getElementById('dirCW');
     var ccw = document.getElementById('dirCCW');
     var bi = document.getElementById('dirBi');
-    
-    if(cw) cw.className = "dir-btn" + (dir == 0 ? " active" : "");
-    if(ccw) ccw.className = "dir-btn" + (dir == 1 ? " active" : "");
-    if(bi) bi.className = "dir-btn" + (dir == 2 ? " active" : "");
+
+    if (cw) cw.className = "dir-btn" + (dir == 0 ? " active" : "");
+    if (ccw) ccw.className = "dir-btn" + (dir == 1 ? " active" : "");
+    if (bi) bi.className = "dir-btn" + (dir == 2 ? " active" : "");
 }
 
 function sendSettings() {
@@ -247,8 +257,8 @@ function saveDeviceName() {
     var name = document.getElementById('deviceName').value;
 
     if (!name || name.trim() === '') {
-       showToast('Lütfen geçerli bir cihaz adı girin.');
-       return;
+        showToast('Lütfen geçerli bir cihaz adı girin.');
+        return;
     }
 
     var settings = {
@@ -299,7 +309,7 @@ function switchTab(tabId) {
 
     document.getElementById(tabId).classList.add('active');
     var navBtn = document.getElementById('nav-' + tabId);
-    if(navBtn) navBtn.classList.add('active');
+    if (navBtn) navBtn.classList.add('active');
 }
 
 // ================= DEVICE DISCOVERY & CONTROL =================
@@ -309,11 +319,11 @@ function refreshPeers() {
         socket.send(JSON.stringify(cmd));
     }
 }
-    
+
 function renderPeers(peers) {
     var list = document.getElementById('deviceList');
-    if(!list) return;
-    
+    if (!list) return;
+
     list.innerHTML = "";
     if (peers.length == 0) {
         list.innerHTML = '<div class="list-item placeholder" data-i18n="no_devices">' + getTrans('no_devices') + '</div>';
@@ -399,7 +409,7 @@ window.pushPeerSettings = function (mac, currentRunningState) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(cmd));
         showToast('Ayarlar kutuya gönderildi!');
-    }    
+    }
 };
 
 window.togglePeer = function (mac, newState) {
@@ -430,9 +440,6 @@ window.deletePeer = function (mac) {
     }
 };
 
-// ================= WIFI LOGIC (GÜNCELLENDİ) =================
-let isScanning = false;
-
 // ================= WIFI LOGIC (TEK VE ORTAK FONKSİYON) =================
 let isScanning = false;
 
@@ -440,11 +447,11 @@ function scanWifi() {
     // Hem Setup modundaki hem de Ana ekrandaki listeyi ve butonları seç
     // Setup Modu ID'leri: wifiList, scanBtn
     // Ana Ekran ID'leri: wifi-list, btn-scan (HTML'deki ID'lerine göre burayı kontrol et)
-    
+
     // Hangi liste görünürse onu kullan
-    let list = document.getElementById('wifiList'); 
+    let list = document.getElementById('wifiList');
     if (!list || list.offsetParent === null) {
-        list = document.getElementById('wifi-list'); // Ana ekrandaki listenin ID'si bu olabilir
+        list = document.getElementById('wifiList'); // Ana ekrandaki listenin ID'si
     }
 
     // Hangi buton görünürse onu kullan
@@ -454,22 +461,22 @@ function scanWifi() {
     }
 
     if (!list) {
-        console.error("Wifi listesi elemanı bulunamadı!"); 
+        console.error("Wifi listesi elemanı bulunamadı!");
         return;
     }
-    
+
     if (isScanning) return;
 
     isScanning = true;
     list.innerHTML = '<div class="scanning">Ağlar taranıyor...</div>';
-    
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = (typeof getTrans === 'function' && getTrans('scanning')) ? getTrans('scanning') : "Taranıyor...";
     }
 
     // 1️⃣ Tarama isteği gönder
-    fetch('/api/scan-networks')
+    fetch(API_SCAN_NETWORKS_URL)
         .then(r => r.json())
         .then(() => {
             // 2️⃣ 2.5 sn bekle, sonra sonucu iste
@@ -485,7 +492,7 @@ function scanWifi() {
 
 // Sonuçları getiren yardımcı fonksiyon
 function fetchResults(list, btn) {
-    fetch('/api/scan-networks')
+    fetch(API_SCAN_NETWORKS_URL)
         .then(r => r.json())
         .then(networks => {
             // Liste boşsa tekrar dene (Retry)
@@ -518,10 +525,10 @@ function resetScanState(btn) {
 // Listeyi ekrana basan fonksiyon (Güncellendi)
 function renderWifiList(networks, listElement) {
     // Eğer parametre olarak liste gelmediyse bulmaya çalış
-    const list = listElement || document.getElementById('wifiList') || document.getElementById('wifi-list');
-    
+    const list = listElement || document.getElementById('wifiList');
+
     list.innerHTML = '';
-    
+
     if (networks.length === 0) {
         list.innerHTML = '<div class="empty">Ağ bulunamadı. Tekrar deneyin.</div>';
         return;
@@ -532,7 +539,7 @@ function renderWifiList(networks, listElement) {
     uniqueNetworks.forEach(net => {
         const div = document.createElement('div');
         div.className = 'wifi-item';
-        
+
         const lockIcon = net.secure ? '🔒' : '';
         const signalDisplay = (typeof getSignalSvg === 'function') ? getSignalSvg(net.rssi) : net.rssi + " dBm";
 
@@ -543,18 +550,18 @@ function renderWifiList(networks, listElement) {
                 ${signalDisplay}
             </div>
         `;
-        
+
         div.onclick = () => {
             openWifiModal(net.ssid);
         };
-        
+
         list.appendChild(div);
     });
 }
 
 function openWifiModal(ssid) {
     var modal = document.getElementById('wifiModal');
-    if(modal) {
+    if (modal) {
         document.getElementById('modalSSID').innerText = ssid;
         modal.style.display = 'block';
         setTimeout(() => document.getElementById('wifiPass').focus(), 100);
@@ -563,7 +570,7 @@ function openWifiModal(ssid) {
 
 function closeWifiModal() {
     var modal = document.getElementById('wifiModal');
-    if(modal) modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
     document.getElementById('wifiPass').value = '';
 }
 
@@ -582,41 +589,41 @@ function connectWifi() {
     formData.append('ssid', ssid);
     formData.append('pass', pass);
 
-    fetch('/api/save-wifi', { 
-        method: 'POST', 
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ssid: ssid, pass: pass}) 
+    fetch(API_SAVE_WIFI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid: ssid, pass: pass })
     })
-    .then(response => {
-        if(response.ok) {
-            closeWifiModal();
-            
-            if (isSetupMode) {
-                var setupCard = document.getElementById("setupCard");
-                var setupDone = document.getElementById("setupDone");
-                if(setupCard) setupCard.classList.add("hidden");
-                if(setupDone) setupDone.classList.remove("hidden");
+        .then(response => {
+            if (response.ok) {
+                closeWifiModal();
 
-                setTimeout(() => {
-                    window.location.href = "/";
-                }, 3000);
-            } else {
-                if (confirm(getTrans('connection_started') || "Bağlanılıyor... Yeniden başlatılsın mı?")) {
-                    location.reload();
+                if (isSetupMode) {
+                    var setupCard = document.getElementById("setupCard");
+                    var setupDone = document.getElementById("setupDone");
+                    if (setupCard) setupCard.classList.add("hidden");
+                    if (setupDone) setupDone.classList.remove("hidden");
+
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 3000);
+                } else {
+                    if (confirm(getTrans('connection_started') || "Bağlanılıyor... Yeniden başlatılsın mı?")) {
+                        location.reload();
+                    }
                 }
+            } else {
+                showToast("Bağlantı hatası");
             }
-        } else {
-            showToast("Bağlantı hatası");
-        }
-    })
-    .catch(() => showToast("Bağlantı isteği başarısız"));
+        })
+        .catch(() => showToast("Bağlantı isteği başarısız"));
 }
 
 // ================= OTA LOGIC =================
 function triggerAutoUpdate() {
     if (!confirm(getTrans('confirm_update') || "Update firmware?")) return;
 
-    fetch('/api/ota-auto', { method: 'POST' })
+    fetch(API_OTA_AUTO_URL, { method: 'POST' })
         .then(response => response.json())
         .then(data => {
             if (data.status == "started" || data.status == "updating") {
@@ -632,7 +639,7 @@ function triggerAutoUpdate() {
 }
 
 function checkOtaStatus() {
-    fetch('/api/ota-status')
+    fetch(API_OTA_STATUS_URL)
         .then(response => response.json())
         .then(data => {
             console.log("OTA Status:", data.status);
@@ -660,7 +667,7 @@ function changeLanguage() {
 
 function applyLanguage(lang) {
     var t = translations[lang];
-    if (!t) t = translations['tr']; 
+    if (!t) t = translations['tr'];
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
         var key = el.getAttribute('data-i18n');
@@ -711,13 +718,13 @@ function showToast(message, type = "info", duration = 2500) {
 }
 
 function skipSetup() {
- fetch("/api/skip-setup", { method: "POST" })
-    .then(() => {
-      document.getElementById("setupCard").classList.add("hidden");
-      // Menüyü geri getir
-      var navBar = document.querySelector('nav');
-      if(navBar) navBar.style.display = 'flex';
-    });
+    fetch(API_SKIP_SETUP_URL, { method: "POST" })
+        .then(() => {
+            document.getElementById("setupCard").classList.add("hidden");
+            // Menüyü geri getir
+            var navBar = document.querySelector('nav');
+            if (navBar) navBar.style.display = 'flex';
+        });
 }
 
 // --- PWA Kurulum Mantığı ---
@@ -728,7 +735,7 @@ const iosModal = document.getElementById('iosInstallModal');
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if(installBtn) installBtn.classList.remove('hidden');
+    if (installBtn) installBtn.classList.remove('hidden');
 });
 
 const isIos = () => {
@@ -739,13 +746,13 @@ const isIos = () => {
 window.addEventListener('load', () => {
     const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
     if (isIos() && !isStandalone) {
-        if(installBtn) installBtn.classList.remove('hidden');
+        if (installBtn) installBtn.classList.remove('hidden');
     }
 });
 
 function handleInstallClick() {
     if (isIos()) {
-        if(iosModal) iosModal.classList.remove('hidden');
+        if (iosModal) iosModal.classList.remove('hidden');
     } else {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -757,7 +764,5 @@ function handleInstallClick() {
 }
 
 function closeIosModal() {
-    if(iosModal) iosModal.classList.add('hidden');
+    if (iosModal) iosModal.classList.add('hidden');
 }
-
-
