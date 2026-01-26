@@ -67,6 +67,7 @@ window.onload = function () {
         .then(r => r.json())
         .then(data => {
             isSetupMode = data.setup;
+            if (data.suffix) deviceSuffix = data.suffix;
             if (isSetupMode) {
                 // 1. Setup Modu Aktifse Body'ye sınıf ekle (CSS ile yönetmek için)
                 document.body.classList.add('setup-mode-active');
@@ -589,6 +590,8 @@ function connectWifi() {
     formData.append('ssid', ssid);
     formData.append('pass', pass);
 
+    showToast(getTrans('connection_started') || "Bağlantı isteği gönderiliyor...", "info");
+
     fetch(API_SAVE_WIFI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -597,6 +600,7 @@ function connectWifi() {
         .then(response => {
             if (response.ok) {
                 closeWifiModal();
+                showToast(getTrans('kaydedildi') || "Bilgiler kaydedildi, Horus bağlanıyor...", "success");
 
                 if (isSetupMode) {
                     var setupCard = document.getElementById("setupCard");
@@ -605,18 +609,35 @@ function connectWifi() {
                     if (setupDone) setupDone.classList.remove("hidden");
 
                     setTimeout(() => {
-                        window.location.href = "/";
-                    }, 3000);
+                        // Yeni mDNS adresini hesapla
+                        let hostname = document.getElementById('deviceName') ? document.getElementById('deviceName').value : "Horus";
+                        let slug = hostname.toLowerCase()
+                            .replace(/ş/g, 's').replace(/Ş/g, 's')
+                            .replace(/ı/g, 'i').replace(/İ/g, 'i')
+                            .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
+                            .replace(/ü/g, 'u').replace(/Ü/g, 'u')
+                            .replace(/ö/g, 'o').replace(/Ö/g, 'o')
+                            .replace(/ç/g, 'c').replace(/Ç/g, 'c')
+                            .replace(/[^a-z0-9]/g, '-')
+                            .replace(/--+/g, '-')
+                            .replace(/^-|-$/g, '');
+
+                        if (!slug) slug = "horus";
+                        let newUrl = "http://" + slug + "-" + deviceSuffix + ".local";
+
+                        showToast("Yönlendiriliyor: " + newUrl, "info");
+                        window.location.href = newUrl;
+                    }, 8000);
                 } else {
-                    if (confirm(getTrans('connection_started') || "Bağlanılıyor... Yeniden başlatılsın mı?")) {
+                    setTimeout(() => {
                         location.reload();
-                    }
+                    }, 3000);
                 }
             } else {
-                showToast("Bağlantı hatası");
+                showToast("Bağlantı hatası", "error");
             }
         })
-        .catch(() => showToast("Bağlantı isteği başarısız"));
+        .catch(() => showToast("Bağlantı isteği başarısız", "error"));
 }
 
 // ================= OTA LOGIC =================
