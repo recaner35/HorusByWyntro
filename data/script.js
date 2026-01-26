@@ -15,6 +15,7 @@ const API_SAVE_WIFI_URL = '/api/save-wifi';
 const API_SKIP_SETUP_URL = '/api/skip-setup';
 const API_OTA_AUTO_URL = '/api/ota-auto';
 const API_OTA_STATUS_URL = '/api/ota-status';
+const API_REBOOT_URL = '/api/reboot';
 // ---------------------
 
 // Dil dosyasından çeviri al
@@ -169,6 +170,10 @@ function initWebSocket() {
 
         if (data.type === "error") {
             showToast(data.message);
+        }
+
+        if (data.type === "log") {
+            appendLog(data.tag, data.msg);
         }
     };
 
@@ -786,4 +791,33 @@ function handleInstallClick() {
 
 function closeIosModal() {
     if (iosModal) iosModal.classList.add('hidden');
+}
+
+function rebootDevice() {
+    if (confirm(getTrans('confirm_reboot') || "Cihazı yeniden başlatmak istediğinize emin misiniz?")) {
+        showToast("Cihaz yeniden başlatılıyor...", "info");
+        fetch(API_REBOOT_URL, { method: 'POST' })
+            .then(() => {
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
+            })
+            .catch(() => showToast("Yeniden başlatma başarısız", "error"));
+    }
+}
+
+function appendLog(tag, msg) {
+    const consoleBox = document.getElementById("liveLogs");
+    if (!consoleBox) return;
+
+    const line = document.createElement("div");
+    line.className = "log-line";
+    const time = new Date().toLocaleTimeString();
+    line.innerHTML = `<span class="log-tag">[${tag}]</span> <span class="log-time">${time}</span> ${msg}`;
+
+    consoleBox.appendChild(line);
+    while (consoleBox.children.length > 30) {
+        consoleBox.removeChild(consoleBox.firstChild);
+    }
+    consoleBox.scrollTop = consoleBox.scrollHeight;
 }
