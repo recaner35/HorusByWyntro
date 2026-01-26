@@ -94,6 +94,11 @@ jobs:
         
         python bump_version.py
 
+    - name: Update SW Version
+      run: |
+        sed -i "s/const CACHE_NAME = '.*'/const CACHE_NAME = 'horus-v${{ env.NEW_VERSION }}'/" data/sw.js
+        echo "Service Worker version updated to ${{ env.NEW_VERSION }}"
+
     - name: Commit and Push Version Bump
       run: |
         git config --global user.name "GitHub Actions"
@@ -176,8 +181,8 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        # BOYUT: 0x110000 = 1114112 (NO-FACTORY LAYOUT)
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1114112 ./build/spiffs.bin
+        # BOYUT: 0x130000 = 1245184 (NO-FACTORY LAYOUT)
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1245184 ./build/HorusByWyntro.littlefs.bin
 
     - name: Generate Factory Bin
       run: |
@@ -186,7 +191,7 @@ jobs:
         FIRMWARE_BIN=$(find ./build -name "*.ino.bin" | head -n 1)
         PARTITIONS_BIN=$(find ./build -name "*.partitions.bin" | head -n 1)
         BOOTLOADER_BIN=$(find ./build -name "*.bootloader.bin" | head -n 1)
-        SPIFFS_BIN="./build/spiffs.bin"
+        SPIFFS_BIN="./build/HorusByWyntro.littlefs.bin"
         BOOT_APP0_BIN=$(find ~/.arduino15 -name "boot_app0.bin" | head -n 1)
 
         echo "Firmware: $FIRMWARE_BIN"
@@ -203,7 +208,7 @@ jobs:
           0x8000 "$PARTITIONS_BIN" \
           0xe000 "$BOOT_APP0_BIN" \
           0x10000 "$FIRMWARE_BIN" \
-          0x2F0000 "$SPIFFS_BIN"
+          0x2D0000 "$SPIFFS_BIN"
 
         echo "Factory bin hazır"
 
@@ -224,7 +229,7 @@ jobs:
           BOOT_APP0=$(find ~/.arduino15/packages/esp32/hardware/esp32/*/tools/partitions -name "boot_app0.bin" | head -n 1)
           cp "$BOOT_APP0" website/boot_app0.bin || echo "boot_app0 copy failed"
           cp ./build/*.ino.bin website/firmware.bin || echo "Firmware copy failed"
-          cp ./build/spiffs.bin website/spiffs.bin || echo "LittleFS copy failed"
+          cp ./build/HorusByWyntro.littlefs.bin website/littlefs.bin || echo "LittleFS copy failed"
           # Hala merged bin'i de kopyala (yedek için)
           cp ./build/HorusByWyntro-factory.bin website/HorusByWyntro-factory.bin
           ls -la website/  # Debug: kopyalanan dosyaları logla
@@ -240,7 +245,7 @@ jobs:
         git add website/partitions.bin
         git add website/boot_app0.bin
         git add website/firmware.bin
-        git add website/spiffs.bin
+        git add website/littlefs.bin
 
         git commit -m "chore: update latest factory.bin for web flasher [skip ci]" || echo "No changes"
 
@@ -264,7 +269,7 @@ jobs:
           **Not:** Bu sürüm sıkıştırılmış dosya sistemi (GZIP) ve Minimal SPIFFS kullanır.
         files: |
           ./build/HorusByWyntro.ino.bin
-          ./build/spiffs.bin
+          ./build/HorusByWyntro.littlefs.bin
           ./build/HorusByWyntro-factory.bin
         
     - name: Prepare Pages
@@ -302,7 +307,7 @@ jobs:
                       { "path": "partitions.bin", "offset": 32768 },
                       { "path": "boot_app0.bin", "offset": 57344 },
                       { "path": "firmware.bin", "offset": 65536 },
-                      { "path": "spiffs.bin", "offset": 3080192 }
+                      { "path": "littlefs.bin", "offset": 2949120 }
                     ]
                   }
                 ]
