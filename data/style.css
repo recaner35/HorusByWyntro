@@ -1,43 +1,47 @@
 .setup-card {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #111;
-  border: 1px solid #333;
-  padding: 20px;
-  z-index: 9999;
-  width: 90%;
-  max-width: 400px;
-  border-radius: 12px;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    border: 1px solid #333;
+    padding: 20px;
+    z-index: 9999;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 12px;
 }
 
 .hidden {
-  display: none;
+    display: none;
 }
 
 .skip-btn {
-  margin-top: 10px;
-  background: transparent;
-  color: #aaa;
-  border: 1px dashed #444;
-  padding: 8px;
-  width: 100%;
-  border-radius: 8px;
+    margin-top: 10px;
+    background: transparent;
+    color: #aaa;
+    border: 1px dashed #444;
+    padding: 8px;
+    width: 100%;
+    border-radius: 8px;
 }
 
 :root {
-    --bg-color: #0d0d12;
-    --sidebar-bg: #141419;
-    --card-bg: #1a1a20;
+    --bg-color: #08080c;
+    --sidebar-bg: rgba(20, 20, 25, 0.85);
+    --card-bg: rgba(26, 26, 32, 0.7);
     --text-primary: #ffffff;
-    --text-secondary: #a0a0b0;
+    --text-secondary: rgba(255, 255, 255, 0.6);
     --accent-color: #fdcb6e;
+    --accent-gradient: linear-gradient(135deg, #FFD700, #B8860B);
     --success-color: #00ff88;
     --danger-color: #ff4444;
     --border-color: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.08);
     --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-lux: 0 10px 40px rgba(0, 0, 0, 0.4);
+    --blur-val: 12px;
 }
 
 /* Light Theme */
@@ -101,7 +105,8 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(var(--blur-val));
+    -webkit-backdrop-filter: blur(var(--blur-val));
     transition: var(--transition);
 }
 
@@ -204,11 +209,13 @@ body {
    =============================== */
 .card {
     background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-lux);
+    backdrop-filter: blur(var(--blur-val));
+    -webkit-backdrop-filter: blur(var(--blur-val));
     transition: var(--transition);
 }
 
@@ -296,14 +303,17 @@ body {
 }
 
 .btn-primary {
-    background: var(--accent-color);
+    background: var(--accent-gradient);
     color: #000;
-    box-shadow: 0 3px 12px rgba(255, 215, 0, 0.25);
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 16px rgba(255, 215, 0, 0.35);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+    filter: brightness(1.1);
 }
 
 .btn-secondary {
@@ -631,7 +641,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: center;
     align-items: center;
     /* Z-index 9999'dan büyük olmalı ki Setup kartının (9999) üstüne çıksın */
-    z-index: 10000 !important; 
+    z-index: 10000 !important;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
@@ -778,9 +788,11 @@ input[type="range"]::-moz-range-thumb {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 0.4rem 0;
+    padding: 0.5rem 0;
+    padding-bottom: env(safe-area-inset-bottom, 0.5rem);
     z-index: 100;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(var(--blur-val));
+    -webkit-backdrop-filter: blur(var(--blur-val));
     transition: var(--transition);
 }
 
@@ -1059,9 +1071,17 @@ input[type="range"]::-moz-range-thumb {
     animation: toast-in 0.25s ease forwards;
 }
 
-.toast.success { background: #2e7d32; }
-.toast.error   { background: #c62828; }
-.toast.info    { background: #1565c0; }
+.toast.success {
+    background: #2e7d32;
+}
+
+.toast.error {
+    background: #c62828;
+}
+
+.toast.info {
+    background: #1565c0;
+}
 
 @keyframes toast-in {
     to {
@@ -1108,40 +1128,54 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 50%;
 }
 
-.switch input:checked + .slider {
-    background-color: #34c759; /* iOS green */
+.switch input:checked+.slider {
+    background-color: #34c759;
+    /* iOS green */
 }
 
-.switch input:checked + .slider:before {
+.switch input:checked+.slider:before {
     transform: translateX(24px);
 }
+
 .setup-done {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  color: #fff;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s ease;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    color: #fff;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
 }
 
 .setup-done .check {
-  font-size: 64px;
-  color: #4CAF50;
-  animation: pop 0.4s ease;
+    font-size: 64px;
+    color: #4CAF50;
+    animation: pop 0.4s ease;
 }
 
 @keyframes pop {
-  from { transform: scale(0.5); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0 }
-  to   { opacity: 1 }
+    from {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
 }
 
 /* =========================
@@ -1149,77 +1183,78 @@ input[type="range"]::-moz-range-thumb {
 ========================= */
 
 .setup-card {
-  max-width: 420px;
-  margin: 40px auto;
-  animation: fadeInUp 0.4s ease;
+    max-width: 420px;
+    margin: 40px auto;
+    animation: fadeInUp 0.4s ease;
 }
 
 .setup-card .card-header h2 {
-  margin-bottom: 6px;
+    margin-bottom: 6px;
 }
 
 .card-subtitle {
-  font-size: 13px;
-  opacity: 0.7;
+    font-size: 13px;
+    opacity: 0.7;
 }
 
 .wifi-list {
-  margin-top: 16px;
+    margin-top: 16px;
 }
 
 .wifi-item {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: background 0.2s;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 .wifi-item:hover {
-  background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .wifi-name {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 .wifi-secure {
-  font-size: 12px;
-  opacity: 0.6;
+    font-size: 12px;
+    opacity: 0.6;
 }
 
 .divider {
-  height: 1px;
-  background: rgba(255,255,255,0.08);
-  margin: 20px 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 20px 0;
 }
 
 /* Ghost Button */
 .ghost-btn {
-  background: transparent;
-  border: 1px dashed rgba(255,255,255,0.3);
-  color: #aaa;
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    color: #aaa;
 }
 
 .ghost-btn:hover {
-  border-color: rgba(255,255,255,0.6);
-  color: #fff;
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #fff;
 }
 
 /* Simple animation */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- YENİ EKLENEN STİLLER: Yükleme Butonu ve Modal --- */
@@ -1293,13 +1328,17 @@ input[type="range"]::-moz-range-thumb {
 
 /* --- 1. WIFI LISTESİ (SCROLL VE GÖRÜNÜM) --- */
 #wifiList {
-    max-height: 220px;       /* Listenin boyu sabit kalsın */
-    overflow-y: auto;        /* İçerik taşarsa kaydırma çubuğu çıksın */
-    overflow-x: hidden;      /* Yanlara taşmayı engelle */
-    background: rgba(0, 0, 0, 0.2); 
+    max-height: 220px;
+    /* Listenin boyu sabit kalsın */
+    overflow-y: auto;
+    /* İçerik taşarsa kaydırma çubuğu çıksın */
+    overflow-x: hidden;
+    /* Yanlara taşmayı engelle */
+    background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    margin-bottom: 20px;     /* Alttaki butonlarla mesafe */
+    margin-bottom: 20px;
+    /* Alttaki butonlarla mesafe */
     padding: 5px;
 
     /* Kaydırma Çubuğu Tasarımı (Chrome/Safari) */
@@ -1310,6 +1349,7 @@ input[type="range"]::-moz-range-thumb {
 #wifiList::-webkit-scrollbar {
     width: 6px;
 }
+
 #wifiList::-webkit-scrollbar-thumb {
     background-color: var(--accent-color, #fdcb6e);
     border-radius: 10px;
@@ -1318,7 +1358,8 @@ input[type="range"]::-moz-range-thumb {
 /* Liste Elemanları */
 .wifi-item {
     display: flex;
-    justify-content: space-between; /* İsim solda, ikon sağda */
+    justify-content: space-between;
+    /* İsim solda, ikon sağda */
     align-items: center;
     padding: 12px 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -1344,43 +1385,50 @@ input[type="range"]::-moz-range-thumb {
 .wifi-meta {
     display: flex;
     align-items: center;
-    gap: 8px; 
+    gap: 8px;
 }
 
 /* Sinyal İkonu (SVG) Rengi ve Boyutu */
 .signal-icon {
     width: 20px;
     height: 20px;
-    fill: currentColor; /* Metin rengiyle aynı olsun */
+    fill: currentColor;
+    /* Metin rengiyle aynı olsun */
 }
 
 
 /* --- 2. WIFI MODAL (ŞİFRE PENCERESİ - EN ÖNEMLİ KISIM) --- */
 #wifiModal {
-    display: none;             /* Varsayılan gizli */
-    position: fixed;           /* Ekrana sabitle */
-    z-index: 10000;            /* LİSTENİN ÖNÜNE GEÇMESİ İÇİN ÇOK YÜKSEK SAYI */
+    display: none;
+    /* Varsayılan gizli */
+    position: fixed;
+    /* Ekrana sabitle */
+    z-index: 10000;
+    /* LİSTENİN ÖNÜNE GEÇMESİ İÇİN ÇOK YÜKSEK SAYI */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: rgba(0,0,0,0.85); /* Arka planı iyice karart */
-    backdrop-filter: blur(4px); /* Arka planı buzla */
+    background-color: rgba(0, 0, 0, 0.85);
+    /* Arka planı iyice karart */
+    backdrop-filter: blur(4px);
+    /* Arka planı buzla */
     justify-content: center;
     align-items: center;
 }
 
 .modal-content {
-    background-color: #2d3436; 
+    background-color: #2d3436;
     color: #fff;
-    margin: 15% auto; /* Mobilde ortalamak için */
+    margin: 15% auto;
+    /* Mobilde ortalamak için */
     padding: 25px;
     border: 1px solid #555;
     width: 85%;
-    max-width: 320px; 
+    max-width: 320px;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7); 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     text-align: center;
     position: relative;
 }
@@ -1400,7 +1448,8 @@ input[type="range"]::-moz-range-thumb {
     background: #111;
     color: #fff;
     font-size: 16px;
-    box-sizing: border-box; /* Padding taşmasın */
+    box-sizing: border-box;
+    /* Padding taşmasın */
 }
 
 .modal-content input:focus {
@@ -1426,7 +1475,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .btn-connect {
-    background-color: #00b894; /* Yeşil */
+    background-color: #00b894;
+    /* Yeşil */
     color: white;
     border: none;
     padding: 10px;
@@ -1439,12 +1489,15 @@ input[type="range"]::-moz-range-thumb {
 /* 2. SORUN ÇÖZÜMÜ: Setup Modunda Menüyü Kilitleme */
 /* Eğer body etiketinde 'setup-active' sınıfı varsa navigasyonu gizle */
 body.setup-active nav {
-    display: none !important; /* Alt menüyü tamamen yok et */
+    display: none !important;
+    /* Alt menüyü tamamen yok et */
 }
 
 body.setup-active .container {
-    padding-bottom: 0; /* Alt boşluğu sıfırla */
-    height: 100vh;     /* Tam ekran yap */
+    padding-bottom: 0;
+    /* Alt boşluğu sıfırla */
+    height: 100vh;
+    /* Tam ekran yap */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1465,29 +1518,39 @@ body.setup-active section#setup {
 
 /* Modalın Kendisi (Arka Plan) */
 #wifiModal {
-    display: none;             /* Varsayılan gizli */
-    position: fixed;           /* Ekrana sabitle */
-    z-index: 99999;            /* EN ÖNEMLİ KISIM: Diğer her şeyin önüne al */
+    display: none;
+    /* Varsayılan gizli */
+    position: fixed;
+    /* Ekrana sabitle */
+    z-index: 99999;
+    /* EN ÖNEMLİ KISIM: Diğer her şeyin önüne al */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;            /* İçerik taşarsa kaydır */
-    background-color: rgba(0,0,0,0.8); /* Arka planı karart */
-    backdrop-filter: blur(5px); /* Arka planı hafif buzla (Modern görünüm) */
+    overflow: auto;
+    /* İçerik taşarsa kaydır */
+    background-color: rgba(0, 0, 0, 0.8);
+    /* Arka planı karart */
+    backdrop-filter: blur(5px);
+    /* Arka planı hafif buzla (Modern görünüm) */
 }
 
 /* Modal İçeriği (Beyaz Kutu) */
 .modal-content {
-    background-color: #2d3436; /* Koyu tema uyumlu renk (veya var(--card-bg)) */
+    background-color: #2d3436;
+    /* Koyu tema uyumlu renk (veya var(--card-bg)) */
     color: #fff;
-    margin: 15% auto;          /* Üstten %15 boşluk ve ortala */
+    margin: 15% auto;
+    /* Üstten %15 boşluk ve ortala */
     padding: 20px;
     border: 1px solid #444;
     width: 80%;
-    max-width: 350px;          /* Çok geniş olmasın */
+    max-width: 350px;
+    /* Çok geniş olmasın */
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5); /* Gölge ver ki önde dursun */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    /* Gölge ver ki önde dursun */
     position: relative;
     text-align: center;
 }
@@ -1531,5 +1594,3 @@ body.setup-active section#setup {
     cursor: pointer;
     flex: 1;
 }
-
-
