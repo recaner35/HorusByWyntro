@@ -65,7 +65,7 @@ const char *SETUP_AP_SSID = "Horus";
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-#define FIRMWARE_VERSION "1.0.336"
+#define FIRMWARE_VERSION "1.0.334"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -490,14 +490,28 @@ void handlePhysicalControl() {
   }
 }
 
+void logToWs(const char *tag, const char *msg) {
+  String json = "{\"type\":\"log\",\"tag\":\"" + String(tag) + "\",\"msg\":\"" +
+                String(msg) + "\"}";
+  ws.textAll(json);
+}
+
 void logSys(const char *msg) {
   Serial.print(F("[SYSTEM] "));
   Serial.println(msg);
+  logToWs("SYSTEM", msg);
 }
 
 void logMotor(const char *msg) {
   Serial.print(F("[MOTOR] "));
   Serial.println(msg);
+  logToWs("MOTOR", msg);
+}
+
+void logWifi(const char *msg) {
+  Serial.print(F("[WIFI] "));
+  Serial.println(msg);
+  logToWs("WIFI", msg);
 }
 
 void loadConfig() {
@@ -978,16 +992,17 @@ void initWiFi() {
 
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
-    Serial.print(F("[WIFI] mDNS Başlatıldı: http://"));
-    Serial.print(apName);
-    Serial.println(F(".local"));
+    char buf[128];
+    snprintf(buf, sizeof(buf), "mDNS: http://%s.local", apName.c_str());
+    logWifi(buf);
     MDNS.addService("http", "tcp", 80);
   }
 
-  Serial.print(F("[WIFI] AP Başlatıldı: "));
-  Serial.println(apName);
-  Serial.print(F("[WIFI] MAC Adresi: "));
-  Serial.println(myMacAddress);
+  char buf[128];
+  snprintf(buf, sizeof(buf), "AP: %s", apName.c_str());
+  logWifi(buf);
+  logWifi(myMacAddress.c_str());
+
   Serial.print(F("[WIFI] AP IP: "));
   Serial.println(WiFi.softAPIP());
 }
