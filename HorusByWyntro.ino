@@ -2,7 +2,7 @@
  * PROJE ADI: HORUS BY WYNTRO
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
- * TASARIM: Caner Kocacık
+ * TASARIM: Caner Kocacık - 2026
  * DÜZELTME: LittleFS Entegrasyonu ve Version Log
  */
 
