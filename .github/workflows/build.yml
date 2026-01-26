@@ -163,7 +163,7 @@ jobs:
     - name: Build LittleFS Image
       run: |
         echo "Yerel mklittlefs araci araniyor..."
-        MKLITTLEFS_BIN=$(find /home/runner/.arduino15 -name mklittlefs -type f | head -n 1)
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1114112 ./build/spiffs.bin
         
         if [ -z "$MKLITTLEFS_BIN" ]; then
             echo "HATA: mklittlefs yerel dosyalarda bulunamadi!"
@@ -202,7 +202,7 @@ jobs:
           0x8000 "$PARTITIONS_BIN" \
           0xe000 "$BOOT_APP0_BIN" \
           0x10000 "$FIRMWARE_BIN" \
-          0x2E0000 "$SPIFFS_BIN"
+          0x2F0000 "$SPIFFS_BIN"
 
         echo "Factory bin hazır"
 
@@ -300,8 +300,8 @@ jobs:
                       { "path": "bootloader.bin", "offset": 4096 },
                       { "path": "partitions.bin", "offset": 32768 },
                       { "path": "boot_app0.bin", "offset": 57344 },
-                      { "path": "factory.bin", "offset": 65536 },
-                      { "path": "spiffs.bin", "offset": 3014656 }
+                      { "path": "firmware.bin", "offset": 65536 },
+                      { "path": "spiffs.bin", "offset": 3080192 }
                     ]
                   }
                 ]
