@@ -163,7 +163,8 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 196608 ./build/spiffs.bin
+        # BOYUT GUNCELLENDI: 0x120000 = 1179648
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1179648 ./build/spiffs.bin
 
     - name: Generate Factory Bin
       run: |
@@ -179,6 +180,7 @@ jobs:
         echo "Partitions: $PARTITIONS_BIN"
         echo "Bootloader: $BOOTLOADER_BIN"
 
+        # OFFSET GUNCELLENDI: 0x2E0000
         esptool.py --chip esp32 merge_bin \
           -o ./build/HorusByWyntro-factory.bin \
           --flash_mode dio \
@@ -188,7 +190,7 @@ jobs:
           0x8000 "$PARTITIONS_BIN" \
           0xe000 "$BOOT_APP0_BIN" \
           0x10000 "$FIRMWARE_BIN" \
-          0x3D0000 "$SPIFFS_BIN"
+          0x2E0000 "$SPIFFS_BIN"
 
         echo "Factory bin hazır"
 
@@ -287,7 +289,7 @@ jobs:
                       { "path": "partitions.bin", "offset": 32768 },
                       { "path": "boot_app0.bin", "offset": 57344 },
                       { "path": "factory.bin", "offset": 65536 },
-                      { "path": "spiffs.bin", "offset": 3997696 }
+                      { "path": "spiffs.bin", "offset": 3014656 }
                     ]
                   }
                 ]
