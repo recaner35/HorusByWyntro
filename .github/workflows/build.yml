@@ -116,8 +116,20 @@ jobs:
         arduino-cli lib install "AccelStepper"
         arduino-cli lib install "ArduinoJson"
         arduino-cli lib install "WiFiManager"
-        git clone https://github.com/me-no-dev/AsyncTCP.git ~/Arduino/libraries/AsyncTCP
-        git clone https://github.com/me-no-dev/ESPAsyncWebServer.git ~/Arduino/libraries/ESPAsyncWebServer
+        
+        if [ ! -d "$HOME/Arduino/libraries/AsyncTCP" ]; then
+          echo "AsyncTCP indiriliyor..."
+          git clone https://github.com/me-no-dev/AsyncTCP.git ~/Arduino/libraries/AsyncTCP
+        else
+          echo "AsyncTCP zaten yüklü (Cached)."
+        fi
+
+        if [ ! -d "$HOME/Arduino/libraries/ESPAsyncWebServer" ]; then
+          echo "ESPAsyncWebServer indiriliyor..."
+          git clone https://github.com/me-no-dev/ESPAsyncWebServer.git ~/Arduino/libraries/ESPAsyncWebServer
+        else
+          echo "ESPAsyncWebServer zaten yüklü (Cached)."
+        fi
 
     - name: Prepare custom partitions
       run: |
