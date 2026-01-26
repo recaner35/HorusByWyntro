@@ -1,3 +1,4 @@
+
 name: Build Horus Firmware
 
 on:
@@ -163,7 +164,7 @@ jobs:
     - name: Build LittleFS Image
       run: |
         echo "Yerel mklittlefs araci araniyor..."
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1114112 ./build/spiffs.bin
+        MKLITTLEFS_BIN=$(find /home/runner/.arduino15 -name mklittlefs -type f | head -n 1)
         
         if [ -z "$MKLITTLEFS_BIN" ]; then
             echo "HATA: mklittlefs yerel dosyalarda bulunamadi!"
@@ -175,8 +176,8 @@ jobs:
         
         echo "Building LittleFS from $DATA_PATH"
         
-        # BOYUT GUNCELLENDI: 0x120000 = 1179648
-        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1179648 ./build/spiffs.bin
+        # BOYUT: 0x110000 = 1114112 (NO-FACTORY LAYOUT)
+        "$MKLITTLEFS_BIN" -c "$DATA_PATH" -p 256 -b 4096 -s 1114112 ./build/spiffs.bin
 
     - name: Generate Factory Bin
       run: |
@@ -192,7 +193,7 @@ jobs:
         echo "Partitions: $PARTITIONS_BIN"
         echo "Bootloader: $BOOTLOADER_BIN"
 
-        # OFFSET GUNCELLENDI: 0x2E0000
+        # OFFSET GUNCELLENDI: 0x2F0000 (NO-FACTORY LAYOUT)
         esptool.py --chip esp32 merge_bin \
           -o ./build/HorusByWyntro-factory.bin \
           --flash_mode dio \
