@@ -6,6 +6,7 @@
  * DÜZELTME: LittleFS Entegrasyonu ve Version Log
  */
 
+// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -347,10 +348,10 @@ void setup() {
 
   // 3. DUZELTME: LittleFS Başlatılıyor (SPIFFS yerine)
   if (!LittleFS.begin(true)) {
-    Serial.println("LittleFS Mount Failed");
+    Serial.println(F("LittleFS Mount Failed"));
     return;
   }
-  Serial.println("LittleFS OK");
+  Serial.println(F("LittleFS OK"));
 
   // Config ve Suffix Yükle
   loadConfig();
@@ -385,7 +386,7 @@ void setup() {
   initWebServer();
 
   server.begin();
-  Serial.println(">>> SERVER BEGIN CAGIRILDI");
+  logSys("Horus ready and initialized.");
 }
 
 // ===============================
@@ -415,6 +416,14 @@ void loop() {
 
   // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
   delay(2);
+
+  // Heap Monitor (Debug Only - Periodic)
+  static unsigned long lastHeapLog = 0;
+  if (millis() - lastHeapLog > 30000) {
+    lastHeapLog = millis();
+    Serial.print(F("[DEBUG] Free Heap: "));
+    Serial.println(ESP.getFreeHeap());
+  }
 }
 
 // ===============================
@@ -479,6 +488,16 @@ void handlePhysicalControl() {
     ws.textAll(json);
     broadcastStatus();
   }
+}
+
+void logSys(const char *msg) {
+  Serial.print(F("[SYSTEM] "));
+  Serial.println(msg);
+}
+
+void logMotor(const char *msg) {
+  Serial.print(F("[MOTOR] "));
+  Serial.println(msg);
 }
 
 void loadConfig() {
@@ -959,13 +978,17 @@ void initWiFi() {
 
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
-    Serial.println("mDNS Başlatıldı: http://" + apName + ".local");
+    Serial.print(F("[WIFI] mDNS Başlatıldı: http://"));
+    Serial.print(apName);
+    Serial.println(F(".local"));
     MDNS.addService("http", "tcp", 80);
   }
 
-  Serial.println("WiFi AP Başlatıldı: " + apName);
-  Serial.println("MAC Adresi: " + myMacAddress);
-  Serial.print("AP IP Adresi: ");
+  Serial.print(F("[WIFI] AP Başlatıldı: "));
+  Serial.println(apName);
+  Serial.print(F("[WIFI] MAC Adresi: "));
+  Serial.println(myMacAddress);
+  Serial.print(F("[WIFI] AP IP: "));
   Serial.println(WiFi.softAPIP());
 }
 
@@ -1116,6 +1139,12 @@ void initWebServer() {
   server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "application/json",
                   String("{\"version\":\"") + FIRMWARE_VERSION + "\"}");
+  });
+
+  server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"status\":\"rebooting\"}");
+    delay(500);
+    ESP.restart();
   });
 
   server.begin();
