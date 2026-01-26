@@ -1,7 +1,12 @@
 {
-  "name": "Horus by Wyntro",
   "short_name": "Horus",
-  "id": "/?v=1.0.2",
+  "name": "Horus by Wyntro",
+  "description": "Luxury Watch Winder Controller",
+  "categories": [
+    "utilities",
+    "lifestyle"
+  ],
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0d12",
@@ -28,4 +33,3 @@
     }
   ]
 }
-
