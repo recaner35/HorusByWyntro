@@ -6,7 +6,7 @@
  * DÜZELTME: OTA güncelleme iyileştirmesi ve temizlik
  */
 
-// 1. OTA güncelleme iyileştirmesi ve temizlik
+// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.345"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -103,6 +103,8 @@ String deviceSuffix = "";
 
 unsigned long lastHourCheck = 0;
 unsigned long hourDuration = 3600000;
+unsigned long restartTimer = 0; // Güvenli restart için zamanlayıcı
+bool shouldRestartFlag = false; // Restart bayrağı
 
 struct PeerDevice {
   String mac;
@@ -450,16 +452,15 @@ void loop() {
   handlePhysicalControl();
   stepper.run();
 
-  // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
-  delay(2);
-
-  // Heap Monitor (Debug Only - Periodic)
-  static unsigned long lastHeapLog = 0;
-  if (millis() - lastHeapLog > 30000) {
-    lastHeapLog = millis();
-    Serial.print(F("[DEBUG] Free Heap: "));
-    Serial.println(ESP.getFreeHeap());
+  // Güvenli Restart Kontrolü
+  if (shouldRestartFlag && millis() > restartTimer) {
+    saveConfig();
+    delay(100);
+    ESP.restart();
   }
+
+  // ÖNEMLİ: Watchdog beslemesi için minik bir gecikme
+  delay(1);
 }
 
 // ===============================
@@ -1108,8 +1109,9 @@ void initWebServer() {
         prefs.end();
 
         request->send(200, "application/json", "{\"status\":\"saved\"}");
-        delay(1000); // Frontend'in yanıtı işlemesi için süre tanı
-        ESP.restart();
+        restartTimer =
+            millis() + 2000; // 2 saniye sonra restart (tarayıcıya zaman tanı)
+        shouldRestartFlag = true;
       });
 
   /* -------------------- CAPTIVE PORTAL -------------------- */
