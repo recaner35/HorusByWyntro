@@ -679,13 +679,13 @@ function manualRedirect() {
 
 // ================= OTA LOGIC =================
 function triggerAutoUpdate() {
-    showToast("Güncelleme kontrol ediliyor...", "info");
+    showToast(getTrans('checking_updates') || "Güncelleme kontrol ediliyor...", "info");
 
     fetch(API_OTA_CHECK_URL)
         .then(response => response.json())
         .then(data => {
             if (data.update_available) {
-                if (confirm(`Yeni sürüm bulundu: ${data.new_version}\nGüncellemek istiyor musunuz?`)) {
+                if (confirm(`Yeni sürüm bulundu: v${data.new_version}\nGüncellemek istiyor musunuz?`)) {
                     startOtaProcess();
                 }
             } else if (data.error) {
@@ -702,8 +702,14 @@ function startOtaProcess() {
     if (overlay) overlay.classList.remove("hidden");
 
     fetch(API_OTA_AUTO_URL, { method: 'POST' })
-        .then(() => handlePostUpdateUI())
-        .catch(() => handlePostUpdateUI()); // Hata olsa bile cihaz restart olmuş olabilir
+        .then(() => {
+            // Arka planda polling başlasın
+            handlePostUpdateUI();
+        })
+        .catch(() => {
+            // Sunucu hemen kapanmış olabilir, yine de polling başlasın
+            handlePostUpdateUI();
+        });
 }
 
 function handlePostUpdateUI() {
