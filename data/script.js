@@ -591,10 +591,6 @@ function connectWifi() {
     var ssid = document.getElementById('modalSSID').innerText;
     var pass = document.getElementById('wifiPass').value;
 
-    var formData = new FormData();
-    formData.append('ssid', ssid);
-    formData.append('pass', pass);
-
     showToast(getTrans('connection_started') || "Bağlantı isteği gönderiliyor...", "info");
 
     fetch(API_SAVE_WIFI_URL, {
@@ -608,31 +604,7 @@ function connectWifi() {
                 showToast(getTrans('kaydedildi') || "Bilgiler kaydedildi, Horus bağlanıyor...", "success");
 
                 if (isSetupMode) {
-                    var setupCard = document.getElementById("setupCard");
-                    var setupDone = document.getElementById("setupDone");
-                    if (setupCard) setupCard.classList.add("hidden");
-                    if (setupDone) setupDone.classList.remove("hidden");
-
-                    setTimeout(() => {
-                        // Yeni mDNS adresini hesapla
-                        let hostname = document.getElementById('deviceName') ? document.getElementById('deviceName').value : "Horus";
-                        let slug = hostname.toLowerCase()
-                            .replace(/ş/g, 's').replace(/Ş/g, 's')
-                            .replace(/ı/g, 'i').replace(/İ/g, 'i')
-                            .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
-                            .replace(/ü/g, 'u').replace(/Ü/g, 'u')
-                            .replace(/ö/g, 'o').replace(/Ö/g, 'o')
-                            .replace(/ç/g, 'c').replace(/Ç/g, 'c')
-                            .replace(/[^a-z0-9]/g, '-')
-                            .replace(/--+/g, '-')
-                            .replace(/^-|-$/g, '');
-
-                        if (!slug) slug = "horus";
-                        let newUrl = "http://" + slug + "-" + deviceSuffix + ".local";
-
-                        showToast("Yönlendiriliyor: " + newUrl, "info");
-                        window.location.href = newUrl;
-                    }, 8000);
+                    startRedirectSequence();
                 } else {
                     setTimeout(() => {
                         location.reload();
@@ -643,6 +615,59 @@ function connectWifi() {
             }
         })
         .catch(() => showToast("Bağlantı isteği başarısız", "error"));
+}
+
+let redirectTargetUrl = "";
+
+function startRedirectSequence() {
+    const setupCard = document.getElementById("setupCard");
+    const setupDone = document.getElementById("setupDone");
+    const counterEl = document.getElementById("redirectCounter");
+    const urlTextEl = document.getElementById("mdnsUrlText");
+
+    if (setupCard) setupCard.classList.add("hidden");
+    if (setupDone) setupDone.classList.remove("hidden");
+
+    // mDNS URL'ini hesapla
+    let hostnameValue = "Horus";
+    const nameInput = document.getElementById('deviceName');
+    if (nameInput && nameInput.value.trim() !== "") {
+        hostnameValue = nameInput.value;
+    }
+
+    let slug = hostnameValue.toLowerCase()
+        .replace(/ş/g, 's').replace(/Ş/g, 's')
+        .replace(/ı/g, 'i').replace(/İ/g, 'i')
+        .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
+        .replace(/ü/g, 'u').replace(/Ü/g, 'u')
+        .replace(/ö/g, 'o').replace(/Ö/g, 'o')
+        .replace(/ç/g, 'c').replace(/Ç/g, 'c')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/--+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    if (!slug) slug = "horus";
+    
+    // Eğer setup modundaysak suffix her zaman eklenir
+    redirectTargetUrl = "http://" + slug + "-" + deviceSuffix + ".local";
+    if (urlTextEl) urlTextEl.innerText = redirectTargetUrl.replace("http://", "");
+
+    let count = 10;
+    const timer = setInterval(() => {
+        count--;
+        if (counterEl) counterEl.innerText = count;
+
+        if (count <= 0) {
+            clearInterval(timer);
+            window.location.href = redirectTargetUrl;
+        }
+    }, 1000);
+}
+
+function manualRedirect() {
+    if (redirectTargetUrl) {
+        window.location.href = redirectTargetUrl;
+    }
 }
 
 // ================= OTA LOGIC =================
