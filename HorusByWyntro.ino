@@ -3,10 +3,10 @@
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
  * TASARIM: Caner Kocacık
- * DÜZELTME: OTA güncelleme iyileştirmesi ve temizlik
+ * DÜZELTME: Kurulum iyileştirmesi
  */
 
-// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
+// 1. Kurulum Modunda iyileştirmeler
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.342"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1102,8 +1102,8 @@ void initWebServer() {
         prefs.putString("pass", doc["pass"].as<String>());
         prefs.end();
 
-        request->send(200, "text/plain", "OK");
-        delay(500);
+        request->send(200, "application/json", "{\"status\":\"saved\"}");
+        delay(1000); // Frontend'in yanıtı işlemesi için süre tanı
         ESP.restart();
       });
 
