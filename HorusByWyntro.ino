@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.358"
+#define FIRMWARE_VERSION "1.0.347"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -993,6 +993,8 @@ void initWiFi() {
     apName = apSlug + "-" + deviceSuffix;
   }
 
+  IPAddress apIP(192, 168, 4, 1);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apName.c_str(), NULL);
   WiFi.setHostname(apName.c_str());
 
@@ -1011,13 +1013,22 @@ void initWiFi() {
 // ===============================
 void initWebServer() {
 
-  // 5. DUZELTME: LittleFS olarak değiştirildi ve serveStatic tek başına
-  // yeterli. Kök dizin (/) isteği için Host kontrolü ekliyoruz.
+  // Helping Lambda: Check if the request is for OUR host (IP or mDNS)
+  auto isOurHost = [](String host) {
+    if (host == "192.168.4.1" || host == "horus.local")
+      return true;
+    if (host.startsWith("horus-"))
+      return true;
+    if (host.startsWith("192.168.4.1:"))
+      return true; // Handle ports
+    return false;
+  };
+
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(
         302, "text/html",
         "<html><head><meta http-equiv=\"refresh\" "
-        "content=\"0;url=http://192.168.4.1/\"/></head>"
+        "content=\"1;url=http://192.168.4.1/\"/></head>"
         "<body><a href=\"http://192.168.4.1/\">Redirecting to "
         "Horus...</a></body></html>");
     response->addHeader("Location", "http://192.168.4.1/");
@@ -1028,10 +1039,8 @@ void initWebServer() {
   };
 
   server.on("/", HTTP_GET,
-            [sendPortalRedirect](AsyncWebServerRequest *request) {
-              String host = request->host();
-              if (host != "192.168.4.1" && host != "horus.local" &&
-                  host.indexOf("horus-") < 0) {
+            [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
+              if (!isOurHost(request->host())) {
                 sendPortalRedirect(request);
               } else {
                 request->send(LittleFS, "/index.html", "text/html");
@@ -1102,7 +1111,13 @@ void initWebServer() {
 
   /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
    * -------------------- */
-  // Explicit Probes
+  // Samsung Specific Probes
+  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
+  server.on("/ip_address.txt", HTTP_ANY, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "192.168.4.1");
+  });
+
+  // Explicit Probes (Android, Apple, Microsoft)
   server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
   server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
   server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
@@ -1112,19 +1127,18 @@ void initWebServer() {
   server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
   server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
 
-  server.onNotFound([sendPortalRedirect](AsyncWebServerRequest *request) {
-    if (setupMode || captiveMode) {
-      String host = request->host();
-      if (host != "192.168.4.1" && host != "horus.local" &&
-          host.indexOf("horus-") < 0) {
-        sendPortalRedirect(request);
-      } else {
-        request->send(404, "text/plain", "Not Found");
-      }
-    } else {
-      request->send(404, "text/plain", "Not Found");
-    }
-  });
+  server.onNotFound(
+      [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
+        if (setupMode || captiveMode) {
+          if (!isOurHost(request->host())) {
+            sendPortalRedirect(request);
+          } else {
+            request->send(404, "text/plain", "Not Found");
+          }
+        } else {
+          request->send(404, "text/plain", "Not Found");
+        }
+      });
 
   /* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
 
