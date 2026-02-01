@@ -23,9 +23,7 @@
 #include <esp_netif.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
-#include <lwip/apps/dhcpserver.h>
 #include <vector>
-
 
 // ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
@@ -70,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.354"
+#define FIRMWARE_VERSION "1.0.345"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -999,15 +997,21 @@ void initWiFi() {
   WiFi.setHostname(apName.c_str());
 
   // DHCP Option 114 (Captive Portal API URL) - Android 11+ Fix
+  // Core 3.x (ESP-IDF 5.1+) uyumlu yöntem
   esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
   if (ap_netif) {
+    esp_netif_dhcps_stop(
+        ap_netif); // Opsiyonu set etmeden önce durdurmak gerekebilir
+
     const char *cp_url = "http://192.168.4.1/api/captive-portal";
-    size_t url_len = strlen(cp_url);
-    uint8_t opt_data[url_len + 2];
-    opt_data[0] = url_len;
-    memcpy(&opt_data[1], cp_url, url_len);
-    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET, 114, opt_data,
-                           url_len + 1);
+    int url_len = strlen(cp_url);
+
+    // RFC 8910: Option 114 verisi
+    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
+                           (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
+                           url_len);
+
+    esp_netif_dhcps_start(ap_netif);
   }
 
   // mDNS Başlatma
