@@ -19,7 +19,12 @@ const translations = {
         "confirm_delete": "Cihazı silmek istediğinize emin misiniz?",
         "no_networks": "Ağ bulunamadı",
         "confirm_update": "Yazılım güncellensin mi?",
-        "saved": "Kaydedildi"
+        "saved": "Kaydedildi",
+        "setup_complete": "Kurulum Tamamlandı",
+        "horus_ready": "Horus kullanıma hazır.",
+        "redirecting": "saniye içinde yönlendiriliyorsunuz...",
+        "go_to_horus": "Horus'a Git",
+        "manual_url_tip": "Otomatik açılmazsa şu adresi deneyin:"
     },
     "en": {
         "status": "STATUS", "stopped": "STOPPED", "running": "RUNNING", "paused": "PAUSED", "ready": "Ready",
@@ -39,7 +44,12 @@ const translations = {
         "confirm_delete": "Are you sure you want to delete this device?",
         "no_networks": "No networks found",
         "confirm_update": "Update firmware?",
-        "saved": "Saved"
+        "saved": "Saved",
+        "setup_complete": "Setup Complete",
+        "horus_ready": "Horus is ready to use.",
+        "redirecting": "seconds remaining before redirect...",
+        "go_to_horus": "Go to Horus",
+        "manual_url_tip": "If not redirected, try this URL:"
     },
     "de": {
         "status": "STATUS", "stopped": "GESTOPPT", "running": "LÄUFT", "paused": "PAUSIERT", "ready": "Bereit",
