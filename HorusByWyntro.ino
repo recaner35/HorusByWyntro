@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.351"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1108,10 +1108,15 @@ void initWebServer() {
   server.onNotFound([redirectCP](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
       String host = request->host();
-      // Eğer istek 192.168.4.1 veya horus.local değilse, kesinlikle bir CP
-      // sorgusudur.
-      if (host != "192.168.4.1" && host != "horus.local") {
-        redirectCP(request);
+      // Eğer kendi IP'miz veya local adreste değilsek (Samsung test sorguları)
+      if (host != "192.168.4.1" && host != "horus.local" &&
+          host != "horus-f380.local") {
+        // RADIKAL: Her türlü bilinmeyen hostu 302 ile ana sayfaya yönlendir
+        AsyncWebServerResponse *response =
+            request->beginResponse(302, "text/plain", "");
+        response->addHeader("Location", "http://192.168.4.1/");
+        response->addHeader("Cache-Control", "no-cache");
+        request->send(response);
       } else {
         // Dosya bulunamadıysa (kendi hostumuzda)
         request->send(404, "text/plain", "Not Found");
@@ -1154,6 +1159,32 @@ void initWebServer() {
     request->send(200, "application/json", "{\"status\":\"reset\"}");
   });
 
+  server.on("/api/ota-check", HTTP_GET, [](AsyncWebServerRequest *request) {
+    NetworkClientSecure client;
+    client.setInsecure();
+    HTTPClient http;
+    http.begin(client, GITHUB_VERSION_URL);
+    int httpCode = http.GET();
+
+    StaticJsonDocument<256> resDoc;
+    if (httpCode == 200) {
+      String payload = http.getString();
+      StaticJsonDocument<512> githubDoc;
+      deserializeJson(githubDoc, payload);
+      String newV = githubDoc["version"] | FIRMWARE_VERSION;
+      resDoc["update_available"] = (newV != String(FIRMWARE_VERSION));
+      resDoc["new_version"] = newV;
+      resDoc["current_version"] = FIRMWARE_VERSION;
+    } else {
+      resDoc["error"] = "Check failed: " + String(httpCode);
+    }
+    http.end();
+
+    String out;
+    serializeJson(resDoc, out);
+    request->send(200, "application/json", out);
+  });
+
   server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
     shouldUpdate = true;
     otaStatus = "started";
@@ -1161,7 +1192,8 @@ void initWebServer() {
   });
 
   server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", "{\"status\":\"ok\"}");
+    request->send(200, "application/json",
+                  "{\"status\":\"" + otaStatus + "\"}");
   });
 
   server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
