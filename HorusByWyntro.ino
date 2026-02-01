@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.360"
+#define FIRMWARE_VERSION "1.0.348"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -994,14 +994,18 @@ void initWiFi() {
   }
 
   IPAddress apIP(192, 168, 4, 1);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  IPAddress subnet(255, 255, 255, 0);
+  WiFi.softAPConfig(apIP, apIP, subnet);
   WiFi.softAP(apName.c_str(), NULL);
   WiFi.setHostname(apName.c_str());
 
-  // RFC 8910: DHCP Option 114 (Captive Portal API) - Modern Android Fix
+  // RFC 8910: DHCP Option 114 (Captive Portal API) - The DEFINITIVE way for
+  // Android 11+
   esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
   if (ap_netif) {
     esp_netif_dhcps_stop(ap_netif);
+    // Android 11+, Option 114 verisinin başında uzunluk byte'ı beklemez, saf
+    // string bekler.
     const char *cp_url = "http://192.168.4.1/api/captive-portal";
     esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
                            (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
@@ -1024,48 +1028,50 @@ void initWiFi() {
 // ===============================
 void initWebServer() {
 
-  // Helping Lambda: Check if the request is for OUR host (IP or mDNS)
-  auto isOurHost = [](String host) {
+  // Check if the request is for US (IP or mDNS)
+  auto isOurLocalRequest = [](String host) {
     if (host == "192.168.4.1" || host == "horus.local")
       return true;
-    if (host.startsWith("horus-"))
-      return true;
-    if (host.startsWith("192.168.4.1:"))
-      return true;
+    if (host.indexOf("192.168.4.1:") >= 0)
+      return true; // Handling IP:80 etc.
+    if (host.indexOf("horus-") >= 0)
+      return true; // Handling horus-xxxx.local
     return false;
   };
 
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
-    // Android (especially Samsung) can be picky. 307 is often better for
-    // probes.
-    AsyncWebServerResponse *response =
-        request->beginResponse(307, "text/html",
-                               "<html><head><meta http-equiv=\"refresh\" "
-                               "content=\"0;url=http://192.168.4.1/\"/></head>"
-                               "<body>Redirecting...</body></html>");
+    // 302 Found is most compatible for initial capture.
+    AsyncWebServerResponse *response = request->beginResponse(
+        302, "text/html",
+        "<html><head><meta http-equiv=\"refresh\" "
+        "content=\"0;url=http://192.168.4.1/\"/></head>"
+        "<body>Redirecting to Horus Setup...</body></html>");
     response->addHeader("Location", "http://192.168.4.1/");
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
     response->addHeader("Expires", "-1");
-    response->addHeader("X-Captive-Portal", "true");
+    // VERY IMPORTANT: Force connection close to reset client's socket state
+    response->addHeader("Connection", "close");
     request->send(response);
   };
 
-  server.on(
-      "/api/captive-portal", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(
-            200, "application/json",
-            "{\"captive\":true,\"user-portal-url\":\"http://192.168.4.1/\"}");
-      });
-
-  server.on("/", HTTP_GET,
-            [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
-              if (!isOurHost(request->host())) {
-                sendPortalRedirect(request);
-              } else {
-                request->send(LittleFS, "/index.html", "text/html");
-              }
+  // RFC 8908 Uyumlu API endpoint
+  server.on("/api/captive-portal", HTTP_GET,
+            [](AsyncWebServerRequest *request) {
+              request->send(200, "application/json",
+                            "{\"captive\":true,\"user-portal-url\":\"http://"
+                            "192.168.4.1/\",\"can-extend-session\":true}");
             });
+
+  server.on(
+      "/", HTTP_GET,
+      [isOurLocalRequest, sendPortalRedirect](AsyncWebServerRequest *request) {
+        if (!isOurLocalRequest(request->host())) {
+          sendPortalRedirect(request);
+        } else {
+          request->send(LittleFS, "/index.html", "text/html");
+        }
+      });
 
   server.serveStatic("/", LittleFS, "/");
 
@@ -1131,23 +1137,30 @@ void initWebServer() {
 
   /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
    * -------------------- */
-  // Explicit Probes (Android, Apple, Microsoft)
-  server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
-  server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
-  server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
-  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
+  // Apple Captive Portal Probes
   server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
   server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
   server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
+
+  // Google / Android Probes
+  server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
+  server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
+  server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/connectivity-check", HTTP_ANY, sendPortalRedirect);
+  server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
+  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
+
+  // Windows / Microsoft Probes
   server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
   server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
+
+  // Samsung Special Probe
   server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
 
   server.onNotFound(
-      [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
+      [isOurLocalRequest, sendPortalRedirect](AsyncWebServerRequest *request) {
         if (setupMode || captiveMode) {
-          if (!isOurHost(request->host())) {
+          if (!isOurLocalRequest(request->host())) {
             sendPortalRedirect(request);
           } else {
             request->send(404, "text/plain", "Not Found");
