@@ -3,10 +3,9 @@
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
  * TASARIM: Caner Kocacık
- * DÜZELTME: LittleFS Entegrasyonu ve Version Log
+ * DÜZELTME: OTA güncelleme iyileştirmesi
  */
 
-// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
