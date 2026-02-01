@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.349"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1074,9 +1074,8 @@ void initWebServer() {
         shouldRestartFlag = true;
       });
 
-  /* -------------------- CAPTIVE PORTAL -------------------- */
-  // 6. DUZELTME: Buradaki SPIFFS yönlendirmesi silindi, serveStatic yeterlidir.
-
+  /* -------------------- CAPTIVE PORTAL (OPTIMIZED) -------------------- */
+  // Android / Samsung / Apple için kritik tetikleyici path'ler
   server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
     request->redirect("http://192.168.4.1/");
   });
@@ -1087,18 +1086,8 @@ void initWebServer() {
             [](AsyncWebServerRequest *request) {
               request->redirect("http://192.168.4.1/");
             });
-  server.on("/connectivitycheck.gstatic.com", HTTP_ANY,
-            [](AsyncWebServerRequest *request) {
-              request->redirect("http://192.168.4.1/");
-            });
-  server.on("/connectivitycheck.android.com", HTTP_ANY,
-            [](AsyncWebServerRequest *request) {
-              request->redirect("http://192.168.4.1/");
-            });
-  server.on("/clients3.google.com", HTTP_ANY,
-            [](AsyncWebServerRequest *request) {
-              request->redirect("http://192.168.4.1/");
-            });
+
+  // NCSI / Connectivity Check yanıtları (Microsoft/Android)
   server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Microsoft Connect Test");
   });
@@ -1108,7 +1097,15 @@ void initWebServer() {
 
   server.onNotFound([](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
-      request->redirect("http://192.168.4.1/");
+      String host = request->host();
+      // Eğer istek 192.168.4.1 veya horus.local dışında bir domain'e ise
+      // (connectivity check) anında ana sayfaya yönlendiriyoruz (302)
+      if (host != "192.168.4.1" && host != "horus.local") {
+        request->redirect("http://192.168.4.1/");
+      } else {
+        // Eğer kendi domainimizdeyse ama dosya yoksa 404
+        request->send(404, "text/plain", "Not Found");
+      }
     } else {
       request->send(404, "text/plain", "Not Found");
     }
