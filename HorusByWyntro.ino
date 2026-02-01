@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.352"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1010,9 +1010,25 @@ void initWiFi() {
 void initWebServer() {
 
   // 5. DUZELTME: LittleFS olarak değiştirildi ve serveStatic tek başına
-  // yeterli. Eski server.on("/", ...) satırı KALDIRILDI çünkü serveStatic ile
-  // çakışır.
-  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+  // yeterli. Kök dizin (/) isteği için Host kontrolü ekliyoruz.
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String host = request->host();
+    if (host != "192.168.4.1" && host != "horus.local" &&
+        host.indexOf("horus-") < 0) {
+      AsyncWebServerResponse *response = request->beginResponse(
+          302, "text/html",
+          "<html><head><meta http-equiv=\"refresh\" "
+          "content=\"0;url=http://192.168.4.1/\"/></head><body><a "
+          "href=\"http://192.168.4.1/\">Click here</a></body></html>");
+      response->addHeader("Location", "http://192.168.4.1/");
+      response->addHeader("Cache-Control", "no-cache");
+      request->send(response);
+    } else {
+      request->send(LittleFS, "/index.html", "text/html");
+    }
+  });
+
+  server.serveStatic("/", LittleFS, "/");
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -1076,49 +1092,32 @@ void initWebServer() {
 
   /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Samsung Fix)
    * -------------------- */
-  // Android/Samsung/Apple için en kararlı yönlendirme yöntemi: 302 Found!
+  // Apple/Android tetikleyicileri
   auto redirectCP = [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response =
-        request->beginResponse(302, "text/plain", "");
+    AsyncWebServerResponse *response = request->beginResponse(
+        302, "text/html",
+        "<html><head><meta http-equiv=\"refresh\" "
+        "content=\"0;url=http://192.168.4.1/\"/></head><body><a "
+        "href=\"http://192.168.4.1/\">Redirecting...</a></body></html>");
     response->addHeader("Location", "http://192.168.4.1/");
+    response->addHeader("Cache-Control", "no-cache");
     request->send(response);
   };
 
-  // Google/Android Connectivity Check
   server.on("/generate_204", HTTP_ANY, redirectCP);
   server.on("/gen_204", HTTP_ANY, redirectCP);
-  server.on("/blank.html", HTTP_ANY, redirectCP);
-
-  // Apple Captive Portal
   server.on("/hotspot-detect.html", HTTP_ANY, redirectCP);
   server.on("/library/test/success.html", HTTP_ANY, redirectCP);
-
-  // Samsung Specific & Others
-  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, redirectCP);
   server.on("/success.txt", HTTP_ANY, redirectCP);
-
-  // NCSI / Windows Connectivity Check
-  server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "Microsoft Connect Test");
-  });
-  server.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "Microsoft NCSI");
-  });
 
   server.onNotFound([redirectCP](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
       String host = request->host();
-      // Eğer kendi IP'miz veya local adreste değilsek (Samsung test sorguları)
+      // Eğer kendi domainimizde değilsek, kesinlikle bir CP sorgusudur.
       if (host != "192.168.4.1" && host != "horus.local" &&
-          host != "horus-f380.local") {
-        // RADIKAL: Her türlü bilinmeyen hostu 302 ile ana sayfaya yönlendir
-        AsyncWebServerResponse *response =
-            request->beginResponse(302, "text/plain", "");
-        response->addHeader("Location", "http://192.168.4.1/");
-        response->addHeader("Cache-Control", "no-cache");
-        request->send(response);
+          host.indexOf("horus-") < 0) {
+        redirectCP(request);
       } else {
-        // Dosya bulunamadıysa (kendi hostumuzda)
         request->send(404, "text/plain", "Not Found");
       }
     } else {
