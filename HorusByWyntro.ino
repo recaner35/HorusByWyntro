@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.355"
+#define FIRMWARE_VERSION "1.0.356"
 #define PEER_FILE "/peers.json"
 
 // ===============================
