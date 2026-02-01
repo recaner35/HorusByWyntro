@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.364"
+#define FIRMWARE_VERSION "1.0.351"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -985,7 +985,7 @@ void initWiFi() {
     myMacAddress = String(macBuf);
   }
 
-  String apName = "Horus"; // Varsayılan SSID (Setup Modu için)
+  String apName = SETUP_AP_SSID; // Global değişkenden al (Horus-Setup)
 
   if (!setupMode) {
     String apBase = (config.hostname != "") ? config.hostname : "Horus";
@@ -993,7 +993,7 @@ void initWiFi() {
     apName = apSlug + "-" + deviceSuffix;
   }
 
-  IPAddress apIP(10, 0, 0, 1);
+  IPAddress apIP(172, 217, 28, 1); // Google / gstatic bloğu taklidi
   IPAddress subnet(255, 255, 255, 0);
   WiFi.softAPConfig(apIP, apIP, subnet);
 
@@ -1012,9 +1012,7 @@ void initWiFi() {
   esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
   if (ap_netif) {
     esp_netif_dhcps_stop(ap_netif);
-    // Android 11+, Option 114 verisinin başında uzunluk byte'ı beklemez, saf
-    // string bekler.
-    const char *cp_url = "http://10.0.0.1/api/captive-portal";
+    const char *cp_url = "http://172.217.28.1/api/captive-portal";
     esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
                            (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
                            strlen(cp_url));
@@ -1038,9 +1036,9 @@ void initWebServer() {
 
   // Helping Lambda: Check if the request is for US (IP or mDNS)
   auto isOurLocalRequest = [](String host) {
-    if (host == "10.0.0.1" || host == "horus.local")
+    if (host == "172.217.28.1" || host == "horus.local")
       return true;
-    if (host.indexOf("10.0.0.1") >= 0)
+    if (host.indexOf("172.217.28.1") >= 0)
       return true;
     if (host.indexOf("horus-") >= 0)
       return true;
@@ -1053,8 +1051,9 @@ void initWebServer() {
         200, "text/html",
         "<!DOCTYPE html><html><head>"
         "<meta http-equiv='refresh' "
-        "content='0;url=http://10.0.0.1/captive.html'>"
-        "<script>window.location.href='http://10.0.0.1/captive.html';</script>"
+        "content='0;url=http://172.217.28.1/captive.html'>"
+        "<script>window.location.href='http://172.217.28.1/captive.html';</"
+        "script>"
         "</head><body>Redirecting to Horus...</body></html>");
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
@@ -1083,7 +1082,7 @@ void initWebServer() {
         "</style></head><body>"
         "<h1>HORUS</h1><p style='opacity:0.6;margin-bottom:40px'>Aura of "
         "Setup</p>"
-        "<a href='http://10.0.0.1/' class='btn'>ENTER SETUP</a>"
+        "<a href='http://172.217.28.1/' class='btn'>ENTER SETUP</a>"
         "</body></html>";
     request->send(200, "text/html", html);
   });
@@ -1093,7 +1092,7 @@ void initWebServer() {
             [](AsyncWebServerRequest *request) {
               request->send(200, "application/json",
                             "{\"captive\":true,\"user-portal-url\":\"http://"
-                            "10.0.0.1/captive.html\"}");
+                            "172.217.28.1/captive.html\"}");
             });
 
   server.on(
@@ -1312,14 +1311,15 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 void startSetupMode() {
   setupMode = true;
 
-  // Cihazın modem olduğu kesinleşmeli (IP 10.0.0.1)
-  IPAddress apIP(10, 0, 0, 1);
+  // Cihazın modem olduğu kesinleşmeli (IP 172.217.28.1)
+  IPAddress apIP(172, 217, 28, 1);
 
-  // DNS Sunucusunu Başlat (Tüm sorguları 10.0.0.1'e çek)
+  // DNS Sunucusunu Başlat (Tüm sorguları Google IP'si gibi taklit eden adrese
+  // çek)
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(53, "*", apIP);
 
-  Serial.println("Setup Mode: ON (Captive Portal 10.0.0.1 Active)");
+  Serial.println("Setup Mode: ON (Captive Portal 172.217.28.1 Active)");
 }
 
 bool connectToSavedWiFi() {
