@@ -347,8 +347,19 @@
     <div id="toast-container"></div>
     <div id="setupDone" class="setup-done hidden">
         <div class="check">✓</div>
-        <h2>Kurulum Tamamlandı</h2>
-        <p>Horus kullanıma hazır</p>
+        <h2 data-i18n="setup_complete">Kurulum Tamamlandı</h2>
+        <p data-i18n="horus_ready">Horus kullanıma hazır.</p>
+        <div class="redirect-info">
+            <p id="redirectCounter">10</p>
+            <span data-i18n="redirecting">saniye içinde yönlendiriliyorsunuz...</span>
+        </div>
+        <button id="goToDeviceBtn" class="primary-btn" onclick="manualRedirect()">
+            <span data-i18n="go_to_horus">Horus'a Git</span>
+        </button>
+        <div class="manual-url-info">
+            <small data-i18n="manual_url_tip">Eğer otomatik açılmazsa şu adresi deneyin:</small>
+            <code id="mdnsUrlText">horus.local</code>
+        </div>
     </div>
     <div id="iosInstallModal" class="modal-overlay hidden">
         <div class="modal-content">
