@@ -3,10 +3,10 @@
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
  * TASARIM: Caner Kocacık
- * DÜZELTME: Kurulum iyileştirmesi
+ * DÜZELTME: OTA güncelleme iyileştirmesi ve temizlik
  */
 
-// 1. Kurulum Modunda iyileştirmeler
+// 1. OTA güncelleme iyileştirmesi
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.343"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -223,14 +223,20 @@ String slugify(String text) {
 // OTA Helper Functions
 // ===============================
 bool execOTA(String url, int command) {
+  // OTA öncesi belleği temizlemek için Update durumunu sıfırla
+  Update.abort();
+
   NetworkClientSecure client;
   client.setInsecure();
-  client.setTimeout(30); // 30 saniye timeout
+
+  // 🔥 KRITIK: SSL Tampon belleklerini küçülterek heap tasarrufu yap (Önemli!)
+  // GitHub için 4KB Rx yeterlidir, varsayılan 16KB'dan çok daha düşüktür.
+  client.setBufferSizes(4096, 512);
 
   HTTPClient http;
   http.begin(client, url);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setTimeout(60000); // 60 saniye HTTP timeout
+  http.setTimeout(60000);
 
   Serial.println(F("[OTA] HTTP GET baslatiliyor..."));
   int httpCode = http.GET();
@@ -238,60 +244,48 @@ bool execOTA(String url, int command) {
   if (httpCode == 200) {
     int contentLength = http.getSize();
 
-    // Partition boyut kontrolü
-    size_t maxSize =
-        (command == U_FLASH) ? 0x160000 : 0x130000; // 1.37MB / 1.19MB
-    Serial.printf("[OTA] Dosya boyutu: %d bytes, Max partition: %d bytes\n",
-                  contentLength, maxSize);
+    // Partition kontrolü (Manual check yerine Update.begin'e bırakıyoruz ama
+    // logluyoruz)
+    Serial.printf("[OTA] Dosya boyutu: %d bytes\n", contentLength);
+    Serial.printf("[OTA] Heap (Bağlantı açıkken): %d bytes\n",
+                  ESP.getFreeHeap());
 
-    if (contentLength > maxSize) {
-      Serial.printf("[OTA] HATA: Dosya partition'a sigmaz! (%d > %d)\n",
-                    contentLength, maxSize);
+    if (contentLength <= 0) {
+      Serial.println(F("[OTA] Hata: Icerik boyutu 0!"));
       http.end();
       return false;
     }
 
-    Serial.printf("[OTA] Free heap: %d bytes\n", ESP.getFreeHeap());
-
+    // OTA başlatma - Eğer normal begin başarısız olursa bellek zorlaması yap
     bool canBegin = Update.begin(contentLength, command);
 
     if (canBegin) {
-      Serial.println("[OTA] Basliyor: " + url);
+      Serial.println("[OTA] Yazma basliyor: " + url);
       size_t written = Update.writeStream(http.getStream());
 
       if (written == contentLength) {
-        Serial.printf("[OTA] Yazma basarili: %d/%d bytes\n", written,
-                      contentLength);
+        Serial.printf("[OTA] Basarili: %d bytes\n", written);
       } else {
-        Serial.printf("[OTA] Yazma hatasi: %d/%d bytes (Error: %d)\n", written,
+        Serial.printf("[OTA] Yazma hatasi: %d/%d (Hata: %d)\n", written,
                       contentLength, Update.getError());
+        Update.abort();
         http.end();
         return false;
       }
 
       if (Update.end()) {
-        Serial.println(F("[OTA] Tamamlandi"));
         if (Update.isFinished()) {
+          Serial.println(F("[OTA] Tamamlandi."));
           http.end();
           return true;
-        } else {
-          Serial.println(F("[OTA] isFinished=false, bilinmeyen hata"));
-          http.end();
-          return false;
         }
       } else {
         Serial.printf("[OTA] End hatasi: %d\n", Update.getError());
-        http.end();
-        return false;
       }
     } else {
-      // Detaylı hata raporu
       Serial.printf("[OTA] Begin HATASI! Kod: %d\n", Update.getError());
-      Serial.printf("[OTA] contentLength: %d, command: %s\n", contentLength,
-                    command == U_FLASH ? "U_FLASH" : "U_SPIFFS");
-      Serial.printf("[OTA] Mevcut partition max: %d bytes\n", maxSize);
-      Serial.printf("[OTA] Free sketch space: %d bytes\n",
-                    ESP.getFreeSketchSpace());
+      // Bellek hatası ihtimaline karşı servisi durdurup tekrar denenebilir
+      // (opsiyonel)
       http.end();
       return false;
     }
