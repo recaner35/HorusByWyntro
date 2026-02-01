@@ -20,8 +20,12 @@
 #include <Preferences.h>
 #include <Update.h>
 #include <WiFi.h>
+#include <esp_netif.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
+#include <lwip/apps/dhcpserver.h>
 #include <vector>
+
 
 // ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
@@ -66,7 +70,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.353"
+#define FIRMWARE_VERSION "1.0.345"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -991,8 +995,20 @@ void initWiFi() {
     apName = apSlug + "-" + deviceSuffix;
   }
 
-  WiFi.softAP(apName.c_str(), NULL); // Sifresiz
+  WiFi.softAP(apName.c_str(), NULL);
   WiFi.setHostname(apName.c_str());
+
+  // DHCP Option 114 (Captive Portal API URL) - Android 11+ Fix
+  esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+  if (ap_netif) {
+    const char *cp_url = "http://192.168.4.1/api/captive-portal";
+    size_t url_len = strlen(cp_url);
+    uint8_t opt_data[url_len + 2];
+    opt_data[0] = url_len;
+    memcpy(&opt_data[1], cp_url, url_len);
+    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET, 114, opt_data,
+                           url_len + 1);
+  }
 
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
@@ -1090,9 +1106,16 @@ void initWebServer() {
         shouldRestartFlag = true;
       });
 
-  /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Samsung Fix)
+  /* -------------------- ULTIMATE CAPTIVE PORTAL (RFC 8908/8910)
    * -------------------- */
-  // Apple/Android tetikleyicileri
+  // Captive Portal API Endpoint
+  server.on("/api/captive-portal", HTTP_GET,
+            [](AsyncWebServerRequest *request) {
+              request->send(200, "application/json",
+                            "{\"captive\":true,\"user-portal-url\":\"http://"
+                            "192.168.4.1/\",\"can-extend-session\":true}");
+            });
+
   auto redirectCP = [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(
         302, "text/html",
