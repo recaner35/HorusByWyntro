@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.350"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1074,20 +1074,30 @@ void initWebServer() {
         shouldRestartFlag = true;
       });
 
-  /* -------------------- CAPTIVE PORTAL (OPTIMIZED) -------------------- */
-  // Android / Samsung / Apple için kritik tetikleyici path'ler
-  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->redirect("http://192.168.4.1/");
-  });
-  server.on("/gen_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->redirect("http://192.168.4.1/");
-  });
-  server.on("/hotspot-detect.html", HTTP_ANY,
-            [](AsyncWebServerRequest *request) {
-              request->redirect("http://192.168.4.1/");
-            });
+  /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Samsung Fix)
+   * -------------------- */
+  // Android/Samsung/Apple için en kararlı yönlendirme yöntemi: 302 Found!
+  auto redirectCP = [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response =
+        request->beginResponse(302, "text/plain", "");
+    response->addHeader("Location", "http://192.168.4.1/");
+    request->send(response);
+  };
 
-  // NCSI / Connectivity Check yanıtları (Microsoft/Android)
+  // Google/Android Connectivity Check
+  server.on("/generate_204", HTTP_ANY, redirectCP);
+  server.on("/gen_204", HTTP_ANY, redirectCP);
+  server.on("/blank.html", HTTP_ANY, redirectCP);
+
+  // Apple Captive Portal
+  server.on("/hotspot-detect.html", HTTP_ANY, redirectCP);
+  server.on("/library/test/success.html", HTTP_ANY, redirectCP);
+
+  // Samsung Specific & Others
+  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, redirectCP);
+  server.on("/success.txt", HTTP_ANY, redirectCP);
+
+  // NCSI / Windows Connectivity Check
   server.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Microsoft Connect Test");
   });
@@ -1095,15 +1105,15 @@ void initWebServer() {
     request->send(200, "text/plain", "Microsoft NCSI");
   });
 
-  server.onNotFound([](AsyncWebServerRequest *request) {
+  server.onNotFound([redirectCP](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
       String host = request->host();
-      // Eğer istek 192.168.4.1 veya horus.local dışında bir domain'e ise
-      // (connectivity check) anında ana sayfaya yönlendiriyoruz (302)
+      // Eğer istek 192.168.4.1 veya horus.local değilse, kesinlikle bir CP
+      // sorgusudur.
       if (host != "192.168.4.1" && host != "horus.local") {
-        request->redirect("http://192.168.4.1/");
+        redirectCP(request);
       } else {
-        // Eğer kendi domainimizdeyse ama dosya yoksa 404
+        // Dosya bulunamadıysa (kendi hostumuzda)
         request->send(404, "text/plain", "Not Found");
       }
     } else {
