@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.357"
+#define FIRMWARE_VERSION "1.0.347"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1013,22 +1013,30 @@ void initWebServer() {
 
   // 5. DUZELTME: LittleFS olarak değiştirildi ve serveStatic tek başına
   // yeterli. Kök dizin (/) isteği için Host kontrolü ekliyoruz.
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String host = request->host();
-    if (host != "192.168.4.1" && host != "horus.local" &&
-        host.indexOf("horus-") < 0) {
-      AsyncWebServerResponse *response = request->beginResponse(
-          302, "text/html",
-          "<html><head><meta http-equiv=\"refresh\" "
-          "content=\"0;url=http://192.168.4.1/\"/></head><body><a "
-          "href=\"http://192.168.4.1/\">Click here</a></body></html>");
-      response->addHeader("Location", "http://192.168.4.1/");
-      response->addHeader("Cache-Control", "no-cache");
-      request->send(response);
-    } else {
-      request->send(LittleFS, "/index.html", "text/html");
-    }
-  });
+  auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(
+        302, "text/html",
+        "<html><head><meta http-equiv=\"refresh\" "
+        "content=\"0;url=http://192.168.4.1/\"/></head>"
+        "<body><a href=\"http://192.168.4.1/\">Redirecting to "
+        "Horus...</a></body></html>");
+    response->addHeader("Location", "http://192.168.4.1/");
+    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    response->addHeader("Expires", "-1");
+    request->send(response);
+  };
+
+  server.on("/", HTTP_GET,
+            [sendPortalRedirect](AsyncWebServerRequest *request) {
+              String host = request->host();
+              if (host != "192.168.4.1" && host != "horus.local" &&
+                  host.indexOf("horus-") < 0) {
+                sendPortalRedirect(request);
+              } else {
+                request->send(LittleFS, "/index.html", "text/html");
+              }
+            });
 
   server.serveStatic("/", LittleFS, "/");
 
@@ -1092,15 +1100,27 @@ void initWebServer() {
         shouldRestartFlag = true;
       });
 
-  /* -------------------- CAPTIVE PORTAL (Aggressive Fix) --------------------
-   */
-  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->redirect("http://192.168.4.1/");
-  });
+  /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
+   * -------------------- */
+  // Explicit Probes
+  server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
+  server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
+  server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
+  server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
+  server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
 
-  server.onNotFound([](AsyncWebServerRequest *request) {
+  server.onNotFound([sendPortalRedirect](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
-      request->redirect("http://192.168.4.1/");
+      String host = request->host();
+      if (host != "192.168.4.1" && host != "horus.local" &&
+          host.indexOf("horus-") < 0) {
+        sendPortalRedirect(request);
+      } else {
+        request->send(404, "text/plain", "Not Found");
+      }
     } else {
       request->send(404, "text/plain", "Not Found");
     }
