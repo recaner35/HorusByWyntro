@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.365"
+#define FIRMWARE_VERSION "1.0.351"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -404,7 +404,15 @@ void setup() {
   stepper.setAcceleration(200);
 
   // Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
-  if (!connectToSavedWiFi()) {
+  // Önce 'skip' tercihini kontrol et
+  Preferences p;
+  p.begin("setup", true); // Read-only mode
+  bool skip = p.getBool("skip", false);
+  p.end();
+
+  // Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
+  // Eğer skip=true ise bağlantı başarısız olsa bile setup moduna girme
+  if (!skip && !connectToSavedWiFi()) {
     setupMode = true; // SSID kararı için önce mode set edilmeli
     initWiFi();       // AP ve mDNS burada başlatılacak
     startSetupMode();
@@ -1223,8 +1231,11 @@ void initWebServer() {
     p.putBool("skip", true);
     p.end();
 
-    initWiFi();
     request->send(200, "application/json", "{\"status\":\"skipped\"}");
+
+    // Temiz geçiş için restart şart
+    restartTimer = millis() + 1000;
+    shouldRestartFlag = true;
   });
 
   server.on("/api/reset-setup", HTTP_POST, [](AsyncWebServerRequest *request) {
