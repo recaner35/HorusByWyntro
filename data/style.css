@@ -1712,3 +1712,148 @@ body.setup-active section#setup {
         transform: scale(1);
     }
 }
+
+/* ===============================
+   UPDATE OVERLAY
+   =============================== */
+.update-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 21000;
+    /* Diğer her şeyin üstünde */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+}
+
+.update-content {
+    max-width: 400px;
+    width: 100%;
+}
+
+.update-spinner {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 30px;
+}
+
+.update-spinner .ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: rotate 2s linear infinite;
+}
+
+.update-spinner .ring:nth-child(2) {
+    width: 80%;
+    height: 80%;
+    top: 10%;
+    left: 10%;
+    border-top-color: var(--success-color);
+    animation: rotate 1.5s linear reverse infinite;
+}
+
+.update-spinner .ring:nth-child(3) {
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+    border-top-color: #fff;
+    animation: rotate 1s linear infinite;
+}
+
+.update-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: #fff;
+    animation: bounce 2s infinite;
+}
+
+.update-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.update-content p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+}
+
+.progress-box {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 30%;
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: 3px;
+    animation: progressIndeterminate 3s infinite linear;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translate(-50%, -50%);
+    }
+
+    40% {
+        transform: translate(-50%, -70%);
+    }
+
+    60% {
+        transform: translate(-50%, -60%);
+    }
+}
+
+@keyframes progressIndeterminate {
+    0% {
+        transform: translateX(-100%);
+        width: 30%;
+    }
+
+    50% {
+        transform: translateX(100%);
+        width: 50%;
+    }
+
+    100% {
+        transform: translateX(350%);
+        width: 30%;
+    }
+}
