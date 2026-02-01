@@ -6,7 +6,7 @@
  * DÜZELTME: OTA güncelleme iyileştirmesi ve temizlik
  */
 
-// 1. OTA güncelleme iyileştirmesi
+// 1. OTA güncelleme iyileştirmesi ve temizlik
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.344"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -226,12 +226,19 @@ bool execOTA(String url, int command) {
   // OTA öncesi belleği temizlemek için Update durumunu sıfırla
   Update.abort();
 
+  // 🔥 RAM KAZANIMI: En çok bellek tüketen hizmetleri durdur
+  if (isEspNowActive) {
+    esp_now_deinit();
+    isEspNowActive = false;
+    Serial.println(F("[OTA] RAM icin ESP-NOW durduruldu."));
+  }
+
+  ws.enable(false); // WebSocket trafiğini ve tamponlarını durdur
+  Serial.println(F("[OTA] RAM icin WebSocket devre disi birakildi."));
+
   NetworkClientSecure client;
   client.setInsecure();
-
-  // 🔥 KRITIK: SSL Tampon belleklerini küçülterek heap tasarrufu yap (Önemli!)
-  // GitHub için 4KB Rx yeterlidir, varsayılan 16KB'dan çok daha düşüktür.
-  client.setBufferSizes(4096, 512);
+  // Not: Core 3.x'te setBufferSizes kaldırılmıştır, mbedtls dinamik yönetir.
 
   HTTPClient http;
   http.begin(client, url);
@@ -283,7 +290,11 @@ bool execOTA(String url, int command) {
         Serial.printf("[OTA] End hatasi: %d\n", Update.getError());
       }
     } else {
+      // Hala RAM hatası alırsak detaylı çıktı ver
       Serial.printf("[OTA] Begin HATASI! Kod: %d\n", Update.getError());
+      if (Update.getError() == 0)
+        Serial.println(
+            F("[OTA] KRITIK HATA: Hala RAM yetersiz (malloc faulure)!"));
       // Bellek hatası ihtimaline karşı servisi durdurup tekrar denenebilir
       // (opsiyonel)
       http.end();
