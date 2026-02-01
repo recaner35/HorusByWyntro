@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.361"
+#define FIRMWARE_VERSION "1.0.349"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -996,8 +996,12 @@ void initWiFi() {
   IPAddress apIP(192, 168, 4, 1);
   IPAddress subnet(255, 255, 255, 0);
   WiFi.softAPConfig(apIP, apIP, subnet);
-  WiFi.softAP(apName.c_str(), NULL);
+  // Kanal 1, gizli değil, max 8 istemci
+  WiFi.softAP(apName.c_str(), NULL, 1, 0, 8);
   WiFi.setHostname(apName.c_str());
+
+  // WiFi gücünü ve yanıt hızını artırmak için uykuyu kapat
+  WiFi.setSleep(false);
 
   // RFC 8910: DHCP Option 114 (Captive Portal API) - The DEFINITIVE way for
   // Android 11+
@@ -1032,25 +1036,29 @@ void initWebServer() {
   auto isOurLocalRequest = [](String host) {
     if (host == "192.168.4.1" || host == "horus.local")
       return true;
-    if (host.indexOf("192.168.4.1:") >= 0)
-      return true; // Handling IP:80 etc.
+    if (host.indexOf("192.168.4.1") >= 0)
+      return true; // Daha toleranslı IP kontrolü
     if (host.indexOf("horus-") >= 0)
-      return true; // Handling horus-xxxx.local
+      return true;
     return false;
   };
 
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
-    // 302 Found is most compatible for initial capture.
+    // STEALTH REDIRECT: Modern OS security filters sometimes block 302/307.
+    // We send a 200 OK with multiple client-side redirect triggers.
     AsyncWebServerResponse *response = request->beginResponse(
-        302, "text/html",
-        "<html><head><meta http-equiv=\"refresh\" "
-        "content=\"0;url=http://192.168.4.1/\"/></head>"
-        "<body>Redirecting to Horus Setup...</body></html>");
-    response->addHeader("Location", "http://192.168.4.1/");
+        200, "text/html",
+        "<html><head>"
+        "<meta http-equiv='refresh' content='0;url=http://192.168.4.1/'>"
+        "<script>window.location.href='http://192.168.4.1/';</script>"
+        "</head><body>"
+        "<h1>Horus Setup</h1><p>Redirecting... <a "
+        "href='http://192.168.4.1/'>Click here</a></p>"
+        "</body></html>");
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
     response->addHeader("Expires", "-1");
-    // VERY IMPORTANT: Force connection close to reset client's socket state
+    response->addHeader("Location", "http://192.168.4.1/"); // Backup header
     response->addHeader("Connection", "close");
     request->send(response);
   };
@@ -1137,11 +1145,6 @@ void initWebServer() {
 
   /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
    * -------------------- */
-  // Apple Captive Portal Probes
-  server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
-
   // Google / Android Probes
   server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
   server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
@@ -1149,6 +1152,11 @@ void initWebServer() {
   server.on("/connectivity-check", HTTP_ANY, sendPortalRedirect);
   server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
   server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
+
+  // Apple Captive Portal Probes
+  server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
 
   // Windows / Microsoft Probes
   server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
