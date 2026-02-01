@@ -699,17 +699,14 @@ function triggerAutoUpdate() {
 
 function startOtaProcess() {
     const overlay = document.getElementById("updateOverlay");
-    if (overlay) overlay.classList.remove("hidden");
+    if (overlay) {
+        overlay.classList.remove("hidden");
+        overlay.style.display = "flex"; // Kesin görünürlük için
+    }
 
     fetch(API_OTA_AUTO_URL, { method: 'POST' })
-        .then(() => {
-            // Arka planda polling başlasın
-            handlePostUpdateUI();
-        })
-        .catch(() => {
-            // Sunucu hemen kapanmış olabilir, yine de polling başlasın
-            handlePostUpdateUI();
-        });
+        .then(() => handlePostUpdateUI())
+        .catch(() => handlePostUpdateUI());
 }
 
 function handlePostUpdateUI() {
@@ -876,5 +873,3 @@ function rebootDevice() {
             .catch(() => showToast("Yeniden başlatma başarısız", "error"));
     }
 }
-
-
