@@ -840,28 +840,44 @@ const isIos = () => {
     return /iphone|ipad|ipod/.test(userAgent);
 }
 
+const isAndroid = () => {
+    return /android/i.test(navigator.userAgent);
+}
+
 window.addEventListener('load', () => {
     const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
-    if (isIos() && !isStandalone) {
-        if (installBtn) installBtn.classList.remove('hidden');
+    const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+    // Eğer uygulama zaten yüklü değilse butonu göster
+    if (!isStandalone && !isDisplayStandalone) {
+        if (isIos() || isAndroid()) {
+            if (installBtn) installBtn.classList.remove('hidden');
+        }
     }
 });
 
 function handleInstallClick() {
     if (isIos()) {
         if (iosModal) iosModal.classList.remove('hidden');
-    } else {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                deferredPrompt = null;
-            });
-        }
+    } else if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            deferredPrompt = null;
+        });
+    } else if (isAndroid()) {
+        // Android ama beforeinstallprompt tetiklenmedi (örneğin HTTP)
+        const androidModal = document.getElementById('androidInstallModal');
+        if (androidModal) androidModal.classList.remove('hidden');
     }
 }
 
 function closeIosModal() {
     if (iosModal) iosModal.classList.add('hidden');
+}
+
+function closeAndroidModal() {
+    const androidModal = document.getElementById('androidInstallModal');
+    if (androidModal) androidModal.classList.add('hidden');
 }
 
 function rebootDevice() {
