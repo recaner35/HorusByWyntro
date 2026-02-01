@@ -617,6 +617,7 @@ function connectWifi() {
             // Bu yüzden hataya rağmen yönlendirme sekansını başlatıyoruz.
             if (isSetupMode) {
                 closeWifiModal();
+                // Fetch hatası (restart nedeniyle) olsa bile başarılı say ve ekranı güncelle
                 startRedirectSequence();
             } else {
                 showToast("Bağlantı isteği başarısız", "error");
@@ -666,7 +667,9 @@ function startRedirectSequence() {
 
         if (count <= 0) {
             clearInterval(timer);
-            window.location.href = redirectTargetUrl;
+            // Otomatik yönlendirme YAPM, çünkü cihaz AP modunda olabilir.
+            // Kullanıcıya manuel link gösteriyoruz.
+            if (counterEl) counterEl.innerText = "0";
         }
     }, 1000);
 }
@@ -873,3 +876,5 @@ function rebootDevice() {
             .catch(() => showToast("Yeniden başlatma başarısız", "error"));
     }
 }
+
+
