@@ -24,7 +24,9 @@ const translations = {
         "horus_ready": "Horus kullanıma hazır.",
         "redirecting": "saniye içinde yönlendiriliyorsunuz...",
         "go_to_horus": "Horus'a Git",
-        "manual_url_tip": "Otomatik açılmazsa şu adresi deneyin:"
+        "manual_url_tip": "Otomatik açılmazsa şu adresi deneyin:",
+        "updating_horus": "Horus Güncelleniyor",
+        "updating_tip": "Lütfen gücü kesmeyin. İşlem bittiğinde cihazınız otomatik olarak yeniden başlayacaktır."
     },
     "en": {
         "status": "STATUS", "stopped": "STOPPED", "running": "RUNNING", "paused": "PAUSED", "ready": "Ready",
@@ -49,7 +51,9 @@ const translations = {
         "horus_ready": "Horus is ready to use.",
         "redirecting": "seconds remaining before redirect...",
         "go_to_horus": "Go to Horus",
-        "manual_url_tip": "If not redirected, try this URL:"
+        "manual_url_tip": "If not redirected, try this URL:",
+        "updating_horus": "Updating Horus",
+        "updating_tip": "Please do not disconnect the power. Your device will automatically restart when the process is complete."
     },
     "de": {
         "status": "STATUS", "stopped": "GESTOPPT", "running": "LÄUFT", "paused": "PAUSIERT", "ready": "Bereit",
