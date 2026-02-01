@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.359"
+#define FIRMWARE_VERSION "1.0.347"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -998,6 +998,17 @@ void initWiFi() {
   WiFi.softAP(apName.c_str(), NULL);
   WiFi.setHostname(apName.c_str());
 
+  // RFC 8910: DHCP Option 114 (Captive Portal API) - Modern Android Fix
+  esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+  if (ap_netif) {
+    esp_netif_dhcps_stop(ap_netif);
+    const char *cp_url = "http://192.168.4.1/api/captive-portal";
+    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
+                           (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
+                           strlen(cp_url));
+    esp_netif_dhcps_start(ap_netif);
+  }
+
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
     MDNS.addService("http", "tcp", 80);
@@ -1020,23 +1031,32 @@ void initWebServer() {
     if (host.startsWith("horus-"))
       return true;
     if (host.startsWith("192.168.4.1:"))
-      return true; // Handle ports
+      return true;
     return false;
   };
 
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse(
-        302, "text/html",
-        "<html><head><meta http-equiv=\"refresh\" "
-        "content=\"1;url=http://192.168.4.1/\"/></head>"
-        "<body><a href=\"http://192.168.4.1/\">Redirecting to "
-        "Horus...</a></body></html>");
+    // Android (especially Samsung) can be picky. 307 is often better for
+    // probes.
+    AsyncWebServerResponse *response =
+        request->beginResponse(307, "text/html",
+                               "<html><head><meta http-equiv=\"refresh\" "
+                               "content=\"0;url=http://192.168.4.1/\"/></head>"
+                               "<body>Redirecting...</body></html>");
     response->addHeader("Location", "http://192.168.4.1/");
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
     response->addHeader("Expires", "-1");
+    response->addHeader("X-Captive-Portal", "true");
     request->send(response);
   };
+
+  server.on(
+      "/api/captive-portal", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(
+            200, "application/json",
+            "{\"captive\":true,\"user-portal-url\":\"http://192.168.4.1/\"}");
+      });
 
   server.on("/", HTTP_GET,
             [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
@@ -1111,21 +1131,18 @@ void initWebServer() {
 
   /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
    * -------------------- */
-  // Samsung Specific Probes
-  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
-  server.on("/ip_address.txt", HTTP_ANY, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "192.168.4.1");
-  });
-
   // Explicit Probes (Android, Apple, Microsoft)
   server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
   server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
   server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
+  server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
+  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
   server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
   server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
   server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
   server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
   server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
+  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
 
   server.onNotFound(
       [isOurHost, sendPortalRedirect](AsyncWebServerRequest *request) {
