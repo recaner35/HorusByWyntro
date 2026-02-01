@@ -6,6 +6,10 @@
  * DÜZELTME: OTA güncelleme iyileştirmesi
  */
 
+<<<<<<< HEAD
+== == == =
+// 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
+>>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -22,8 +26,8 @@
 #include <esp_now.h>
 #include <vector>
 
-// ===== FORWARD DECLARATIONS =====
-bool connectToSavedWiFi();
+             // ===== FORWARD DECLARATIONS =====
+    bool connectToSavedWiFi();
 
 String wifiScanResult = "[]";
 
@@ -64,14 +68,19 @@ const char *SETUP_AP_SSID = "Horus";
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
+<<<<<<< HEAD
 #define FIRMWARE_VERSION "1.0.338"
+    == == ==
+    =
+#define FIRMWARE_VERSION "1.0.334"
+        >>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
 #define PEER_FILE "/peers.json"
 
-// ===============================
-// Nesneler
-// ===============================
-AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
-                     MOTOR_PIN_2, MOTOR_PIN_4);
+    // ===============================
+    // Nesneler
+    // ===============================
+    AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
+                         MOTOR_PIN_2, MOTOR_PIN_4);
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -223,48 +232,78 @@ String slugify(String text) {
 bool execOTA(String url, int command) {
   NetworkClientSecure client;
   client.setInsecure();
+  client.setTimeout(30); // 30 saniye timeout
 
   HTTPClient http;
   http.begin(client, url);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.setTimeout(60000); // 60 saniye HTTP timeout
 
+  Serial.println(F("[OTA] HTTP GET baslatiliyor..."));
   int httpCode = http.GET();
+
   if (httpCode == 200) {
     int contentLength = http.getSize();
+
+    // Partition boyut kontrolü
+    size_t maxSize =
+        (command == U_FLASH) ? 0x160000 : 0x130000; // 1.37MB / 1.19MB
+    Serial.printf("[OTA] Dosya boyutu: %d bytes, Max partition: %d bytes\n",
+                  contentLength, maxSize);
+
+    if (contentLength > maxSize) {
+      Serial.printf("[OTA] HATA: Dosya partition'a sigmaz! (%d > %d)\n",
+                    contentLength, maxSize);
+      http.end();
+      return false;
+    }
+
+    Serial.printf("[OTA] Free heap: %d bytes\n", ESP.getFreeHeap());
+
     bool canBegin = Update.begin(contentLength, command);
 
     if (canBegin) {
-      Serial.println("OTA Basliyor: " + url);
+      Serial.println("[OTA] Basliyor: " + url);
       size_t written = Update.writeStream(http.getStream());
 
       if (written == contentLength) {
-        Serial.println("Yazma basarili: " + String(written) + "/" +
-                       String(contentLength));
+        Serial.printf("[OTA] Yazma basarili: %d/%d bytes\n", written,
+                      contentLength);
       } else {
-        Serial.println("Yazma hatasi: " + String(written) + "/" +
-                       String(contentLength));
+        Serial.printf("[OTA] Yazma hatasi: %d/%d bytes (Error: %d)\n", written,
+                      contentLength, Update.getError());
+        http.end();
         return false;
       }
 
       if (Update.end()) {
-        Serial.println("OTA Tamamlandi");
+        Serial.println(F("[OTA] Tamamlandi"));
         if (Update.isFinished()) {
+          http.end();
           return true;
         } else {
-          Serial.println("OTA Bitti ama basarisiz (isFinished=false)");
+          Serial.println(F("[OTA] isFinished=false, bilinmeyen hata"));
+          http.end();
           return false;
         }
       } else {
-        Serial.println("OTA Hatasi: " + String(Update.getError()));
+        Serial.printf("[OTA] End hatasi: %d\n", Update.getError());
+        http.end();
         return false;
       }
     } else {
-      Serial.println("OTA Baslatilamadi (Yetersiz alan?)");
+      // Detaylı hata raporu
+      Serial.printf("[OTA] Begin HATASI! Kod: %d\n", Update.getError());
+      Serial.printf("[OTA] contentLength: %d, command: %s\n", contentLength,
+                    command == U_FLASH ? "U_FLASH" : "U_SPIFFS");
+      Serial.printf("[OTA] Mevcut partition max: %d bytes\n", maxSize);
+      Serial.printf("[OTA] Free sketch space: %d bytes\n",
+                    ESP.getFreeSketchSpace());
+      http.end();
       return false;
     }
   } else {
-    Serial.println("HTTP Hatasi: " + String(httpCode));
-    return false;
+    Serial.printf("[OTA] HTTP Hatasi: %d\n", httpCode);
   }
   http.end();
   return false;
