@@ -6,8 +6,6 @@
  * DÜZELTME: OTA güncelleme iyileştirmesi
  */
 
-<<<<<<< HEAD
-== == == =
 // 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
 >>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
 #include <AccelStepper.h>
@@ -27,7 +25,7 @@
 #include <vector>
 
              // ===== FORWARD DECLARATIONS =====
-    bool connectToSavedWiFi();
+bool connectToSavedWiFi();
 
 String wifiScanResult = "[]";
 
