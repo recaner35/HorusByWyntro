@@ -13,8 +13,9 @@ const API_DEVICE_STATE_URL = '/api/device-state';
 const API_SCAN_NETWORKS_URL = '/api/scan-networks';
 const API_SAVE_WIFI_URL = '/api/save-wifi';
 const API_SKIP_SETUP_URL = '/api/skip-setup';
-const API_OTA_AUTO_URL = '/api/ota-auto';
-const API_OTA_STATUS_URL = '/api/ota-status';
+const API_OTA_AUTO_URL = "/api/ota-auto";
+const API_OTA_CHECK_URL = "/api/ota-check";
+const API_OTA_STATUS_URL = "/api/ota-status";
 const API_REBOOT_URL = '/api/reboot';
 // ---------------------
 
@@ -678,28 +679,31 @@ function manualRedirect() {
 
 // ================= OTA LOGIC =================
 function triggerAutoUpdate() {
-    if (!confirm(getTrans('confirm_update') || "Update firmware?")) return;
+    showToast("Güncelleme kontrol ediliyor...", "info");
 
+    fetch(API_OTA_CHECK_URL)
+        .then(response => response.json())
+        .then(data => {
+            if (data.update_available) {
+                if (confirm(`Yeni sürüm bulundu: ${data.new_version}\nGüncellemek istiyor musunuz?`)) {
+                    startOtaProcess();
+                }
+            } else if (data.error) {
+                showToast("Kontrol başarısız: " + data.error, "error");
+            } else {
+                showToast("Yazılım zaten güncel (v" + data.current_version + ")", "success");
+            }
+        })
+        .catch(() => showToast("Sunucuya erişilemedi", "error"));
+}
+
+function startOtaProcess() {
     const overlay = document.getElementById("updateOverlay");
     if (overlay) overlay.classList.remove("hidden");
 
     fetch(API_OTA_AUTO_URL, { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status == "started" || data.status == "updating") {
-                // Sunucu kapanacağı için polling yerine uzun bir bekleme başlatıyoruz
-                handlePostUpdateUI();
-            } else if (data.status == "busy") {
-                showToast("Güncelleştirme zaten devam ediyor.");
-            } else if (data.status == "up_to_date") {
-                showToast("Yazılım zaten güncel!");
-                if (overlay) overlay.classList.add("hidden");
-            }
-        })
-        .catch(e => {
-            // Sunucu durduğu için catch'e düşmesi normaldir
-            handlePostUpdateUI();
-        });
+        .then(() => handlePostUpdateUI())
+        .catch(() => handlePostUpdateUI()); // Hata olsa bile cihaz restart olmuş olabilir
 }
 
 function handlePostUpdateUI() {
