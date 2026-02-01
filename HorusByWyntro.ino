@@ -66,7 +66,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.347"
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -225,86 +225,78 @@ String slugify(String text) {
 // OTA Helper Functions
 // ===============================
 bool execOTA(String url, int command) {
-  // OTA öncesi belleği temizlemek için Update durumunu sıfırla
+  // OTA öncesi her şeyi sıfırla
   Update.abort();
 
-  // 🔥 RAM KAZANIMI: En çok bellek tüketen hizmetleri durdur
+  // 🔥 RADIKAL RAM KAZANIMI: WiFi dışındaki tüm servisleri kapat
   if (isEspNowActive) {
     esp_now_deinit();
     isEspNowActive = false;
-    Serial.println(F("[OTA] RAM icin ESP-NOW durduruldu."));
+    Serial.println(F("[OTA] ESP-NOW durduruldu."));
   }
 
-  ws.enable(false); // WebSocket trafiğini ve tamponlarını durdur
-  Serial.println(F("[OTA] RAM icin WebSocket devre disi birakildi."));
+  ws.closeAll();
+  ws.enable(false);
+  server.end(); // Web sunucusunu tamamen kapat (RAM boşaltır)
+  MDNS.end();   // mDNS servislerini kapat
+
+  // Belleğin toparlanması için sistem görevlerine zaman tanı
+  delay(500);
+  Serial.printf("[OTA] Temizlik sonrasi Heap: %d bytes\n", ESP.getFreeHeap());
 
   NetworkClientSecure client;
   client.setInsecure();
-  // Not: Core 3.x'te setBufferSizes kaldırılmıştır, mbedtls dinamik yönetir.
+
+  // Core 3.x için SSL tampon belleğini minimumda tutmaya çalış
+  client.setHandshakeTimeout(30);
 
   HTTPClient http;
   http.begin(client, url);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.setTimeout(60000);
 
-  Serial.println(F("[OTA] HTTP GET baslatiliyor..."));
+  Serial.println(F("[OTA] HTTP GET..."));
   int httpCode = http.GET();
 
   if (httpCode == 200) {
     int contentLength = http.getSize();
-
-    // Partition kontrolü (Manual check yerine Update.begin'e bırakıyoruz ama
-    // logluyoruz)
-    Serial.printf("[OTA] Dosya boyutu: %d bytes\n", contentLength);
-    Serial.printf("[OTA] Heap (Bağlantı açıkken): %d bytes\n",
+    Serial.printf("[OTA] Dosya: %d, Heap: %d\n", contentLength,
                   ESP.getFreeHeap());
 
     if (contentLength <= 0) {
-      Serial.println(F("[OTA] Hata: Icerik boyutu 0!"));
+      Serial.println(F("[OTA] Hata: Boyut 0!"));
       http.end();
       return false;
     }
 
-    // OTA başlatma - Eğer normal begin başarısız olursa bellek zorlaması yap
-    bool canBegin = Update.begin(contentLength, command);
-
-    if (canBegin) {
-      Serial.println("[OTA] Yazma basliyor: " + url);
+    // OTA başlatma
+    if (Update.begin(contentLength, command)) {
+      Serial.println(F("[OTA] Yazma basliyor..."));
       size_t written = Update.writeStream(http.getStream());
 
       if (written == contentLength) {
-        Serial.printf("[OTA] Basarili: %d bytes\n", written);
-      } else {
-        Serial.printf("[OTA] Yazma hatasi: %d/%d (Hata: %d)\n", written,
-                      contentLength, Update.getError());
-        Update.abort();
-        http.end();
-        return false;
-      }
-
-      if (Update.end()) {
-        if (Update.isFinished()) {
-          Serial.println(F("[OTA] Tamamlandi."));
-          http.end();
-          return true;
+        if (Update.end()) {
+          if (Update.isFinished()) {
+            Serial.println(F("[OTA] Basarili!"));
+            http.end();
+            return true;
+          }
         }
       } else {
-        Serial.printf("[OTA] End hatasi: %d\n", Update.getError());
+        Serial.printf("[OTA] Yazma eksik: %d/%d\n", written, contentLength);
       }
     } else {
-      // Hala RAM hatası alırsak detaylı çıktı ver
-      Serial.printf("[OTA] Begin HATASI! Kod: %d\n", Update.getError());
-      if (Update.getError() == 0)
+      Serial.printf("[OTA] Hata Kodu: %d\n", Update.getError());
+      if (Update.getError() == 0) {
         Serial.println(
-            F("[OTA] KRITIK HATA: Hala RAM yetersiz (malloc faulure)!"));
-      // Bellek hatası ihtimaline karşı servisi durdurup tekrar denenebilir
-      // (opsiyonel)
-      http.end();
-      return false;
+            F("[OTA] Hala bellek yetersiz! SSL cok fazla RAM kullaniyor."));
+      }
     }
   } else {
-    Serial.printf("[OTA] HTTP Hatasi: %d\n", httpCode);
+    Serial.printf("[OTA] HTTP Kod: %d\n", httpCode);
   }
+
+  Update.abort();
   http.end();
   return false;
 }
