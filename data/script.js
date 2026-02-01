@@ -614,7 +614,17 @@ function connectWifi() {
                 showToast("Bağlantı hatası", "error");
             }
         })
-        .catch(() => showToast("Bağlantı isteği başarısız", "error"));
+        .catch((err) => {
+            console.error("Fetch error during wifi save:", err);
+            // Setup modundaysak, fetch hatası genellikle cihazın restart olması demektir.
+            // Bu yüzden hataya rağmen yönlendirme sekansını başlatıyoruz.
+            if (isSetupMode) {
+                closeWifiModal();
+                startRedirectSequence();
+            } else {
+                showToast("Bağlantı isteği başarısız", "error");
+            }
+        });
 }
 
 let redirectTargetUrl = "";
@@ -647,7 +657,7 @@ function startRedirectSequence() {
         .replace(/^-|-$/g, '');
 
     if (!slug) slug = "horus";
-    
+
     // Eğer setup modundaysak suffix her zaman eklenir
     redirectTargetUrl = "http://" + slug + "-" + deviceSuffix + ".local";
     if (urlTextEl) urlTextEl.innerText = redirectTargetUrl.replace("http://", "");
