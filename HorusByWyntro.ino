@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.356"
+#define FIRMWARE_VERSION "1.0.347"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -996,24 +996,6 @@ void initWiFi() {
   WiFi.softAP(apName.c_str(), NULL);
   WiFi.setHostname(apName.c_str());
 
-  // DHCP Option 114 (Captive Portal API URL) - Android 11+ Fix
-  // Core 3.x (ESP-IDF 5.1+) uyumlu yöntem
-  esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
-  if (ap_netif) {
-    esp_netif_dhcps_stop(
-        ap_netif); // Opsiyonu set etmeden önce durdurmak gerekebilir
-
-    const char *cp_url = "http://192.168.4.1/api/captive-portal";
-    int url_len = strlen(cp_url);
-
-    // RFC 8910: Option 114 verisi
-    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
-                           (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
-                           url_len);
-
-    esp_netif_dhcps_start(ap_netif);
-  }
-
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
     MDNS.addService("http", "tcp", 80);
@@ -1110,43 +1092,15 @@ void initWebServer() {
         shouldRestartFlag = true;
       });
 
-  /* -------------------- ULTIMATE CAPTIVE PORTAL (RFC 8908/8910)
-   * -------------------- */
-  // Captive Portal API Endpoint
-  server.on("/api/captive-portal", HTTP_GET,
-            [](AsyncWebServerRequest *request) {
-              request->send(200, "application/json",
-                            "{\"captive\":true,\"user-portal-url\":\"http://"
-                            "192.168.4.1/\",\"can-extend-session\":true}");
-            });
+  /* -------------------- CAPTIVE PORTAL (Aggressive Fix) --------------------
+   */
+  server.on("/generate_204", HTTP_ANY, [](AsyncWebServerRequest *request) {
+    request->redirect("http://192.168.4.1/");
+  });
 
-  auto redirectCP = [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse(
-        302, "text/html",
-        "<html><head><meta http-equiv=\"refresh\" "
-        "content=\"0;url=http://192.168.4.1/\"/></head><body><a "
-        "href=\"http://192.168.4.1/\">Redirecting...</a></body></html>");
-    response->addHeader("Location", "http://192.168.4.1/");
-    response->addHeader("Cache-Control", "no-cache");
-    request->send(response);
-  };
-
-  server.on("/generate_204", HTTP_ANY, redirectCP);
-  server.on("/gen_204", HTTP_ANY, redirectCP);
-  server.on("/hotspot-detect.html", HTTP_ANY, redirectCP);
-  server.on("/library/test/success.html", HTTP_ANY, redirectCP);
-  server.on("/success.txt", HTTP_ANY, redirectCP);
-
-  server.onNotFound([redirectCP](AsyncWebServerRequest *request) {
+  server.onNotFound([](AsyncWebServerRequest *request) {
     if (setupMode || captiveMode) {
-      String host = request->host();
-      // Eğer kendi domainimizde değilsek, kesinlikle bir CP sorgusudur.
-      if (host != "192.168.4.1" && host != "horus.local" &&
-          host.indexOf("horus-") < 0) {
-        redirectCP(request);
-      } else {
-        request->send(404, "text/plain", "Not Found");
-      }
+      request->redirect("http://192.168.4.1/");
     } else {
       request->send(404, "text/plain", "Not Found");
     }
