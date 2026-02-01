@@ -67,10 +67,10 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 <<<<<<< HEAD
-#define FIRMWARE_VERSION "1.0.339"
+#define FIRMWARE_VERSION "1.0.340"
     == == ==
     =
-#define FIRMWARE_VERSION "1.0.339"
+#define FIRMWARE_VERSION "1.0.340"
         >>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
 #define PEER_FILE "/peers.json"
 
