@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.367"
+#define FIRMWARE_VERSION "1.0.351"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1043,13 +1043,30 @@ void initWiFi() {
 void initWebServer() {
 
   // Helping Lambda: Check if the request is for US (IP or mDNS)
-  auto isOurLocalRequest = [](String host) {
+  // Helping Lambda: Check if the request is for US (IP or mDNS)
+  // [=] capture: config, deviceSuffix ve diğer global değişkenlere erişim
+  // sağlar.
+  auto isOurLocalRequest = [=](String host) {
     if (host == "172.217.28.1" || host == "horus.local")
       return true;
+
+    // IP Kontrolü: Google IP'si veya o anki Yerel IP
     if (host.indexOf("172.217.28.1") >= 0)
       return true;
-    if (host.indexOf("horus-") >= 0)
+    if (WiFi.localIP().toString() != "0.0.0.0" &&
+        host.indexOf(WiFi.localIP().toString()) >= 0)
       return true;
+
+    // İsim Kontrolü: "horus-" veya kullanıcının verdiği özel isim
+    if (host.indexOf("horus") >= 0)
+      return true;
+
+    // Dinamik İsim Kontrolü (örn: livingroom-A1B2)
+    String currentSlug =
+        slugify((config.hostname != "") ? config.hostname : "horus");
+    if (host.indexOf(currentSlug) >= 0)
+      return true;
+
     return false;
   };
 
