@@ -42,7 +42,7 @@ Preferences prefs;
 bool setupMode = false;
 bool skipSetup = false;
 bool captiveMode = true;
-const char *SETUP_AP_SSID = "Horus";
+const char *SETUP_AP_SSID = "Horus-Setup";
 // const char* SETUP_AP_PASS = "ByWyntro3545"; // Setup modu şifresiz daha
 // stabil çalışır
 
@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.362"
+#define FIRMWARE_VERSION "1.0.350"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -993,14 +993,18 @@ void initWiFi() {
     apName = apSlug + "-" + deviceSuffix;
   }
 
-  IPAddress apIP(192, 168, 4, 1);
+  IPAddress apIP(10, 0, 0, 1);
   IPAddress subnet(255, 255, 255, 0);
   WiFi.softAPConfig(apIP, apIP, subnet);
-  // Kanal 1, gizli değil, max 8 istemci
+
+  // Kanal 1, Şifresiz, Max 8 istemci
   WiFi.softAP(apName.c_str(), NULL, 1, 0, 8);
   WiFi.setHostname(apName.c_str());
 
-  // WiFi gücünü ve yanıt hızını artırmak için uykuyu kapat
+  // KRİTİK: WiFi Güç Tasarrufunu kapat (Samsung bağlantı kopmalarını önler)
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  // WiFi uykusunu kapat (Yanıt süresini milisaniyelere düşürür)
   WiFi.setSleep(false);
 
   // RFC 8910: DHCP Option 114 (Captive Portal API) - The DEFINITIVE way for
@@ -1010,7 +1014,7 @@ void initWiFi() {
     esp_netif_dhcps_stop(ap_netif);
     // Android 11+, Option 114 verisinin başında uzunluk byte'ı beklemez, saf
     // string bekler.
-    const char *cp_url = "http://192.168.4.1/api/captive-portal";
+    const char *cp_url = "http://10.0.0.1/api/captive-portal";
     esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
                            (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
                            strlen(cp_url));
@@ -1032,43 +1036,64 @@ void initWiFi() {
 // ===============================
 void initWebServer() {
 
-  // Check if the request is for US (IP or mDNS)
+  // Helping Lambda: Check if the request is for US (IP or mDNS)
   auto isOurLocalRequest = [](String host) {
-    if (host == "192.168.4.1" || host == "horus.local")
+    if (host == "10.0.0.1" || host == "horus.local")
       return true;
-    if (host.indexOf("192.168.4.1") >= 0)
-      return true; // Daha toleranslı IP kontrolü
+    if (host.indexOf("10.0.0.1") >= 0)
+      return true;
     if (host.indexOf("horus-") >= 0)
       return true;
     return false;
   };
 
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
-    // STEALTH REDIRECT: Modern OS security filters sometimes block 302/307.
-    // We send a 200 OK with multiple client-side redirect triggers.
+    // STEALTH + LUXURY REDIRECT: Redirect to a dedicated captive page first.
     AsyncWebServerResponse *response = request->beginResponse(
         200, "text/html",
-        "<html><head>"
-        "<meta http-equiv='refresh' content='0;url=http://192.168.4.1/'>"
-        "<script>window.location.href='http://192.168.4.1/';</script>"
-        "</head><body>"
-        "<h1>Horus Setup</h1><p>Redirecting... <a "
-        "href='http://192.168.4.1/'>Click here</a></p>"
-        "</body></html>");
+        "<!DOCTYPE html><html><head>"
+        "<meta http-equiv='refresh' "
+        "content='0;url=http://10.0.0.1/captive.html'>"
+        "<script>window.location.href='http://10.0.0.1/captive.html';</script>"
+        "</head><body>Redirecting to Horus...</body></html>");
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
     response->addHeader("Expires", "-1");
-    response->addHeader("Location", "http://192.168.4.1/"); // Backup header
     response->addHeader("Connection", "close");
     request->send(response);
   };
+
+  // Inline Captive Portal Page (Lüks & Minimalist)
+  server.on("/captive.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String html =
+        "<!DOCTYPE html><html><head><meta name='viewport' "
+        "content='width=device-width,initial-scale=1'>"
+        "<title>Horus Setup</title><style>"
+        "body{background:#000;color:#fff;font-family:-apple-system,sans-serif;"
+        "display:flex;flex-direction:column;align-items:center;justify-content:"
+        "center;height:100vh;margin:0;text-align:center}"
+        "h1{font-weight:200;letter-spacing:5px;margin-bottom:30px;color:#"
+        "00f0ff;text-shadow:0 0 20px rgba(0,240,255,0.5)}"
+        ".btn{color:#00f0ff;text-decoration:none;border:1px solid "
+        "rgba(0,240,255,0.3);padding:18px "
+        "40px;border-radius:50px;font-size:14px;letter-spacing:2px;background:"
+        "rgba(0,240,255,0.05);transition:all 0.3s;box-shadow:0 0 30px "
+        "rgba(0,240,255,0.1)}"
+        ".btn:active{transform:scale(0.95);background:rgba(0,240,255,0.2)}"
+        "</style></head><body>"
+        "<h1>HORUS</h1><p style='opacity:0.6;margin-bottom:40px'>Aura of "
+        "Setup</p>"
+        "<a href='http://10.0.0.1/' class='btn'>ENTER SETUP</a>"
+        "</body></html>";
+    request->send(200, "text/html", html);
+  });
 
   // RFC 8908 Uyumlu API endpoint
   server.on("/api/captive-portal", HTTP_GET,
             [](AsyncWebServerRequest *request) {
               request->send(200, "application/json",
                             "{\"captive\":true,\"user-portal-url\":\"http://"
-                            "192.168.4.1/\",\"can-extend-session\":true}");
+                            "10.0.0.1/captive.html\"}");
             });
 
   server.on(
@@ -1080,186 +1105,186 @@ void initWebServer() {
           request->send(LittleFS, "/index.html", "text/html");
         }
       });
+});
 
-  server.serveStatic("/", LittleFS, "/");
+server.serveStatic("/", LittleFS, "/");
 
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
+ws.onEvent(onWsEvent);
+server.addHandler(&ws);
 
-  /* -------------------- WIFI SCAN (DÜZELTİLEN KISIM) -------------------- */
+/* -------------------- WIFI SCAN (DÜZELTİLEN KISIM) -------------------- */
 
-  server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
-    int status = WiFi.scanComplete();
+server.on("/api/scan-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
+  int status = WiFi.scanComplete();
 
-    // Scan hiç başlamamış → başlat
-    if (status == WIFI_SCAN_FAILED || status == -2) {
-      WiFi.scanDelete();
-      WiFi.scanNetworks(true); // async
-      request->send(200, "application/json", "[]");
-      return;
-    }
-
-    // Scan devam ediyor
-    if (status == WIFI_SCAN_RUNNING) {
-      request->send(200, "application/json", "[]");
-      return;
-    }
-
-    // Scan bitti
-    StaticJsonDocument<2048> doc;
-    JsonArray arr = doc.to<JsonArray>();
-
-    for (int i = 0; i < status; i++) {
-      JsonObject n = arr.createNestedObject();
-      n["ssid"] = WiFi.SSID(i);
-      n["rssi"] = WiFi.RSSI(i);
-      n["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-    }
-
-    String out;
-    serializeJson(arr, out);
+  // Scan hiç başlamamış → başlat
+  if (status == WIFI_SCAN_FAILED || status == -2) {
     WiFi.scanDelete();
+    WiFi.scanNetworks(true); // async
+    request->send(200, "application/json", "[]");
+    return;
+  }
 
-    request->send(200, "application/json", out);
-  });
+  // Scan devam ediyor
+  if (status == WIFI_SCAN_RUNNING) {
+    request->send(200, "application/json", "[]");
+    return;
+  }
 
-  /* -------------------- WIFI KAYIT -------------------- */
+  // Scan bitti
+  StaticJsonDocument<2048> doc;
+  JsonArray arr = doc.to<JsonArray>();
 
-  server.on(
-      "/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
-      [](AsyncWebServerRequest *request, uint8_t *data, size_t len,
-         size_t index, size_t total) {
-        StaticJsonDocument<200> doc;
-        deserializeJson(doc, data);
+  for (int i = 0; i < status; i++) {
+    JsonObject n = arr.createNestedObject();
+    n["ssid"] = WiFi.SSID(i);
+    n["rssi"] = WiFi.RSSI(i);
+    n["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+  }
 
-        prefs.begin("wifi", false);
-        prefs.putString("ssid", doc["ssid"].as<String>());
-        prefs.putString("pass", doc["pass"].as<String>());
-        prefs.end();
+  String out;
+  serializeJson(arr, out);
+  WiFi.scanDelete();
 
-        request->send(200, "application/json", "{\"status\":\"saved\"}");
-        restartTimer =
-            millis() + 2000; // 2 saniye sonra restart (tarayıcıya zaman tanı)
-        shouldRestartFlag = true;
-      });
+  request->send(200, "application/json", out);
+});
 
-  /* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
-   * -------------------- */
-  // Google / Android Probes
-  server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
-  server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
-  server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/connectivity-check", HTTP_ANY, sendPortalRedirect);
-  server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
-  server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
+/* -------------------- WIFI KAYIT -------------------- */
 
-  // Apple Captive Portal Probes
-  server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
-  server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
+server.on(
+    "/api/save-wifi", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
+       size_t total) {
+      StaticJsonDocument<200> doc;
+      deserializeJson(doc, data);
 
-  // Windows / Microsoft Probes
-  server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
-  server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
+      prefs.begin("wifi", false);
+      prefs.putString("ssid", doc["ssid"].as<String>());
+      prefs.putString("pass", doc["pass"].as<String>());
+      prefs.end();
 
-  // Samsung Special Probe
-  server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
+      request->send(200, "application/json", "{\"status\":\"saved\"}");
+      restartTimer =
+          millis() + 2000; // 2 saniye sonra restart (tarayıcıya zaman tanı)
+      shouldRestartFlag = true;
+    });
 
-  server.onNotFound(
-      [isOurLocalRequest, sendPortalRedirect](AsyncWebServerRequest *request) {
-        if (setupMode || captiveMode) {
-          if (!isOurLocalRequest(request->host())) {
-            sendPortalRedirect(request);
-          } else {
-            request->send(404, "text/plain", "Not Found");
-          }
-        } else {
-          request->send(404, "text/plain", "Not Found");
-        }
-      });
+/* -------------------- ULTIMATE CAPTIVE PORTAL (2026 Android/Fix)
+ * -------------------- */
+// Google / Android Probes
+server.on("/generate_204", HTTP_ANY, sendPortalRedirect);
+server.on("/gen_204", HTTP_ANY, sendPortalRedirect);
+server.on("/blank.html", HTTP_ANY, sendPortalRedirect);
+server.on("/connectivity-check", HTTP_ANY, sendPortalRedirect);
+server.on("/connectivitycheck.android.com", HTTP_ANY, sendPortalRedirect);
+server.on("/connectivitycheck.gstatic.com", HTTP_ANY, sendPortalRedirect);
 
-  /* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
+// Apple Captive Portal Probes
+server.on("/hotspot-detect.html", HTTP_ANY, sendPortalRedirect);
+server.on("/library/test/success.html", HTTP_ANY, sendPortalRedirect);
+server.on("/success.txt", HTTP_ANY, sendPortalRedirect);
 
-  server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<200> doc;
-    doc["setup"] = setupMode;
-    doc["suffix"] = deviceSuffix;
+// Windows / Microsoft Probes
+server.on("/connecttest.txt", HTTP_ANY, sendPortalRedirect);
+server.on("/ncsi.txt", HTTP_ANY, sendPortalRedirect);
 
-    String json;
-    serializeJson(doc, json);
-    request->send(200, "application/json", json);
-  });
+// Samsung Special Probe
+server.on("/nmcheck.gnm.samsung.com", HTTP_ANY, sendPortalRedirect);
 
-  server.on("/api/skip-setup", HTTP_POST, [](AsyncWebServerRequest *request) {
-    skipSetup = true;
-    setupMode = false;
-
-    Preferences p;
-    p.begin("setup", false);
-    p.putBool("skip", true);
-    p.end();
-
-    initWiFi();
-    request->send(200, "application/json", "{\"status\":\"skipped\"}");
-  });
-
-  server.on("/api/reset-setup", HTTP_POST, [](AsyncWebServerRequest *request) {
-    Preferences p;
-    p.begin("setup", false);
-    p.remove("skip");
-    p.end();
-    request->send(200, "application/json", "{\"status\":\"reset\"}");
-  });
-
-  server.on("/api/ota-check", HTTP_GET, [](AsyncWebServerRequest *request) {
-    NetworkClientSecure client;
-    client.setInsecure();
-    HTTPClient http;
-    http.begin(client, GITHUB_VERSION_URL);
-    int httpCode = http.GET();
-
-    StaticJsonDocument<256> resDoc;
-    if (httpCode == 200) {
-      String payload = http.getString();
-      StaticJsonDocument<512> githubDoc;
-      deserializeJson(githubDoc, payload);
-      String newV = githubDoc["version"] | FIRMWARE_VERSION;
-      resDoc["update_available"] = (newV != String(FIRMWARE_VERSION));
-      resDoc["new_version"] = newV;
-      resDoc["current_version"] = FIRMWARE_VERSION;
+server.onNotFound([isOurLocalRequest,
+                   sendPortalRedirect](AsyncWebServerRequest *request) {
+  if (setupMode || captiveMode) {
+    if (!isOurLocalRequest(request->host())) {
+      sendPortalRedirect(request);
     } else {
-      resDoc["error"] = "Check failed: " + String(httpCode);
+      request->send(404, "text/plain", "Not Found");
     }
-    http.end();
+  } else {
+    request->send(404, "text/plain", "Not Found");
+  }
+});
 
-    String out;
-    serializeJson(resDoc, out);
-    request->send(200, "application/json", out);
-  });
+/* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
 
-  server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
-    shouldUpdate = true;
-    otaStatus = "started";
-    request->send(200, "application/json", "{\"status\":\"started\"}");
-  });
+server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request) {
+  StaticJsonDocument<200> doc;
+  doc["setup"] = setupMode;
+  doc["suffix"] = deviceSuffix;
 
-  server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json",
-                  "{\"status\":\"" + otaStatus + "\"}");
-  });
+  String json;
+  serializeJson(doc, json);
+  request->send(200, "application/json", json);
+});
 
-  server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json",
-                  String("{\"version\":\"") + FIRMWARE_VERSION + "\"}");
-  });
+server.on("/api/skip-setup", HTTP_POST, [](AsyncWebServerRequest *request) {
+  skipSetup = true;
+  setupMode = false;
 
-  server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", "{\"status\":\"rebooting\"}");
-    delay(500);
-    ESP.restart();
-  });
+  Preferences p;
+  p.begin("setup", false);
+  p.putBool("skip", true);
+  p.end();
 
-  server.begin();
+  initWiFi();
+  request->send(200, "application/json", "{\"status\":\"skipped\"}");
+});
+
+server.on("/api/reset-setup", HTTP_POST, [](AsyncWebServerRequest *request) {
+  Preferences p;
+  p.begin("setup", false);
+  p.remove("skip");
+  p.end();
+  request->send(200, "application/json", "{\"status\":\"reset\"}");
+});
+
+server.on("/api/ota-check", HTTP_GET, [](AsyncWebServerRequest *request) {
+  NetworkClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, GITHUB_VERSION_URL);
+  int httpCode = http.GET();
+
+  StaticJsonDocument<256> resDoc;
+  if (httpCode == 200) {
+    String payload = http.getString();
+    StaticJsonDocument<512> githubDoc;
+    deserializeJson(githubDoc, payload);
+    String newV = githubDoc["version"] | FIRMWARE_VERSION;
+    resDoc["update_available"] = (newV != String(FIRMWARE_VERSION));
+    resDoc["new_version"] = newV;
+    resDoc["current_version"] = FIRMWARE_VERSION;
+  } else {
+    resDoc["error"] = "Check failed: " + String(httpCode);
+  }
+  http.end();
+
+  String out;
+  serializeJson(resDoc, out);
+  request->send(200, "application/json", out);
+});
+
+server.on("/api/ota-auto", HTTP_POST, [](AsyncWebServerRequest *request) {
+  shouldUpdate = true;
+  otaStatus = "started";
+  request->send(200, "application/json", "{\"status\":\"started\"}");
+});
+
+server.on("/api/ota-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send(200, "application/json", "{\"status\":\"" + otaStatus + "\"}");
+});
+
+server.on("/api/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send(200, "application/json",
+                String("{\"version\":\"") + FIRMWARE_VERSION + "\"}");
+});
+
+server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
+  request->send(200, "application/json", "{\"status\":\"rebooting\"}");
+  delay(500);
+  ESP.restart();
+});
+
+server.begin();
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
@@ -1287,15 +1312,14 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 void startSetupMode() {
   setupMode = true;
 
-  // initWiFi() artık setup() içinde veya öncesinde çağrılıyor,
-  // mDNS ve AP burada zaten yapılandırılmış olmalı.
-  IPAddress apIP(192, 168, 4, 1);
+  // Cihazın modem olduğu kesinleşmeli (IP 10.0.0.1)
+  IPAddress apIP(10, 0, 0, 1);
 
-  // DNS Sunucusunu Başlat
+  // DNS Sunucusunu Başlat (Tüm sorguları 10.0.0.1'e çek)
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(53, "*", apIP);
 
-  Serial.println("Setup Mode: ON (Captive Portal Active)");
+  Serial.println("Setup Mode: ON (Captive Portal 10.0.0.1 Active)");
 }
 
 bool connectToSavedWiFi() {
