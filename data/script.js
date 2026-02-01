@@ -680,39 +680,69 @@ function manualRedirect() {
 function triggerAutoUpdate() {
     if (!confirm(getTrans('confirm_update') || "Update firmware?")) return;
 
+    const overlay = document.getElementById("updateOverlay");
+    if (overlay) overlay.classList.remove("hidden");
+
     fetch(API_OTA_AUTO_URL, { method: 'POST' })
         .then(response => response.json())
         .then(data => {
             if (data.status == "started" || data.status == "updating") {
-                showToast("Güncelleme başlatıldı! 5 Dakika bekleyip yeniden bağlanın");
-                if (!otaStatusInterval) {
-                    otaStatusInterval = setInterval(checkOtaStatus, 2000);
-                }
+                // Sunucu kapanacağı için polling yerine uzun bir bekleme başlatıyoruz
+                handlePostUpdateUI();
             } else if (data.status == "busy") {
-                showToast("Güncelleştirmeye devam ediyor.");
+                showToast("Güncelleştirme zaten devam ediyor.");
+            } else if (data.status == "up_to_date") {
+                showToast("Yazılım zaten güncel!");
+                if (overlay) overlay.classList.add("hidden");
             }
         })
-        .catch(e => showToast("Güncelleştirme hatası"));
+        .catch(e => {
+            // Sunucu durduğu için catch'e düşmesi normaldir
+            handlePostUpdateUI();
+        });
+}
+
+function handlePostUpdateUI() {
+    const overlay = document.getElementById("updateOverlay");
+    if (overlay) overlay.classList.remove("hidden");
+
+    // 3 dakika (180 saniye) boyunca her 5 saniyede bir cihazın gelip gelmediğini kontrol et
+    let attempts = 0;
+    const maxAttempts = 36;
+
+    // Önceki interval'ları temizle (eğer varsa)
+    if (window.otaCheckInterval) clearInterval(window.otaCheckInterval);
+
+    window.otaCheckInterval = setInterval(() => {
+        attempts++;
+        console.log("Checking if Horus is back... Attempt:", attempts);
+
+        fetch(API_DEVICE_STATE_URL)
+            .then(res => {
+                if (res.ok) {
+                    clearInterval(window.otaCheckInterval);
+                    showToast("Güncelleme Başarılı! Horus hazır.", "success");
+                    // Overlay'i kapatmadan önce biraz başarı mesajı görünsün
+                    setTimeout(() => {
+                        if (overlay) overlay.classList.add("hidden");
+                        location.reload();
+                    }, 3000);
+                }
+            })
+            .catch(() => {
+                if (attempts >= maxAttempts) {
+                    clearInterval(window.otaCheckInterval);
+                    showToast("Güncelleme zaman aşımına uğradı. Lütfen cihazı kontrol edin.", "error");
+                    setTimeout(() => {
+                        if (overlay) overlay.classList.add("hidden");
+                    }, 5000);
+                }
+            });
+    }, 5000);
 }
 
 function checkOtaStatus() {
-    fetch(API_OTA_STATUS_URL)
-        .then(response => response.json())
-        .then(data => {
-            console.log("OTA Status:", data.status);
-            if (data.status == "up_to_date") {
-                clearInterval(otaStatusInterval);
-                otaStatusInterval = null;
-                showToast("Yazılım zaten güncel!");
-            } else if (data.status == "error") {
-                clearInterval(otaStatusInterval);
-                otaStatusInterval = null;
-                showToast("Güncelleme yapılmadı!");
-            } else if (data.status == "idle") {
-                clearInterval(otaStatusInterval);
-                otaStatusInterval = null;
-            }
-        });
+    // Bu fonksiyon artık triggerAutoUpdate'in bir parçası olarak handlePostUpdateUI tarafından yapılıyor
 }
 
 function changeLanguage() {
