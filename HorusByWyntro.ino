@@ -3,11 +3,10 @@
  * ROL: Firmware
  * DONANIM: ESP32 WROOM, 28BYJ-48 (ULN2003), TTP223
  * TASARIM: Caner Kocacık
- * DÜZELTME: OTA güncelleme iyileştirmesi
+ * DÜZELTME: OTA güncelleme iyileştirmesi ve temizlik
  */
 
 // 1. KUTUPHANE DEGISTIRILDI (SPIFFS -> LittleFS)
->>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
 #include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -24,7 +23,7 @@
 #include <esp_now.h>
 #include <vector>
 
-             // ===== FORWARD DECLARATIONS =====
+// ===== FORWARD DECLARATIONS =====
 bool connectToSavedWiFi();
 
 String wifiScanResult = "[]";
@@ -66,19 +65,15 @@ const char *SETUP_AP_SSID = "Horus";
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
-<<<<<<< HEAD
-#define FIRMWARE_VERSION "1.0.340"
-    == == ==
-    =
-#define FIRMWARE_VERSION "1.0.340"
-        >>>>>>> 92640a2 (fix: OTA partition table senkronizasyonu ve debug loglari eklendi)
+
+#define FIRMWARE_VERSION "1.0.339"
 #define PEER_FILE "/peers.json"
 
-    // ===============================
-    // Nesneler
-    // ===============================
-    AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
-                         MOTOR_PIN_2, MOTOR_PIN_4);
+// ===============================
+// Nesneler
+// ===============================
+AccelStepper stepper(AccelStepper::HALF4WIRE, MOTOR_PIN_1, MOTOR_PIN_3,
+                     MOTOR_PIN_2, MOTOR_PIN_4);
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
