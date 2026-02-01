@@ -171,10 +171,6 @@ function initWebSocket() {
         if (data.type === "error") {
             showToast(data.message);
         }
-
-        if (data.type === "log") {
-            appendLog(data.tag, data.msg);
-        }
     };
 
     socket.onclose = function () {
@@ -841,18 +837,4 @@ function rebootDevice() {
     }
 }
 
-function appendLog(tag, msg) {
-    const consoleBox = document.getElementById("liveLogs");
-    if (!consoleBox) return;
 
-    const line = document.createElement("div");
-    line.className = "log-line";
-    const time = new Date().toLocaleTimeString();
-    line.innerHTML = `<span class="log-tag">[${tag}]</span> <span class="log-time">${time}</span> ${msg}`;
-
-    consoleBox.appendChild(line);
-    while (consoleBox.children.length > 30) {
-        consoleBox.removeChild(consoleBox.firstChild);
-    }
-    consoleBox.scrollTop = consoleBox.scrollHeight;
-}
