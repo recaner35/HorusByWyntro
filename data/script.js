@@ -447,58 +447,67 @@ window.deletePeer = function (mac) {
 let isScanning = false;
 
 function scanWifi() {
-    // Hem Setup modundaki hem de Ana ekrandaki listeyi ve butonları seç
-    // Setup Modu ID'leri: wifiList, scanBtn
-    // Ana Ekran ID'leri: wifi-list, btn-scan (HTML'deki ID'lerine göre burayı kontrol et)
+    // Determine which list to use based on context
+    // 1. Setup Mode List
+    let setupList = document.getElementById('wifiList');
+    // 2. Network Tab List
+    let networkList = document.getElementById('networkWifiList');
 
-    // Hangi liste görünürse onu kullan
-    let list = document.getElementById('wifiList');
-    if (!list || list.offsetParent === null) {
-        list = document.getElementById('wifiList'); // Ana ekrandaki listenin ID'si
+    let targetList = null;
+    let targetBtn = null;
+
+    // Is the Setup Card visible?
+    let setupCard = document.getElementById('setupCard');
+    if (setupCard && !setupCard.classList.contains('hidden')) {
+        targetList = setupList;
+        // In setup HTML, button has no ID, but we can find it relative or hardcode if we added an ID. 
+        // For now, let's look for the button in setup card if needed, or pass 'this' from onclick.
+        // But since onclick="scanWifi()" is inline, we rely on DOM query.
+        targetBtn = setupCard.querySelector('button.primary-btn'); // Heuristic
+    } else {
+        // Assume Network Tab
+        targetList = networkList;
+        targetBtn = document.getElementById('btn-scan');
     }
 
-    // Hangi buton görünürse onu kullan
-    let btn = document.getElementById('scanBtn');
-    if (!btn || btn.offsetParent === null) {
-        btn = document.getElementById('btn-scan'); // Ana ekrandaki butonun ID'si
-    }
-
-    if (!list) {
-        console.error("Wifi listesi elemanı bulunamadı!");
+    if (!targetList) {
+        console.error("Wifi list target not found");
         return;
     }
 
     if (isScanning) return;
 
     isScanning = true;
-    list.innerHTML = '<div class="scanning">Ağlar taranıyor...</div>';
+    targetList.innerHTML = '<div class="scanning">Ağlar taranıyor...</div>';
 
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = (typeof getTrans === 'function' && getTrans('scanning')) ? getTrans('scanning') : "Taranıyor...";
+    if (targetBtn) {
+        targetBtn.disabled = true;
+        // Save original text to restore later? Or just hardcode restoration
+        targetBtn.dataset.originalText = targetBtn.innerHTML;
+        targetBtn.innerHTML = (typeof getTrans === 'function' && getTrans('scanning')) ? getTrans('scanning') : "Taranıyor...";
     }
 
-    // 1️⃣ Tarama isteği gönder
+    // 1️⃣ Send scan request
     fetch(API_SCAN_NETWORKS_URL)
         .then(r => r.json())
         .then(() => {
-            // 2️⃣ 2.5 sn bekle, sonra sonucu iste
+            // 2️⃣ Wait 2.5s, then fetch results
             setTimeout(() => {
-                fetchResults(list, btn);
+                fetchResults(targetList, targetBtn);
             }, 2500);
         })
         .catch(() => {
-            list.innerHTML = '<div class="error">ESP32 bağlantı hatası</div>';
-            resetScanState(btn);
+            targetList.innerHTML = '<div class="error">ESP32 bağlantı hatası</div>';
+            resetScanState(targetBtn);
         });
 }
 
-// Sonuçları getiren yardımcı fonksiyon
+// Helper to fetch results
 function fetchResults(list, btn) {
     fetch(API_SCAN_NETWORKS_URL)
         .then(r => r.json())
         .then(networks => {
-            // Liste boşsa tekrar dene (Retry)
+            // Retry if empty
             if (networks.length === 0) {
                 list.innerHTML = '<div class="scanning">Ağlar aranıyor... (Tekrar deneniyor)</div>';
                 setTimeout(() => {
@@ -507,7 +516,7 @@ function fetchResults(list, btn) {
                 return;
             }
 
-            renderWifiList(networks, list); // Listeyi parametre olarak gönder
+            renderWifiList(networks, list);
             resetScanState(btn);
         })
         .catch(() => {
@@ -520,15 +529,19 @@ function resetScanState(btn) {
     isScanning = false;
     if (btn) {
         btn.disabled = false;
-        // Buton metnini eski haline getir (İkonlu haline veya sadece yazıya)
-        btn.innerHTML = (typeof getTrans === 'function' && getTrans('scan')) ? getTrans('scan') : "Ağları Tara";
+        if (btn.dataset.originalText) {
+            btn.innerHTML = btn.dataset.originalText;
+        } else {
+            btn.innerHTML = (typeof getTrans === 'function' && getTrans('scan')) ? getTrans('scan') : "Ağları Tara";
+        }
     }
 }
 
-// Listeyi ekrana basan fonksiyon (Güncellendi)
+// List rendering function
 function renderWifiList(networks, listElement) {
-    // Eğer parametre olarak liste gelmediyse bulmaya çalış
+    // If no list element provided, default to setup list (fallback)
     const list = listElement || document.getElementById('wifiList');
+    if (!list) return;
 
     list.innerHTML = '';
 
