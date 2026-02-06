@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.373"
+#define FIRMWARE_VERSION "1.0.370"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -1255,6 +1255,13 @@ void initWebServer() {
         prefs.putString("pass", doc["pass"].as<String>());
         prefs.end();
 
+        // Yeni WiFi girildiğinde, SKIP bayrağını temizlemeliyiz ki tekrar
+        // denesin
+        Preferences p;
+        p.begin("setup", false);
+        p.remove("skip");
+        p.end();
+
         request->send(200, "application/json", "{\"status\":\"saved\"}");
         restartTimer =
             millis() + 2000; // 2 saniye sonra restart (tarayıcıya zaman tanı)
@@ -1297,6 +1304,24 @@ void initWebServer() {
       });
 
   /* -------------------- SETUP / OTA / DEVICE API’LERİ -------------------- */
+
+  // IP değişikliği kontrolü için Event Handler
+  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+      Serial.println("\n[EVENT] Yeni IP Alindi!");
+      Serial.print("[EVENT] IP: ");
+      Serial.println(WiFi.localIP());
+
+      // Eğer sistem zaten çalışıyorsa ve yeni IP aldıysa,
+      // mDNS güncellemek için restart atmak en temizi
+      if (!setupMode) {
+        Serial.println(
+            "[EVENT] mDNS senkronizasyonu icin restart planlaniyor...");
+        shouldRestartFlag = true;
+        restartTimer = millis() + 1000;
+      }
+    }
+  });
 
   server.on("/api/device-state", HTTP_GET, [](AsyncWebServerRequest *request) {
     StaticJsonDocument<200> doc;
