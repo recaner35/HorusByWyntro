@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.371"
+#define FIRMWARE_VERSION "1.0.370"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -995,10 +995,21 @@ void initWiFi() {
 
   String apName = SETUP_AP_SSID; // Global değişkenden al (Horus-Setup)
 
+  // Kanal seçimi: Varsayılan 1
+  int channel = 1;
+
   if (!setupMode) {
     String apBase = (config.hostname != "") ? config.hostname : "Horus";
     String apSlug = slugify(apBase);
     apName = apSlug + "-" + deviceSuffix;
+
+    // EĞER Station modunda bağlıysak, aynı kanalı kullanmak ZORUNDAYIZ
+    // Aksi takdirde ESP32 radio kanalı değiştireceği için bağlantı kopar!
+    if (WiFi.status() == WL_CONNECTED) {
+      channel = WiFi.channel();
+      Serial.print(F("STA Kanalı algılandı: "));
+      Serial.println(channel);
+    }
   }
 
   // 172.217.28.1 sadece SETUP modunda (Android Captive Portal Hilesi)
@@ -1013,8 +1024,8 @@ void initWiFi() {
   IPAddress subnet(255, 255, 255, 0);
   WiFi.softAPConfig(apIP, apIP, subnet);
 
-  // Kanal 1, Şifresiz, Max 8 istemci
-  WiFi.softAP(apName.c_str(), NULL, 1, 0, 8);
+  // SoftAP Başlat
+  WiFi.softAP(apName.c_str(), NULL, channel, 0, 8);
   WiFi.setHostname(apName.c_str());
 
   // KRİTİK: WiFi Güç Tasarrufunu kapat (Samsung bağlantı kopmalarını önler)
@@ -1040,11 +1051,19 @@ void initWiFi() {
   // mDNS Başlatma
   if (MDNS.begin(apName.c_str())) {
     MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS Responder baslatildi: " + apName + ".local");
+  } else {
+    Serial.println("mDNS baslatilamadi!");
   }
 
   Serial.println("AP: " + apName + " (" + myMacAddress + ")");
-  Serial.print(F("IP: "));
+  Serial.print(F("AP IP: "));
   Serial.println(WiFi.softAPIP());
+
+  if (!setupMode && WiFi.status() == WL_CONNECTED) {
+    Serial.print(F("STA IP: "));
+    Serial.println(WiFi.localIP());
+  }
 }
 
 // ===============================
@@ -1127,10 +1146,12 @@ void initWebServer() {
         "rgba(0,240,255,0.1)}"
         ".btn:active{transform:scale(0.95);background:rgba(0,240,255,0.2)}"
         "</style></head><body>"
-        "<h1>Horus By Wyntro</h1><p style='opacity:0.6;margin-bottom:40px'>Horus By Wyntro Kurulum Ekranı</p>"
+        "<h1>Horus By Wyntro</h1><p "
+        "style='opacity:0.6;margin-bottom:40px'>Horus By Wyntro"
+        "Zamanı Korumaya Başlayın</p>"
         "<a href='" +
         enterUrl +
-        "' class='btn'>ENTER SETUP</a>"
+        "' class='btn'>KURULUMA BAŞLA</a>"
         "</body></html>";
     request->send(200, "text/html", html);
   });
