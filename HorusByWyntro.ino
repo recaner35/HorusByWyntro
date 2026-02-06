@@ -418,7 +418,6 @@ void setup() {
     startSetupMode();
   } else {
     setupMode = false;
-    captiveMode = false; // Disable captive portal redirection
     initWiFi();
     initESPNow();
   }
@@ -1002,7 +1001,15 @@ void initWiFi() {
     apName = apSlug + "-" + deviceSuffix;
   }
 
-  IPAddress apIP(172, 217, 28, 1); // Google / gstatic bloğu taklidi
+  // 172.217.28.1 sadece SETUP modunda (Android Captive Portal Hilesi)
+  // Normal modda standart 192.168.4.1 kullan
+  IPAddress apIP;
+  if (setupMode) {
+    apIP = IPAddress(172, 217, 28, 1);
+  } else {
+    apIP = IPAddress(192, 168, 4, 1);
+  }
+
   IPAddress subnet(255, 255, 255, 0);
   WiFi.softAPConfig(apIP, apIP, subnet);
 
@@ -1016,16 +1023,18 @@ void initWiFi() {
   // WiFi uykusunu kapat (Yanıt süresini milisaniyelere düşürür)
   WiFi.setSleep(false);
 
-  // RFC 8910: DHCP Option 114 (Captive Portal API) - The DEFINITIVE way for
-  // Android 11+
-  esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
-  if (ap_netif) {
-    esp_netif_dhcps_stop(ap_netif);
-    const char *cp_url = "http://172.217.28.1/api/captive-portal";
-    esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
-                           (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
-                           strlen(cp_url));
-    esp_netif_dhcps_start(ap_netif);
+  // RFC 8910: DHCP Option 114 (Captive Portal API)
+  // Sadece SETUP modunda aktifleştir
+  if (setupMode) {
+    esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (ap_netif) {
+      esp_netif_dhcps_stop(ap_netif);
+      const char *cp_url = "http://172.217.28.1/api/captive-portal";
+      esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET,
+                             (esp_netif_dhcp_option_id_t)114, (void *)cp_url,
+                             strlen(cp_url));
+      esp_netif_dhcps_start(ap_netif);
+    }
   }
 
   // mDNS Başlatma
@@ -1044,18 +1053,20 @@ void initWiFi() {
 void initWebServer() {
 
   // Helping Lambda: Check if the request is for US (IP or mDNS)
-  // Helping Lambda: Check if the request is for US (IP or mDNS)
   // [=] capture: config, deviceSuffix ve diğer global değişkenlere erişim
   // sağlar.
   auto isOurLocalRequest = [=](String host) {
-    if (host == "172.217.28.1" || host == "horus.local")
+    if (host == "172.217.28.1" || host == "192.168.4.1" ||
+        host == "horus.local")
       return true;
 
-    // IP Kontrolü: Google IP'si veya o anki Yerel IP
+    // IP Kontrolü: Google IP'si veya o anki Yerel IP veya AP IP
     if (host.indexOf("172.217.28.1") >= 0)
       return true;
     if (WiFi.localIP().toString() != "0.0.0.0" &&
         host.indexOf(WiFi.localIP().toString()) >= 0)
+      return true;
+    if (host.indexOf(WiFi.softAPIP().toString()) >= 0)
       return true;
 
     // İsim Kontrolü: "horus-" veya kullanıcının verdiği özel isim
@@ -1072,15 +1083,22 @@ void initWebServer() {
   };
 
   auto sendPortalRedirect = [](AsyncWebServerRequest *request) {
+    String currentApIP = WiFi.softAPIP().toString();
+    String redirectUrl = "http://" + currentApIP + "/captive.html";
+
     // STEALTH + LUXURY REDIRECT: Redirect to a dedicated captive page first.
-    AsyncWebServerResponse *response = request->beginResponse(
-        200, "text/html",
-        "<!DOCTYPE html><html><head>"
-        "<meta http-equiv='refresh' "
-        "content='0;url=http://172.217.28.1/captive.html'>"
-        "<script>window.location.href='http://172.217.28.1/captive.html';</"
-        "script>"
-        "</head><body>Redirecting to Horus...</body></html>");
+    // Dinamik IP ile yönlendirme (Setup modunda 172.x, diğerinde 192.x)
+    String html = "<!DOCTYPE html><html><head>"
+                  "<meta http-equiv='refresh' content='0;url=" +
+                  redirectUrl +
+                  "'>"
+                  "<script>window.location.href='" +
+                  redirectUrl +
+                  "';</script>"
+                  "</head><body>Redirecting to Horus...</body></html>";
+
+    AsyncWebServerResponse *response =
+        request->beginResponse(200, "text/html", html);
     response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response->addHeader("Pragma", "no-cache");
     response->addHeader("Expires", "-1");
@@ -1090,10 +1108,13 @@ void initWebServer() {
 
   // Inline Captive Portal Page (Lüks & Minimalist)
   server.on("/captive.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String currentApIP = WiFi.softAPIP().toString();
+    String enterUrl = "http://" + currentApIP + "/";
+
     String html =
         "<!DOCTYPE html><html><head><meta name='viewport' "
         "content='width=device-width,initial-scale=1'>"
-        "<title>Horus Setup</title><style>"
+        "<title>Horus By Wyntro Kurulum Ekranı</title><style>"
         "body{background:#000;color:#fff;font-family:-apple-system,sans-serif;"
         "display:flex;flex-direction:column;align-items:center;justify-content:"
         "center;height:100vh;margin:0;text-align:center}"
@@ -1106,27 +1127,32 @@ void initWebServer() {
         "rgba(0,240,255,0.1)}"
         ".btn:active{transform:scale(0.95);background:rgba(0,240,255,0.2)}"
         "</style></head><body>"
-        "<h1>HORUS</h1><p style='opacity:0.6;margin-bottom:40px'>Aura of "
-        "Setup</p>"
-        "<a href='http://172.217.28.1/' class='btn'>ENTER SETUP</a>"
+        "<h1>Horus By Wyntro</h1><p style='opacity:0.6;margin-bottom:40px'>Horus By Wyntro Kurulum Ekranı</p>"
+        "<a href='" +
+        enterUrl +
+        "' class='btn'>ENTER SETUP</a>"
         "</body></html>";
     request->send(200, "text/html", html);
   });
 
   // RFC 8908 Uyumlu API endpoint
-  server.on("/api/captive-portal", HTTP_GET,
-            [](AsyncWebServerRequest *request) {
-              request->send(200, "application/json",
-                            "{\"captive\":true,\"user-portal-url\":\"http://"
-                            "172.217.28.1/captive.html\"}");
-            });
+  server.on(
+      "/api/captive-portal", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String currentApIP = WiFi.softAPIP().toString();
+        String url = "http://" + currentApIP + "/captive.html";
+        String json = "{\"captive\":true,\"user-portal-url\":\"" + url + "\"}";
+        request->send(200, "application/json", json);
+      });
 
   server.on(
       "/", HTTP_GET,
       [isOurLocalRequest, sendPortalRedirect](AsyncWebServerRequest *request) {
-        // Sadece captiveMode aktifse ve istek bize değilse yönlendir
-        if (captiveMode && !isOurLocalRequest(request->host())) {
-          sendPortalRedirect(request);
+        if (setupMode || captiveMode) {
+          if (!isOurLocalRequest(request->host())) {
+            sendPortalRedirect(request);
+          } else {
+            request->send(LittleFS, "/index.html", "text/html");
+          }
         } else {
           request->send(LittleFS, "/index.html", "text/html");
         }
