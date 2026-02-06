@@ -1292,6 +1292,11 @@ input[type="range"]::-moz-range-thumb {
     animation: fadeIn 0.3s ease;
 }
 
+.modal-overlay:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
 .modal-content {
     background: var(--card-bg);
     padding: 24px;
