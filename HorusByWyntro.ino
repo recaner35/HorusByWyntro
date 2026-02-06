@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.372"
+#define FIRMWARE_VERSION "1.0.370"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -413,11 +413,13 @@ void setup() {
   // Wi-Fi Bağlantısını Dene veya Setup Moduna Geç
   // Eğer skip=true ise bağlantı başarısız olsa bile setup moduna girme
   if (!skip && !connectToSavedWiFi()) {
-    setupMode = true; // SSID kararı için önce mode set edilmeli
-    initWiFi();       // AP ve mDNS burada başlatılacak
+    setupMode = true;   // SSID kararı için önce mode set edilmeli
+    captiveMode = true; // Setup modunda captive portal aktif
+    initWiFi();         // AP ve mDNS burada başlatılacak
     startSetupMode();
   } else {
     setupMode = false;
+    captiveMode = false; // Bağlantı başarılıysa captive portalı kapat
     initWiFi();
     initESPNow();
   }
@@ -1056,14 +1058,32 @@ void initWiFi() {
     Serial.println("mDNS baslatilamadi!");
   }
 
-  Serial.println("AP: " + apName + " (" + myMacAddress + ")");
-  Serial.print(F("AP IP: "));
+  Serial.println("\n------------------------------------------------");
+  Serial.println("HORUS: Erisim Adresleri");
+  Serial.println("------------------------------------------------");
+  Serial.println("1. Hotspot Baglantisi (AP):");
+  Serial.print("   SSID: ");
+  Serial.println(apName);
+  Serial.print("   IP:   ");
   Serial.println(WiFi.softAPIP());
+  Serial.print("   URL:  http://");
+  Serial.print(WiFi.softAPIP());
+  Serial.println("/");
 
   if (!setupMode && WiFi.status() == WL_CONNECTED) {
-    Serial.print(F("STA IP: "));
+    Serial.println("\n2. Ev Agi Baglantisi (STA):");
+    Serial.print("   IP:   ");
     Serial.println(WiFi.localIP());
+    Serial.print("   mDNS: http://");
+    Serial.print(apName);
+    Serial.println(".local/");
+    if (config.hostname != "") {
+      Serial.print("   mDNS (Slug): http://");
+      Serial.print(slugify(config.hostname));
+      Serial.println(".local/ (Alternatif)");
+    }
   }
+  Serial.println("------------------------------------------------\n");
 }
 
 // ===============================
@@ -1147,8 +1167,8 @@ void initWebServer() {
         ".btn:active{transform:scale(0.95);background:rgba(0,240,255,0.2)}"
         "</style></head><body>"
         "<h1>Horus By Wyntro</h1><p "
-        "style='opacity:0.6;margin-bottom:40px'>Horus By Wyntro"
-        "Zamanı Korumaya Başlayın</p>"
+        "style='opacity:0.6;margin-bottom:40px'>Zamanı"
+        "Korumaya Başlayın</p>"
         "<a href='" +
         enterUrl +
         "' class='btn'>KURULUMA BAŞLA</a>"
