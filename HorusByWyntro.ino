@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.369"
+#define FIRMWARE_VERSION "1.0.351"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -418,6 +418,7 @@ void setup() {
     startSetupMode();
   } else {
     setupMode = false;
+    captiveMode = false; // Disable captive portal redirection
     initWiFi();
     initESPNow();
   }
@@ -1123,7 +1124,8 @@ void initWebServer() {
   server.on(
       "/", HTTP_GET,
       [isOurLocalRequest, sendPortalRedirect](AsyncWebServerRequest *request) {
-        if (!isOurLocalRequest(request->host())) {
+        // Sadece captiveMode aktifse ve istek bize değilse yönlendir
+        if (captiveMode && !isOurLocalRequest(request->host())) {
           sendPortalRedirect(request);
         } else {
           request->send(LittleFS, "/index.html", "text/html");
