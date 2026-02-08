@@ -396,7 +396,7 @@ void setup() {
   Serial.println("Device Suffix: " + deviceSuffix);
 
   // Pinleri Ayarla
-  pinMode(TOUCH_PIN, INPUT);
+  pinMode(TOUCH_PIN, INPUT_PULLUP);
 
   // Motor Kurulumu
   initMotor();
@@ -521,12 +521,28 @@ void checkSchedule() {
 
 void handlePhysicalControl() {
   int reading = digitalRead(TOUCH_PIN);
-  if (reading == HIGH && (millis() - lastTouchTime > 500)) {
-    lastTouchTime = millis();
-    isRunning = !isRunning;
-    String json = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-    ws.textAll(json);
-    broadcastStatus();
+
+  // LED parmağınızı çekince yanıyorsa (Active Low), 
+  // 'LOW' okuduğumuzda aslında dokunmuş oluyoruz.
+  // Eğer tam tersiyse aşağıdaki 'LOW'u 'HIGH' yapın.
+  
+  if (reading == LOW && !touchState) { // Yeni bir dokunma algılandı
+    if (millis() - lastTouchTime > 300) { 
+      isRunning = !isRunning;
+      touchState = true; // Dokunma devam ediyor olarak işaretle
+      lastTouchTime = millis();
+      
+      // Seri porttan kontrol edin
+      Serial.println(isRunning ? "Motor: CALISIYOR" : "Motor: DURDU");
+
+      String json = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      ws.textAll(json);
+      broadcastStatus();
+    }
+  } 
+  
+  if (reading == HIGH && touchState) { // El çekildiğinde durumu sıfırla
+    touchState = false;
   }
 }
 
