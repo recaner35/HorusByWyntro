@@ -269,12 +269,12 @@ bool execOTA(String url, int command) {
 
     Serial.println(F("[OTA] Yazma basliyor..."));
 
-    // Manuel Stream Kopyalama (Daha güvenli)
+    // Manuel Stream Kopyalama (Daha güvenli ve hızlı)
     WiFiClient *stream = http.getStreamPtr();
-    uint8_t buff[1024] = {0};
+    // Tampon boyutunu 4096 byte'a çıkardık (LittleFS blok boyutuyla uyumlu)
+    uint8_t buff[4096] = {0};
     size_t written = 0;
-    unsigned long lastProgress = 0;
-    unsigned long lastDataTime = millis(); // Son veri alma zamanı
+    unsigned long lastDataTime = millis();
     unsigned long totalStartTime = millis();
 
     while (http.connected() && (written < contentLength)) {
@@ -289,13 +289,10 @@ bool execOTA(String url, int command) {
         written += w;
         lastDataTime = millis(); // Veri geldiğinde timer'ı sıfırla
 
-        // İlerleme çubuğu (Her 2 saniyede bir)
-        if (millis() - lastProgress > 2000) {
-          lastProgress = millis();
-          Serial.printf("[OTA] Ilerleme: %d / %d (%.2f%%) | Heap: %d\n",
-                        written, contentLength,
-                        (float)written * 100.0 / contentLength,
-                        ESP.getFreeHeap());
+        // İlerleme çubuğu (Her 1 saniyede bir)
+        if (millis() - totalStartTime > 1000) {
+          // Basit heartbeat logu (seri portu yormamak için sadece nokta)
+          // Serial.print(".");
         }
 
         // Hata kontrolü
@@ -304,13 +301,14 @@ bool execOTA(String url, int command) {
           break;
         }
 
-        delay(1); // Watchdog besle
+        // Watchdog beslemesi için kritik
+        yield();
       } else {
-        delay(10); // Veri yoksa bekle
+        delay(1); // Veri yoksa kısa bekle
       }
 
-      // Inactivity timeout (30 saniye)
-      if (millis() - lastDataTime > 30000) {
+      // Inactivity timeout (45 saniye - biraz artırıldı)
+      if (millis() - lastDataTime > 45000) {
         Serial.println(F("[OTA] Veri akisi durdu (Inactivity)!"));
         break;
       }
