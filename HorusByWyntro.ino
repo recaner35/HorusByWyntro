@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.381"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -455,7 +455,13 @@ void loop() {
     turnsThisHour++;
   }
   checkSchedule();
-  handlePhysicalControl();
+  checkSchedule();
+
+  // Açılış parazitini önlemek için ilk 2 saniye sensörü okuma
+  if (millis() > 2000) {
+    handlePhysicalControl();
+  }
+
   stepper.run();
 
   // Güvenli Restart Kontrolü
@@ -1461,6 +1467,9 @@ void initWebServer() {
       });
 
   server.begin();
+
+  // Başlangıçta motor kapalı olsun
+  isRunning = false;
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
