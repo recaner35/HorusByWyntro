@@ -416,9 +416,9 @@ function renderPeers(peers) {
                     <label>${getTrans('direction') || 'Yön'}</label>
                     <div class="direction-selector" style="margin-top:5px;">
                         <input type="hidden" id="p-dir-${p.mac}" value="${dir}">
-                        <button class="dir-btn ${dir == 0 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 0)">CW</button>
-                        <button class="dir-btn ${dir == 1 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 1)">CCW</button>
-                        <button class="dir-btn ${dir == 2 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 2)">Bi-Dir</button>
+                        <button class="dir-btn ${dir == 0 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 0)">${getTrans('cw') || 'CW'}</button>
+                        <button class="dir-btn ${dir == 1 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 1)">${getTrans('ccw') || 'CCW'}</button>
+                        <button class="dir-btn ${dir == 2 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 2)">${getTrans('bi_dir') || 'Bi-Dir'}</button>
                     </div>
                 </div>
             </div>
