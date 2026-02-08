@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.380"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -230,18 +230,6 @@ bool execOTA(String url, int command) {
   // OTA öncesi her şeyi sıfırla
   Update.abort();
 
-  // 🔥 RADIKAL RAM KAZANIMI: WiFi dışındaki tüm servisleri kapat
-  if (isEspNowActive) {
-    esp_now_deinit();
-    isEspNowActive = false;
-    Serial.println(F("[OTA] ESP-NOW durduruldu."));
-  }
-
-  ws.closeAll();
-  ws.enable(false);
-  server.end(); // Web sunucusunu tamamen kapat (RAM boşaltır)
-  MDNS.end();   // mDNS servislerini kapat
-
   // Belleğin toparlanması için sistem görevlerine zaman tanı
   delay(500);
   Serial.printf("[OTA] Temizlik sonrasi Heap: %d bytes\n", ESP.getFreeHeap());
@@ -330,6 +318,18 @@ void checkAndPerformUpdate() {
       Serial.println("Yeni surum bulundu! Guncelleniyor...");
       otaStatus = "updating";
 
+      // 🔥 RADIKAL RAM KAZANIMI: WiFi dışındaki tüm servisleri kapat (Tek
+      // seferlik)
+      if (isEspNowActive) {
+        esp_now_deinit();
+        isEspNowActive = false;
+      }
+      ws.closeAll();
+      ws.enable(false);
+      server.end();
+      MDNS.end();
+      delay(500); // Sistem rahatlasın
+
       String baseUrl =
           "https://github.com/recaner35/HorusByWyntro/releases/download/" +
           newVersion + "/";
@@ -347,6 +347,7 @@ void checkAndPerformUpdate() {
       Serial.println("Firmware indiriliyor: " + fwUrl);
       if (execOTA(fwUrl, U_FLASH)) {
         Serial.println("Firmware guncellendi. Yeniden baslatiliyor...");
+        delay(1000);
         ESP.restart();
         updated = true;
       } else {
@@ -381,9 +382,11 @@ void setup() {
   // 3. DUZELTME: LittleFS Başlatılıyor (SPIFFS yerine)
   if (!LittleFS.begin(true)) {
     Serial.println(F("LittleFS Mount Failed"));
-    return;
+    // return; // Hata olsa bile devam et, arayüz en azından wifi ayarlarını
+    // sunsun
+  } else {
+    Serial.println(F("LittleFS OK"));
   }
-  Serial.println(F("LittleFS OK"));
 
   // Config ve Suffix Yükle
   loadConfig();
