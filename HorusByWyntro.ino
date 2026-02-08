@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.383"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -231,56 +231,98 @@ bool execOTA(String url, int command) {
   Update.abort();
 
   // Belleğin toparlanması için sistem görevlerine zaman tanı
-  delay(500);
-  Serial.printf("[OTA] Temizlik sonrasi Heap: %d bytes\n", ESP.getFreeHeap());
+  delay(100);
+  Serial.printf("[OTA] Baslangic Heap: %d bytes\n", ESP.getFreeHeap());
 
   NetworkClientSecure client;
   client.setInsecure();
-
-  // Core 3.x için SSL tampon belleğini minimumda tutmaya çalış
-  client.setHandshakeTimeout(30);
+  client.setHandshakeTimeout(120); // Handshake timeout artırıldı
 
   HTTPClient http;
   http.begin(client, url);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setTimeout(60000);
+  http.setTimeout(120000); // 2 dakika timeout
 
   Serial.println(F("[OTA] HTTP GET..."));
   int httpCode = http.GET();
 
   if (httpCode == 200) {
     int contentLength = http.getSize();
-    Serial.printf("[OTA] Dosya: %d, Heap: %d\n", contentLength,
-                  ESP.getFreeHeap());
+    Serial.printf("[OTA] Indirilecek Dosya Boyutu: %d bytes\n", contentLength);
 
     if (contentLength <= 0) {
-      Serial.println(F("[OTA] Hata: Boyut 0!"));
+      Serial.println(F("[OTA] Hata: Gecersiz dosya boyutu!"));
       http.end();
       return false;
     }
 
-    // OTA başlatma
-    if (Update.begin(contentLength, command)) {
-      Serial.println(F("[OTA] Yazma basliyor..."));
-      size_t written = Update.writeStream(http.getStream());
+    // OTA Başlatma
+    if (!Update.begin(contentLength, command)) {
+      Serial.printf("[OTA] Baslatma Hatasi! Kod: %d\n", Update.getError());
+      // Hata detayını yazdır
+      Update.printError(Serial);
+      http.end();
+      return false;
+    }
 
-      if (written == contentLength) {
-        if (Update.end()) {
-          if (Update.isFinished()) {
-            Serial.println(F("[OTA] Basarili!"));
-            http.end();
-            return true;
-          }
+    Serial.println(F("[OTA] Yazma basliyor..."));
+
+    // Manuel Stream Kopyalama (Daha güvenli)
+    WiFiClient *stream = http.getStreamPtr();
+    uint8_t buff[1024] = {0};
+    size_t written = 0;
+    unsigned long lastProgress = 0;
+    unsigned long startTime = millis();
+
+    while (http.connected() && (written < contentLength)) {
+      size_t size = stream->available();
+      if (size) {
+        // Buffer kadar oku
+        int c = stream->readBytes(
+            buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+
+        // Update'e yaz
+        size_t w = Update.write(buff, c);
+        written += w;
+
+        // İlerleme çubuğu (Her 1 saniyede bir veya %10'da bir)
+        if (millis() - lastProgress > 1000) {
+          lastProgress = millis();
+          Serial.printf("[OTA] Ilerleme: %d / %d (%.2f%%)\n", written,
+                        contentLength, (float)written * 100.0 / contentLength);
+        }
+
+        // Hata kontrolü
+        if (w != c) {
+          Serial.println(F("[OTA] Yazma hatasi! Eksik yazildi."));
+          break;
+        }
+
+        delay(1); // Watchdog besle
+      } else {
+        delay(10); // Veri yoksa bekle
+      }
+
+      // Timeout kontrolü (Veri akışı durursa)
+      if (millis() - startTime > 180000) { // 3 dakika total timeout
+        Serial.println(F("[OTA] Zaman asimi!"));
+        break;
+      }
+    }
+
+    if (written == contentLength) {
+      if (Update.end()) {
+        if (Update.isFinished()) {
+          Serial.println(F("[OTA] Basarili!"));
+          http.end();
+          return true;
         }
       } else {
-        Serial.printf("[OTA] Yazma eksik: %d/%d\n", written, contentLength);
+        Serial.printf("[OTA] Bitis Hatasi! Kod: %d\n", Update.getError());
+        Update.printError(Serial);
       }
     } else {
-      Serial.printf("[OTA] Hata Kodu: %d\n", Update.getError());
-      if (Update.getError() == 0) {
-        Serial.println(
-            F("[OTA] Hala bellek yetersiz! SSL cok fazla RAM kullaniyor."));
-      }
+      Serial.printf("[OTA] Yazma eksik: %d/%d\n", written, contentLength);
     }
   } else {
     Serial.printf("[OTA] HTTP Kod: %d\n", httpCode);
