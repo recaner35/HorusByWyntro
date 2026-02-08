@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.387"
+#define FIRMWARE_VERSION "1.0.386"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -99,7 +99,8 @@ bool isEspNowActive = false;
 unsigned long sessionStartTime = 0;
 int turnsThisHour = 0;
 int targetTurnsPerHour = 0;
-unsigned long lastTouchTime = 0;
+unsigned long lastTouchTime = 0;  // Debounce için
+unsigned long touchStartTime = 0; // Uzun basma ölçümü için
 bool touchState = false;
 bool longPressTriggered = false;
 String deviceSuffix = "";
@@ -487,19 +488,19 @@ void setup() {
   // KRİTİK: Açılışta motorun kesinlikle kapalı olduğundan emin ol
   isRunning = false;
 
-  // Sensörün açılış durumunu oku (başlangıçta basılıysa veya parazit varsa
-  // tetikleme yapmasın)
+  // Sensörün açılış durumunu oku
+  lastTouchTime = millis();
   if (digitalRead(TOUCH_PIN) == LOW) {
     touchState = true;
+    touchStartTime = millis();
     longPressTriggered =
-        true; // Açılışta basılıysa elini çekene kadar işlem yapma
-    Serial.println(F("[SENSOR] Acilista basili algilandi, serbest birakilmasi "
-                     "bekleniyor..."));
+        true; // Açılışta basılıysa 'kilit' koy (elini çekene kadar işlem yapma)
+    Serial.println(F("[SENSOR] Acilista basili algilandi, 'Safe Lock' aktif. "
+                     "Lutfen elinizi cekin."));
   } else {
     touchState = false;
     longPressTriggered = false;
   }
-  lastTouchTime = millis();
 }
 
 // ===============================
@@ -599,46 +600,54 @@ void checkSchedule() {
 
 void handlePhysicalControl() {
   int reading = digitalRead(TOUCH_PIN);
+  unsigned long now = millis();
 
-  // LED parmağınızı çekince yanıyorsa (Active Low),
-  // 'LOW' okuduğumuzda aslında dokunmuş oluyoruz.
-  // Eğer tam tersiyse aşağıdaki 'LOW'u 'HIGH' yapın.
+  // DOKUNMA BAŞLANGICI
+  if (reading == LOW && !touchState) {
+    // Debounce: En az 100ms boyunca LOW kalmalı (Parazit engelleme)
+    if (now - lastTouchTime > 100) {
+      touchState = true;
+      touchStartTime = now;
+      lastTouchTime = now;
 
-  if (reading == LOW && !touchState) { // Yeni bir dokunma algılandı
-    if (millis() - lastTouchTime > 300) {
-      isRunning = !isRunning;
-      touchState = true; // Dokunma devam ediyor olarak işaretle
-      lastTouchTime = millis();
+      // Eğer açılış kilidinde değilsek (longPressTriggered değilse) toggle yap
+      if (!longPressTriggered) {
+        isRunning = !isRunning;
+        Serial.print(F("[TOUCH] Tetiklendi -> "));
+        Serial.println(isRunning ? F("CALISIYOR") : F("DURDU"));
 
-      // Seri porttan kontrol edin
-      Serial.println(isRunning ? "Motor: CALISIYOR" : "Motor: DURDU");
-
-      String json =
-          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
-      ws.textAll(json);
-      broadcastStatus();
+        String json =
+            "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+        ws.textAll(json);
+        broadcastStatus();
+      }
     }
   }
 
-  // Uzun basma kontrolü (5 Saniye)
+  // UZUN BASMA KONTROLÜ (5 Saniye)
   if (touchState && !longPressTriggered) {
-    if (millis() - lastTouchTime > 5000) {
-      Serial.println("UZUN BASMA ALGILANDI -> 5s Reboot");
+    if (now - touchStartTime > 5000) {
+      Serial.println(F("[TOUCH] UZUN BASMA -> Reboot baslatiliyor..."));
       longPressTriggered = true;
 
-      // Kullanıcıya bilgi ver
       String json = "{\"type\":\"error\",\"message\":\"Cihaz 5 sn basili "
                     "tutuldu, yeniden baslatiliyor...\"}";
       ws.textAll(json);
 
       shouldRestartFlag = true;
-      restartTimer = millis() + 2000;
+      restartTimer = now + 2000;
     }
   }
 
-  if (reading == HIGH && touchState) { // El çekildiğinde durumu sıfırla
-    touchState = false;
-    longPressTriggered = false;
+  // ELİN ÇEKİLMESİ
+  if (reading == HIGH && touchState) {
+    // Debounce: En az 100ms HIGH kalmalı
+    if (now - lastTouchTime > 100) {
+      touchState = false;
+      longPressTriggered = false; // Kilit açıldı veya basma bitti
+      lastTouchTime = now;
+      Serial.println(F("[TOUCH] El cekildi."));
+    }
   }
 }
 
