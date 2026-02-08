@@ -62,7 +62,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
 // ===============================
 // Sabitler ve Ayarlar
 // ===============================
-#define STEPS_PER_REVOLUTION 2048
+#define STEPS_PER_REVOLUTION 4096
 #define JSON_CONFIG_FILE "/config.json"
 #define GITHUB_VERSION_URL                                                     \
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
