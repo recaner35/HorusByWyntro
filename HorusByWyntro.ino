@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.388"
+#define FIRMWARE_VERSION "1.0.389"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -488,15 +488,16 @@ void setup() {
   // KRİTİK: Açılışta motorun kesinlikle kapalı olduğundan emin ol
   isRunning = false;
 
-  // Sensörün açılış durumunu oku
+  // Sensörün açılış durumunu oku (Active High: Dokununca HIGH olur)
   lastTouchTime = millis();
-  if (digitalRead(TOUCH_PIN) == LOW) {
+  // TTP223 açılışta kalibre olurken kısa süre kararsız olabilir, ama genelde
+  // LOW başlar. Eğer HIGH ise (basılıysa), kilit devreye girer.
+  if (digitalRead(TOUCH_PIN) == HIGH) {
     touchState = true;
     touchStartTime = millis();
-    longPressTriggered =
-        true; // Açılışta basılıysa 'kilit' koy (elini çekene kadar işlem yapma)
-    Serial.println(F("[SENSOR] Acilista basili algilandi, 'Safe Lock' aktif. "
-                     "Lutfen elinizi cekin."));
+    longPressTriggered = true; // Açılışta basılıysa 'kilit' koy
+    Serial.println(
+        F("[SENSOR] Acilista basili algilandi (HIGH), 'Safe Lock' aktif."));
   } else {
     touchState = false;
     longPressTriggered = false;
@@ -602,18 +603,18 @@ void handlePhysicalControl() {
   int reading = digitalRead(TOUCH_PIN);
   unsigned long now = millis();
 
-  // DOKUNMA BAŞLANGICI
-  if (reading == LOW && !touchState) {
-    // Debounce: En az 100ms boyunca LOW kalmalı (Parazit engelleme)
-    if (now - lastTouchTime > 100) {
+  // DOKUNMA BAŞLANGICI (Active High: HIGH gelince basıldı say)
+  if (reading == HIGH && !touchState) {
+    // Debounce: En az 50ms boyunca HIGH kalmalı
+    if (now - lastTouchTime > 50) {
       touchState = true;
       touchStartTime = now;
       lastTouchTime = now;
 
-      // Eğer açılış kilidinde değilsek (longPressTriggered değilse) toggle yap
+      // Eğer açılış kilidinde değilsek işlem yap
       if (!longPressTriggered) {
         isRunning = !isRunning;
-        Serial.print(F("[TOUCH] Tetiklendi -> "));
+        Serial.print(F("[TOUCH] Basildi (HIGH) -> "));
         Serial.println(isRunning ? F("CALISIYOR") : F("DURDU"));
 
         String json =
@@ -639,14 +640,14 @@ void handlePhysicalControl() {
     }
   }
 
-  // ELİN ÇEKİLMESİ
-  if (reading == HIGH && touchState) {
-    // Debounce: En az 100ms HIGH kalmalı
-    if (now - lastTouchTime > 100) {
+  // ELİN ÇEKİLMESİ (LOW gelince bırakıldı say)
+  if (reading == LOW && touchState) {
+    // Debounce: En az 50ms LOW kalmalı
+    if (now - lastTouchTime > 50) {
       touchState = false;
-      longPressTriggered = false; // Kilit açıldı veya basma bitti
+      longPressTriggered = false; // Kilidi aç
       lastTouchTime = now;
-      Serial.println(F("[TOUCH] El cekildi."));
+      Serial.println(F("[TOUCH] Birakildi (LOW)."));
     }
   }
 }
