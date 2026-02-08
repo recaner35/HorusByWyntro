@@ -1,15 +1,19 @@
 .setup-card {
     position: fixed;
-    top: 20px;
+    top: 80px;
+    /* Header altında başlasın */
     left: 50%;
     transform: translateX(-50%);
-    background: #111;
-    border: 1px solid #333;
-    padding: 20px;
-    z-index: 9999;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 25px;
+    z-index: 500;
+    /* Header'ın altında ama diğer her şeyin üstünde */
     width: 90%;
     max-width: 400px;
-    border-radius: 12px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-lux);
+    backdrop-filter: blur(var(--blur-val));
 }
 
 .hidden {
@@ -98,15 +102,15 @@ body {
 .top-bar {
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border-color);
+    z-index: 1000;
+    backdrop-filter: blur(var(--blur-val));
+    -webkit-backdrop-filter: blur(var(--blur-val));
     padding: 0.875rem 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: sticky;
     top: 0;
-    z-index: 100;
-    backdrop-filter: blur(var(--blur-val));
-    -webkit-backdrop-filter: blur(var(--blur-val));
     transition: var(--transition);
 }
 
@@ -1552,14 +1556,15 @@ body.setup-active .container {
 }
 
 /* Sadece Setup bölümünü göster, diğerlerini gizle */
-body.setup-active section {
+body.setup-mode-active section:not(#setup) {
     display: none !important;
 }
 
-body.setup-active section#setup {
+body.setup-mode-active section#setup {
     display: block !important;
     width: 100%;
     max-width: 400px;
+    margin-top: 20px;
 }
 
 /* --- WIFI MODAL (ŞİFRE PENCERESİ) DÜZELTMESİ --- */
