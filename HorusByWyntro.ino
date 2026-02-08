@@ -1151,8 +1151,9 @@ void initWebServer() {
     String enterUrl = "http://" + currentApIP + "/";
 
     String html =
-        "<!DOCTYPE html><html><head><meta name='viewport' "
-        "content='width=device-width,initial-scale=1'>"
+        "<!DOCTYPE html><html lang='tr'><head>"
+        "<meta charset='UTF-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<title>Horus By Wyntro Kurulum Ekranı</title><style>"
         "body{background:#000;color:#fff;font-family:-apple-system,sans-serif;"
         "display:flex;flex-direction:column;align-items:center;justify-content:"
@@ -1167,7 +1168,7 @@ void initWebServer() {
         ".btn:active{transform:scale(0.95);background:rgba(0,240,255,0.2)}"
         "</style></head><body>"
         "<h1>Horus By Wyntro</h1><p "
-        "style='opacity:0.6;margin-bottom:40px'>Zamanı"
+        "style='opacity:0.6;margin-bottom:40px'>Zamanı "
         "Korumaya Başlayın</p>"
         "<a href='" +
         enterUrl +
