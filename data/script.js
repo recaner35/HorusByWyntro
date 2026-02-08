@@ -17,6 +17,7 @@ const API_OTA_AUTO_URL = "/api/ota-auto";
 const API_OTA_CHECK_URL = "/api/ota-check";
 const API_OTA_STATUS_URL = "/api/ota-status";
 const API_REBOOT_URL = '/api/reboot';
+const API_FACTORY_RESET_URL = '/api/factory-reset';
 // ---------------------
 
 // Dil dosyasından çeviri al
@@ -272,6 +273,8 @@ function saveDeviceName() {
     socket.send(JSON.stringify(settings));
     showToast('Cihaz adı kaydedildi. Cihaz yeniden başlatılıyor...');
 
+    showToast('Cihaz adı kaydedildi. Cihaz yeniden başlatılıyor...');
+
     setTimeout(function () {
         var slugifiedName = name.toLowerCase()
             .replace(/ş/g, 's').replace(/Ş/g, 's')
@@ -292,7 +295,45 @@ function saveDeviceName() {
         }
 
         window.location.href = 'http://' + newHostname + '.local';
-    }, 3000);
+    }, 5000);
+}
+
+function rebootDevice() {
+    if (confirm("Cihazı yeniden başlatmak istiyor musunuz?")) {
+        fetch(API_REBOOT_URL, { method: 'POST' })
+            .then(() => showToast("Yeniden başlatılıyor...", "info"))
+            .catch(() => showToast("Yeniden başlatılıyor...", "info"));
+
+        // Biraz bekle sonra reload dene
+        setTimeout(() => {
+            location.reload();
+        }, 10000);
+    }
+}
+
+function factoryReset() {
+    // Çeviri desteği ile onay mesajı
+    const msg = (typeof getTrans === 'function' && getTrans('confirm_factory_reset'))
+        ? getTrans('confirm_factory_reset')
+        : "DİKKAT: Cihaz fabrika ayarlarına dönecek ve tüm veriler silinecek.\nDevam etmek istiyor musunuz?";
+
+    if (confirm(msg)) {
+        showToast("Sıfırlama işlemi başlatıldı...", "warning");
+
+        fetch(API_FACTORY_RESET_URL, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                showToast("Sıfırlama başarılı. Cihaz yeniden başlıyor...", "success");
+            })
+            .catch(err => {
+                // Restart atacağı için hata alabiliriz, bu normal
+                console.log("Reset error (expected due to reboot):", err);
+            });
+
+        setTimeout(() => {
+            location.reload();
+        }, 5000);
+    }
 }
 
 // ================= TAB LOGIC =================
@@ -364,11 +405,21 @@ function renderPeers(peers) {
             <div class="peer-controls-grid">
                 <div class="control-group">
                     <label>TPD: <span id="p-tpd-val-${p.mac}">${tpd}</span></label>
-                    <input type="range" min="100" max="3000" step="10" value="${tpd}" id="p-tpd-${p.mac}" oninput="document.getElementById('p-tpd-val-${p.mac}').innerText = this.value">
+                    <input type="range" min="600" max="1800" step="50" value="${tpd}" id="p-tpd-${p.mac}" oninput="document.getElementById('p-tpd-val-${p.mac}').innerText = this.value">
                 </div>
                 <div class="control-group">
                     <label>${getTrans('duration') || 'Süre'}: <span id="p-dur-val-${p.mac}">${dur}</span></label>
-                        <input type="range" min="1" max="120" step="1" value="${dur}" id="p-dur-${p.mac}" oninput="document.getElementById('p-dur-val-${p.mac}').innerText = this.value">
+                        <input type="range" min="5" max="15" step="1" value="${dur}" id="p-dur-${p.mac}" oninput="document.getElementById('p-dur-val-${p.mac}').innerText = this.value">
+                </div>
+                
+                <div class="control-group" style="grid-column: span 2;">
+                    <label>${getTrans('direction') || 'Yön'}</label>
+                    <div class="direction-selector" style="margin-top:5px;">
+                        <input type="hidden" id="p-dir-${p.mac}" value="${dir}">
+                        <button class="dir-btn ${dir == 0 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 0)">CW</button>
+                        <button class="dir-btn ${dir == 1 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 1)">CCW</button>
+                        <button class="dir-btn ${dir == 2 ? 'active' : ''}" onclick="setPeerDirUI(this, '${p.mac}', 2)">Bi-Dir</button>
+                    </div>
                 </div>
             </div>
             
@@ -398,7 +449,7 @@ window.setPeerDirUI = function (btn, mac, dir) {
 window.pushPeerSettings = function (mac, currentRunningState) {
     var tpd = parseInt(document.getElementById('p-tpd-' + mac).value);
     var dur = parseInt(document.getElementById('p-dur-' + mac).value);
-    var dir = 2; // Default varsayılan
+    var dir = parseInt(document.getElementById('p-dir-' + mac).value);
 
     var cmd = {
         type: "peer_settings",
@@ -418,7 +469,7 @@ window.pushPeerSettings = function (mac, currentRunningState) {
 window.togglePeer = function (mac, newState) {
     var tpd = parseInt(document.getElementById('p-tpd-' + mac).value);
     var dur = parseInt(document.getElementById('p-dur-' + mac).value);
-    var dir = 2;
+    var dir = parseInt(document.getElementById('p-dir-' + mac).value);
 
     var cmd = {
         type: "peer_settings",
@@ -905,5 +956,3 @@ function rebootDevice() {
             .catch(() => showToast("Yeniden başlatma başarısız", "error"));
     }
 }
-
-
