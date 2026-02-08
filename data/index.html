@@ -31,15 +31,14 @@
 
     <div id="setupCard" class="card setup-card hidden">
         <div class="card-header">
-            <h2>Horus Kurulum</h2>
-            <span class="card-subtitle">
+            <h2 data-i18n="setup_title">Horus Kurulum</h2>
+            <span class="card-subtitle" data-i18n="setup_subtitle">
                 Wi-Fi bağlantısı kurarak Horus’u kullanmaya başlayın
             </span>
         </div>
 
         <div class="card-body">
-
-            <button class="primary-btn full" onclick="scanWifi()">
+            <button class="primary-btn full" onclick="scanWifi()" data-i18n="scan_networks">
                 Wi-Fi Ağlarını Tara
             </button>
 
@@ -47,10 +46,9 @@
 
             <div class="divider"></div>
 
-            <button class="ghost-btn full" onclick="skipSetup()">
+            <button class="ghost-btn full" onclick="skipSetup()" data-i18n="skip_setup">
                 Kurulumu Atla
             </button>
-
         </div>
     </div>
 
@@ -400,30 +398,35 @@
     </div>
     <div id="iosInstallModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3>Ana Ekrana Ekle (iOS)</h3>
-            <p>Bu uygulamayı iPhone/iPad ana ekranınıza eklemek için:</p>
+            <h3 data-i18n="add_to_home_ios">Ana Ekrana Ekle (iOS)</h3>
+            <p data-i18n="add_to_home_ios_tip">Bu uygulamayı iPhone/iPad ana ekranınıza eklemek için:</p>
             <ol>
-                <li>Tarayıcı altındaki <strong style="color:var(--accent-color)">Paylaş</strong> simgesine dokunun.</li>
-                <li>Açılan menüde aşağı inin ve <strong>"Ana Ekrana Ekle"</strong> seçeneğini seçin.</li>
-                <li>Sağ üst köşedeki <strong>"Ekle"</strong> butonuna basın.</li>
+                <li data-i18n="ios_step_1">Tarayıcı altındaki <strong style="color:var(--accent-color)">Paylaş</strong>
+                    simgesine dokunun.</li>
+                <li data-i18n="ios_step_2">Açılan menüde aşağı inin ve <strong>"Ana Ekrana Ekle"</strong> seçeneğini
+                    seçin.</li>
+                <li data-i18n="ios_step_3">Sağ üst köşedeki <strong>"Ekle"</strong> butonuna basın.</li>
             </ol>
-            <button class="primary-btn full" onclick="closeIosModal()">Anlaşıldı</button>
+            <button class="primary-btn full" onclick="closeIosModal()" data-i18n="got_it">Anlaşıldı</button>
         </div>
     </div>
 
     <div id="androidInstallModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3>Ana Ekrana Ekle</h3>
-            <p>Uygulamayı yüklemek için şu adımları izleyin:</p>
+            <h3 data-i18n="add_to_home_android">Ana Ekrana Ekle</h3>
+            <p data-i18n="add_to_home_android_tip">Uygulamayı yüklemek için şu adımları izleyin:</p>
             <ol>
-                <li>Tarayıcının sağ üst köşesindeki <strong style="color:var(--accent-color)">üç nokta (⋮)</strong>
+                <li data-i18n="android_step_1">Tarayıcının sağ üst köşesindeki <strong
+                        style="color:var(--accent-color)">üç nokta (⋮)</strong>
                     menüsüne dokunun.</li>
-                <li>Menüden <strong>"Uygulamayı Yükle"</strong> veya <strong>"Ana Ekrana Ekle"</strong> seçeneğini
+                <li data-i18n="android_step_2">Menüden <strong>"Uygulamayı Yükle"</strong> veya <strong>"Ana Ekrana
+                        Ekle"</strong> seçeneğini
                     seçin.</li>
-                <li>Çıkan onay penceresinde <strong>"Yükle"</strong> veya <strong>"Ekle"</strong> diyerek onaylayın.
+                <li data-i18n="android_step_3">Çıkan onay penceresinde <strong>"Yükle"</strong> veya
+                    <strong>"Ekle"</strong> diyerek onaylayın.
                 </li>
             </ol>
-            <button class="primary-btn full" onclick="closeAndroidModal()">Anlaşıldı</button>
+            <button class="primary-btn full" onclick="closeAndroidModal()" data-i18n="got_it">Anlaşıldı</button>
         </div>
     </div>
 </body>
