@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.390"
+#define FIRMWARE_VERSION "1.0.389"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -494,8 +494,7 @@ void setup() {
     touchState = true;
     touchStartTime = millis();
     longPressTriggered = true; // Açılışta basılıysa 'kilit' koy
-    Serial.println(
-        F("[SENSOR] Acilista basili algilandi (HIGH), 'Safe Lock' aktif."));
+    Serial.println(F("[SYSTEM] Sensor basili basladi -> Safe Mode Aktif"));
   } else {
     touchState = false;
     longPressTriggered = false;
@@ -612,8 +611,7 @@ void handlePhysicalControl() {
       // Eğer açılış kilidinde değilsek işlem yap
       if (!longPressTriggered) {
         isRunning = !isRunning;
-        Serial.print(F("[TOUCH] Basildi (HIGH) -> "));
-        Serial.println(isRunning ? F("CALISIYOR") : F("DURDU"));
+        Serial.println(isRunning ? F("[MOTOR] Calisiyor") : F("[MOTOR] Durdu"));
 
         String json =
             "{\"running\":" + String(isRunning ? "true" : "false") + "}";
@@ -626,7 +624,7 @@ void handlePhysicalControl() {
   // UZUN BASMA KONTROLÜ (5 Saniye)
   if (touchState && !longPressTriggered) {
     if (now - touchStartTime > 5000) {
-      Serial.println(F("[TOUCH] UZUN BASMA -> Reboot baslatiliyor..."));
+      Serial.println(F("[SYSTEM] 5sn Basili Tutuldu -> Resetleniyor..."));
       longPressTriggered = true;
 
       String json = "{\"type\":\"error\",\"message\":\"Cihaz 5 sn basili "
@@ -645,7 +643,8 @@ void handlePhysicalControl() {
       touchState = false;
       longPressTriggered = false; // Kilidi aç
       lastTouchTime = now;
-      Serial.println(F("[TOUCH] Birakildi (LOW)."));
+      // Serial.println(F("[TOUCH] Birakildi (LOW).")); // Log kalabalığı
+      // yapmasın
     }
   }
 }
