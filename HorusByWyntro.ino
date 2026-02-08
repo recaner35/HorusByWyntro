@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.379"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -815,6 +815,23 @@ void broadcastDiscovery() {
     return;
 
   strcpy(myData.type, "DISCOVER");
+  strcpy(myData.sender_mac, myMacAddress.c_str());
+  String displayName =
+      (config.hostname != "") ? config.hostname : ("Horus-" + deviceSuffix);
+  strcpy(myData.sender_name, displayName.c_str());
+
+  String payload = getShortStatusJson();
+  payload.toCharArray(myData.payload, 64);
+
+  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+}
+
+void broadcastStatus() {
+  if (!isEspNowActive)
+    return;
+
+  strcpy(myData.type, "STATUS");
   strcpy(myData.sender_mac, myMacAddress.c_str());
   String displayName =
       (config.hostname != "") ? config.hostname : ("Horus-" + deviceSuffix);
