@@ -522,25 +522,26 @@ void checkSchedule() {
 void handlePhysicalControl() {
   int reading = digitalRead(TOUCH_PIN);
 
-  // LED parmağınızı çekince yanıyorsa (Active Low), 
+  // LED parmağınızı çekince yanıyorsa (Active Low),
   // 'LOW' okuduğumuzda aslında dokunmuş oluyoruz.
   // Eğer tam tersiyse aşağıdaki 'LOW'u 'HIGH' yapın.
-  
+
   if (reading == LOW && !touchState) { // Yeni bir dokunma algılandı
-    if (millis() - lastTouchTime > 300) { 
+    if (millis() - lastTouchTime > 300) {
       isRunning = !isRunning;
       touchState = true; // Dokunma devam ediyor olarak işaretle
       lastTouchTime = millis();
-      
+
       // Seri porttan kontrol edin
       Serial.println(isRunning ? "Motor: CALISIYOR" : "Motor: DURDU");
 
-      String json = "{\"running\":" + String(isRunning ? "true" : "false") + "}";
+      String json =
+          "{\"running\":" + String(isRunning ? "true" : "false") + "}";
       ws.textAll(json);
       broadcastStatus();
     }
-  } 
-  
+  }
+
   if (reading == HIGH && touchState) { // El çekildiğinde durumu sıfırla
     touchState = false;
   }
@@ -816,24 +817,7 @@ void broadcastDiscovery() {
   strcpy(myData.type, "DISCOVER");
   strcpy(myData.sender_mac, myMacAddress.c_str());
   String displayName =
-      (config.hostname != "") ? config.hostname : "Horus-Device";
-  strcpy(myData.sender_name, displayName.c_str());
-
-  String payload = getShortStatusJson();
-  payload.toCharArray(myData.payload, 64);
-
-  uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-}
-
-void broadcastStatus() {
-  if (!isEspNowActive)
-    return;
-
-  strcpy(myData.type, "STATUS");
-  strcpy(myData.sender_mac, myMacAddress.c_str());
-  String displayName =
-      (config.hostname != "") ? config.hostname : "Horus-Device";
+      (config.hostname != "") ? config.hostname : ("Horus-" + deviceSuffix);
   strcpy(myData.sender_name, displayName.c_str());
 
   String payload = getShortStatusJson();
@@ -1421,6 +1405,40 @@ void initWebServer() {
     delay(500);
     ESP.restart();
   });
+
+  server.on(
+      "/api/factory-reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+        // 1. WiFi Ayarlarını Sil
+        prefs.begin("wifi", false);
+        prefs.clear();
+        prefs.end();
+
+        // 2. Setup (Skip) Ayarlarını Sil
+        Preferences p;
+        p.begin("setup", false);
+        p.clear();
+        p.end();
+
+        // 3. Konfigürasyon Dosyalarını Sil
+        if (LittleFS.exists(JSON_CONFIG_FILE))
+          LittleFS.remove(JSON_CONFIG_FILE);
+        if (LittleFS.exists(PEER_FILE))
+          LittleFS.remove(PEER_FILE);
+
+        // 4. Varsayılan Ayarları Geri Yükle (RAM'deki config'i sıfırla)
+        config.tpd = 900;
+        config.duration = 10;
+        config.direction = 2;
+        config.hostname = "";
+        config.espNowEnabled = false;
+        peers.clear();
+
+        request->send(200, "application/json", "{\"status\":\"resetting\"}");
+
+        // 5. Restart
+        restartTimer = millis() + 2000;
+        shouldRestartFlag = true;
+      });
 
   server.begin();
 }
