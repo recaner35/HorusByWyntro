@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.385"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -273,7 +273,8 @@ bool execOTA(String url, int command) {
     uint8_t buff[1024] = {0};
     size_t written = 0;
     unsigned long lastProgress = 0;
-    unsigned long startTime = millis();
+    unsigned long lastDataTime = millis(); // Son veri alma zamanı
+    unsigned long totalStartTime = millis();
 
     while (http.connected() && (written < contentLength)) {
       size_t size = stream->available();
@@ -285,12 +286,15 @@ bool execOTA(String url, int command) {
         // Update'e yaz
         size_t w = Update.write(buff, c);
         written += w;
+        lastDataTime = millis(); // Veri geldiğinde timer'ı sıfırla
 
-        // İlerleme çubuğu (Her 1 saniyede bir veya %10'da bir)
-        if (millis() - lastProgress > 1000) {
+        // İlerleme çubuğu (Her 2 saniyede bir)
+        if (millis() - lastProgress > 2000) {
           lastProgress = millis();
-          Serial.printf("[OTA] Ilerleme: %d / %d (%.2f%%)\n", written,
-                        contentLength, (float)written * 100.0 / contentLength);
+          Serial.printf("[OTA] Ilerleme: %d / %d (%.2f%%) | Heap: %d\n",
+                        written, contentLength,
+                        (float)written * 100.0 / contentLength,
+                        ESP.getFreeHeap());
         }
 
         // Hata kontrolü
@@ -304,9 +308,15 @@ bool execOTA(String url, int command) {
         delay(10); // Veri yoksa bekle
       }
 
-      // Timeout kontrolü (Veri akışı durursa)
-      if (millis() - startTime > 180000) { // 3 dakika total timeout
-        Serial.println(F("[OTA] Zaman asimi!"));
+      // Inactivity timeout (30 saniye)
+      if (millis() - lastDataTime > 30000) {
+        Serial.println(F("[OTA] Veri akisi durdu (Inactivity)!"));
+        break;
+      }
+
+      // Total timeout (10 dakika)
+      if (millis() - totalStartTime > 600000) {
+        Serial.println(F("[OTA] Toplam zaman asimi (10 dk)!"));
         break;
       }
     }
