@@ -68,7 +68,7 @@ const char *SETUP_AP_SSID = "Horus-Setup";
   "https://raw.githubusercontent.com/recaner35/HorusByWyntro/main/"            \
   "version.json"
 
-#define FIRMWARE_VERSION "1.0.384"
+#define FIRMWARE_VERSION "1.0.378"
 #define PEER_FILE "/peers.json"
 
 // ===============================
@@ -101,6 +101,7 @@ int turnsThisHour = 0;
 int targetTurnsPerHour = 0;
 unsigned long lastTouchTime = 0;
 bool touchState = false;
+bool longPressTriggered = false;
 String deviceSuffix = "";
 
 unsigned long lastHourCheck = 0;
@@ -471,8 +472,13 @@ void setup() {
 
   // Web Sunucuyu Başlat
   initWebServer();
-
   server.begin();
+
+  // KRİTİK: Açılışta motorun kesinlikle kapalı olduğundan emin ol
+  isRunning = false;
+  // Sensörün açılış durumunu oku (başlangıçta basılıysa tetikleme yapmasın)
+  touchState = (digitalRead(TOUCH_PIN) == LOW);
+  lastTouchTime = millis();
 }
 
 // ===============================
@@ -497,10 +503,10 @@ void loop() {
     turnsThisHour++;
   }
   checkSchedule();
-  checkSchedule();
 
-  // Açılış parazitini önlemek için ilk 2 saniye sensörü okuma
-  if (millis() > 2000) {
+  // Açılış parazitini ve kalibrasyon süresini beklemek için ilk 4 saniye
+  // sensörü okuma
+  if (millis() > 4000) {
     handlePhysicalControl();
   }
 
@@ -593,8 +599,25 @@ void handlePhysicalControl() {
     }
   }
 
+  // Uzun basma kontrolü (5 Saniye)
+  if (touchState && !longPressTriggered) {
+    if (millis() - lastTouchTime > 5000) {
+      Serial.println("UZUN BASMA ALGILANDI -> 5s Reboot");
+      longPressTriggered = true;
+
+      // Kullanıcıya bilgi ver
+      String json = "{\"type\":\"error\",\"message\":\"Cihaz 5 sn basili "
+                    "tutuldu, yeniden baslatiliyor...\"}";
+      ws.textAll(json);
+
+      shouldRestartFlag = true;
+      restartTimer = millis() + 2000;
+    }
+  }
+
   if (reading == HIGH && touchState) { // El çekildiğinde durumu sıfırla
     touchState = false;
+    longPressTriggered = false;
   }
 }
 
