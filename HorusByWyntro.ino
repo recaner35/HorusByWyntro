@@ -486,8 +486,19 @@ void setup() {
 
   // KRİTİK: Açılışta motorun kesinlikle kapalı olduğundan emin ol
   isRunning = false;
-  // Sensörün açılış durumunu oku (başlangıçta basılıysa tetikleme yapmasın)
-  touchState = (digitalRead(TOUCH_PIN) == LOW);
+
+  // Sensörün açılış durumunu oku (başlangıçta basılıysa veya parazit varsa
+  // tetikleme yapmasın)
+  if (digitalRead(TOUCH_PIN) == LOW) {
+    touchState = true;
+    longPressTriggered =
+        true; // Açılışta basılıysa elini çekene kadar işlem yapma
+    Serial.println(F("[SENSOR] Acilista basili algilandi, serbest birakilmasi "
+                     "bekleniyor..."));
+  } else {
+    touchState = false;
+    longPressTriggered = false;
+  }
   lastTouchTime = millis();
 }
 
